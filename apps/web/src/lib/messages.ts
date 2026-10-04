@@ -3,7 +3,7 @@
 // Megolm. The crypto layer loads lazily (see crypto.ts), so the codec here
 // waits for it. It can still read old plaintext events without it.
 import { createStore } from "zustand/vanilla";
-import { createMessagesStore, decodePlainEvent, type PayloadCodec } from "@mortium/client-core";
+import { WAITING_FOR_KEY_TEXT, createMessagesStore, decodePlainEvent, type PayloadCodec } from "@mortium/client-core";
 import type { CryptoClient } from "@mortium/client-core/crypto-client";
 import { session } from "./session.js";
 import { gatewaySend } from "./realtime.js";
@@ -20,6 +20,8 @@ let waiters: Array<{ resolve: (handle: CryptoClient) => void; reject: (error: Er
 let stopKeyWatch: (() => void) | null = null;
 let slowEncryptions = 0;
 const keyListeners = new Set<(channelId: string, sessionId: string) => void>();
+/** The Megolm sessions of the events that could not decode because the crypto layer was missing. */
+const missedSessions = new Map<string, [channelId: string, sessionId: string]>();
 
 /** The crypto layer calls this when it starts (with its handle) and when it stops (with null). */
 export function setCryptoHandle(next: CryptoClient | null): void {
@@ -36,9 +38,23 @@ export function setCryptoHandle(next: CryptoClient | null): void {
         }
       }) ?? null;
     pending.forEach((waiter) => waiter.resolve(next));
+    // The events that waited for the crypto layer can decode now.
+    const missed = [...missedSessions.values()];
+    missedSessions.clear();
+    for (const [channelId, sessionId] of missed) {
+      keyListeners.forEach((listener) => listener(channelId, sessionId));
+    }
   } else {
+    missedSessions.clear();
     pending.forEach((waiter) => waiter.reject(new Error("The session ended.")));
   }
+}
+
+/** The crypto layer could not start. The calls that wait for it fail, so the UI does not wait for all time. */
+export function failCryptoWaiters(error: Error): void {
+  const pending = waiters;
+  waiters = [];
+  pending.forEach((waiter) => waiter.reject(error));
 }
 
 /** Wait for the crypto layer of this tab. */
@@ -73,7 +89,11 @@ export const messageCodec: PayloadCodec = {
     try {
       return await (await cryptoReady()).codec.decode(event);
     } catch {
-      return { ok: false, reason: "This message cannot be read." };
+      // The crypto layer is missing. The event decodes again when the layer is ready.
+      if (event.megolmSessionId) {
+        missedSessions.set(`${event.channelId}:${event.megolmSessionId}`, [event.channelId, event.megolmSessionId]);
+      }
+      return { ok: false, reason: WAITING_FOR_KEY_TEXT, waiting: true };
     }
   },
 

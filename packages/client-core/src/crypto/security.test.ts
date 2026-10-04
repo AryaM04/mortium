@@ -310,6 +310,37 @@ describe("identity changes", () => {
     expect(await a1.handle!.security.userTrust("2")).toEqual({ verified: false, changed: false });
   });
 
+  it("keeps the master key trusted after the device that made it is removed", async () => {
+    const server = new FakeServer();
+    const a1 = newClient("1", "A1");
+    const a2 = newClient("1", "A2");
+    await server.start(a1);
+    await server.start(a2);
+    await verifyWithSas(a1, a2);
+    const { recoveryKey } = await setUpBackup(a1);
+    await settleClients([a1, a2]);
+    // A1 made the master key and vouches for it on the server. Then it signs out.
+    server.stop(a1);
+    server.removeDevice("1", "A1");
+    expect(server.masters.get("1")!.deviceId).toBe("A1");
+
+    // A user who sees user 1 for the first time trusts the master key, because A2 has a signature from it.
+    const b1 = newClient("2", "B1");
+    await server.start(b1);
+    const trusted = await b1.handle!.devices.trustedDevicesOfUsers(["1"]);
+    expect(trusted.get("1")!.map((device) => device.deviceId)).toEqual(["A2"]);
+
+    // A new own device verifies with A2: the MAC of the master key matches.
+    const a3 = newClient("1", "A3");
+    await server.start(a3);
+    await verifyWithSas(a3, a2);
+
+    // A3 gets the master key from the backup, and vouches for it in place of A1.
+    await a3.handle!.security.restoreBackup({ recoveryKey });
+    expect(server.masters.get("1")!.deviceId).toBe("A3");
+    expect(await isVerified(a3)).toBe(true);
+  });
+
   it("an unsigned device of a different user gets no key", async () => {
     const server = new FakeServer();
     server.channels.set(CHANNEL, dm(["1", "2"]));

@@ -162,6 +162,12 @@ devices of that user. There is no separate self-signing key.
     this device.
 - The master key is set one time. A different key gives 409
   `MASTER_KEY_EXISTS`. Only the reset (below) replaces it.
+- The same key again from a different device replaces `deviceId` and
+  `deviceSignature` of the master key. The `masterSignature` proves that
+  this device holds the master private key. The server sends
+  `DEVICE_LIST_UPDATE`. A device that holds the master key does this at
+  start when the device that vouches for the key is removed, and after it
+  takes the key from the key backup.
 - The master private key is **not** on every device. These devices hold
   it, encrypted with the pickle key: the device that made it, a device
   that got it from the key backup (section 9), and the device that did a
@@ -226,7 +232,11 @@ For each user in the query response, the client:
 
 1. Verifies the signature of each device. It drops a device with a bad
    signature, a wrong `userId` or a wrong `deviceId`.
-2. Keeps the first master key that it sees for this user (TOFU).
+2. Keeps the first master key that it sees for this user (TOFU). A
+   master key counts only when a listed device vouches for it: the
+   `deviceSignature` of the device in `masterKey.deviceId` is valid, or a
+   listed device has a `masterSignature` that the key made. Thus the key
+   stays trusted when the device that made it is removed.
 3. If the master key changes, it sets `changedMasterKey` for this user.
    The UI shows a loud warning. The client never replaces the stored key
    silently. The user must accept the new key (or verify it with SAS).
@@ -241,6 +251,8 @@ encrypted channel. The gateway sends `DEVICE_LIST_UPDATE { userId }` to
 each user who can see that user when a device gets keys, is removed, or
 gets a master signature, or when the master key is set. The client marks
 that user as outdated and queries again before the next encryption.
+These events are lost while a device is offline, so after each new
+`READY` (not `RESUMED`) the client marks all tracked users as outdated.
 
 ## 5. Olm sessions
 
@@ -321,16 +333,24 @@ The server sends `TO_DEVICE` dispatches:
   store.
 - Each gateway session has a window of 100 messages that are sent but not
   acknowledged. The server sends in id order.
+- A row with a lower id can commit after a row with a higher id, because
+  each request takes its ids before its transaction. Thus the server
+  sends every queued row that it did not send to this session yet, also
+  a row with a lower id than a row that it sent before.
 - The client sends op `TO_DEVICE_ACK { upToId }` after it saved the
-  result of each message up to that id. The server deletes those rows
-  and sends more.
+  result of each message up to that id. The server deletes only rows
+  that it sent to this session: the rows that it sent before the row
+  `upToId`, or every sent row up to `upToId` when it did not send that
+  row. Then it sends more. The client never acknowledges an id at or
+  above a message that still waits in its local queue.
 - `TO_DEVICE_ACK { upToId, resync: true }` also tells the server to send
-  again every message after `upToId`. The crypto layer sends it when it
-  starts and after each `READY` or `RESUMED`.
+  again every queued message. The crypto layer sends it when it starts
+  and after each `READY` or `RESUMED`.
 - The server also starts a delivery after `IDENTIFY` and `RESUME`.
 - The client drops a message with an id that it already processed. It
-  sends one acknowledgement when its local queue is empty, at most one
-  time in 2 seconds.
+  keeps the last 1000 processed ids for this check, not only the highest
+  id. It acknowledges the copies too. It sends one acknowledgement when
+  its local queue is empty, at most one time in 2 seconds.
 - Each tab of a device has its own gateway session. The crypto worker
   drops the copies, and only one tab sends the acknowledgements (see
   section 13).
@@ -379,10 +399,14 @@ the same rules as `POST /to-device` (visibility, size, queue) and no
 reply. The server stores the ops of one connection in the order that they
 arrive.
 
-The client acknowledges a message after the session state, the account
-state, the seen id and the queue id are saved in one IndexedDB
-transaction, and after the handlers of the event are done. A message that
-fails is dropped and acknowledged. It never blocks the queue. Olm can
+The client saves the session state, the account state and the seen id
+in one IndexedDB transaction. It saves the queue id only after the
+handlers of the event are done. A temporary error (no network, a rate
+limit, a server fault or a storage error) keeps the message first in the
+local queue. The client tries it again after 1 second, then after a
+longer time each time, up to 30 seconds, and at once after `READY` or
+`RESUMED`. Only the handlers that did not finish run again. A message
+that fails for good is dropped and acknowledged. Olm can
 decrypt a message only one time, so a crash after the save and before the
 end of the handlers loses the event. Megolm key requests (pass 3) get lost
 room keys again.
@@ -887,10 +911,9 @@ session of the device, with a window of 100 messages for each session
 it frees only the window of that session.
 
 1. Every tab forwards all of its dispatches to the worker.
-2. The worker drops a `TO_DEVICE` message with a queue id that is lower
-   than or equal to the highest id in its inbox or processed. Each
-   session sends the rows in id order, and each port keeps the order.
-   Thus each id is processed one time.
+2. The worker drops a `TO_DEVICE` message with a queue id that is in its
+   inbox or that it processed (section 6). Thus each id is processed one
+   time.
 3. Only the ack tab sends `TO_DEVICE_ACK`, the live signals
    (`TO_DEVICE_SEND`) and the network calls. Thus there is one ack
    stream.
@@ -901,7 +924,7 @@ it frees only the window of that session.
 6. When the ack tab closes, the worker selects a different tab and sends
    `TO_DEVICE_ACK { upToId, resync: true }` through it. The server
    deletes the processed rows, clears the window of that session, and
-   sends every row after `upToId` again. Thus no message is lost.
+   sends every queued row again. Thus no message is lost.
 7. Dispatches that arrive while the crypto layer starts stay in a buffer
    (at most 1000) and go to the layer when it is ready.
 
@@ -933,9 +956,18 @@ A browser without `SharedWorker` runs the crypto layer in the page
    Then it waits for the lock.
 3. When the other context stops, the browser gives the lock to the
    waiting tab. The banner goes, and the crypto layer starts there.
+4. The tab keeps the gateway dispatches that arrive while the crypto
+   layer starts (at most 1000), as the worker does.
 
 A waiting tab can read the channel list, but it cannot encrypt or
 decrypt.
+
+When the crypto layer does not start (in the page or in the worker), the
+tab tries again after 2 seconds, then after a longer time each time, up
+to 60 seconds. Each failure fails the calls that wait for the layer, so
+a send does not wait for all time. An event that could not decode
+because the layer was missing shows as "waiting". It decodes again when
+the layer is ready.
 
 The desktop apps also use this fallback. Their webviews (WebView2,
 WKWebView, Electron) have `SharedWorker`. But the OS key store, which

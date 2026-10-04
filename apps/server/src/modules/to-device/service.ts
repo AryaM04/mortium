@@ -3,7 +3,12 @@
 // with a window of unacknowledged messages for each gateway session, and
 // deletes the rows once the client acknowledges them. TO_DEVICE never
 // goes through the resume buffer. See docs/concepts/olm-megolm.md section 6.
-import { and, eq, gt, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
+//
+// A row with a lower id can commit after a row with a higher id, because
+// each request takes its ids before its transaction. Thus the delivery
+// reads every queued row that this session did not get yet, not only the
+// rows after the last sent id. An ACK deletes only rows that were sent.
+import { and, eq, inArray, isNotNull, isNull, notInArray, sql } from "drizzle-orm";
 import { decodeBase64Url, encodeBase64Url, DispatchEvent, type DeviceRef, type ToDeviceMessage } from "@mortium/shared";
 import type { FastifyBaseLogger } from "fastify";
 import type { DbClient } from "../../db/client.js";
@@ -109,9 +114,7 @@ export async function sendToDevice(
 
 interface DeliveryState {
   deviceId: string;
-  /** The highest id that this session was sent. */
-  lastSentId: bigint;
-  /** Ids sent to this session and not acknowledged yet. */
+  /** Ids sent to this session and not acknowledged yet, in the order of the send. */
   sent: bigint[];
   running: boolean;
   again: boolean;
@@ -134,7 +137,6 @@ export class ToDeviceDelivery {
   start(sessionId: string, deviceId: string): void {
     this.states.set(sessionId, {
       deviceId,
-      lastSentId: 0n,
       sent: [],
       running: false,
       again: false,
@@ -148,19 +150,28 @@ export class ToDeviceDelivery {
     this.states.delete(sessionId);
   }
 
-  /** Delete the acknowledged rows, then send more. With `resync`, send again every row after `upToId`. */
+  /**
+   * Delete the acknowledged rows, then send more. The client processed the
+   * row `upToId`. The socket keeps the order, so the client also got every
+   * row that this session sent before that row. When this session did not
+   * send `upToId`, every sent row up to that id counts. With `resync`, send
+   * again every queued row.
+   */
   async ack(sessionId: string, upToId: bigint, resync: boolean): Promise<void> {
     const state = this.states.get(sessionId);
     if (!state) {
       return;
     }
-    await this.db
-      .delete(toDeviceQueue)
-      .where(and(eq(toDeviceQueue.recipientDeviceId, state.deviceId), lte(toDeviceQueue.id, upToId)));
-    state.sent = state.sent.filter((id) => id > upToId);
+    const index = state.sent.indexOf(upToId);
+    const done = (index >= 0 ? state.sent.slice(0, index + 1) : state.sent).filter((id) => id <= upToId);
+    if (done.length > 0) {
+      await this.db
+        .delete(toDeviceQueue)
+        .where(and(eq(toDeviceQueue.recipientDeviceId, state.deviceId), inArray(toDeviceQueue.id, done)));
+      state.sent = state.sent.filter((id) => !done.includes(id));
+    }
     if (resync) {
       state.sent = [];
-      state.lastSentId = upToId;
       state.generation += 1;
     }
     this.pump(sessionId);
@@ -210,7 +221,12 @@ export class ToDeviceDelivery {
       const rows = await this.db
         .select()
         .from(toDeviceQueue)
-        .where(and(eq(toDeviceQueue.recipientDeviceId, state.deviceId), gt(toDeviceQueue.id, state.lastSentId)))
+        .where(
+          and(
+            eq(toDeviceQueue.recipientDeviceId, state.deviceId),
+            state.sent.length > 0 ? notInArray(toDeviceQueue.id, state.sent) : undefined,
+          ),
+        )
         .orderBy(toDeviceQueue.id)
         .limit(room);
       if (this.states.get(sessionId) !== state) {
@@ -233,7 +249,6 @@ export class ToDeviceDelivery {
           return;
         }
         state.sent.push(row.id);
-        state.lastSentId = row.id;
       }
     } while (state.again);
   }

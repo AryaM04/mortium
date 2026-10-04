@@ -119,6 +119,34 @@ describeWithDb("to-device queue", () => {
     third.close();
   });
 
+  it("delivers a row with a lower id that commits after a higher id was sent and acknowledged", async () => {
+    const [sender, recipient] = await pair("late");
+    const client = await connectGateway(server, recipient);
+    await apiFor(server, sender).post("/to-device", { messages: [message(recipient, "first")] });
+    const first = await client.event("TO_DEVICE");
+    client.send(GatewayOpcode.TO_DEVICE_ACK, { upToId: first.id });
+    await expect.poll(() => queuedFor(recipient.deviceId)).toBe(0);
+
+    // A request that took its id before "first" commits only now.
+    const lateId = BigInt(first.id) - 1n;
+    await server.testDb.db.insert(toDeviceQueue).values({
+      id: lateId,
+      recipientDeviceId: recipient.deviceId,
+      senderUserId: BigInt(sender.userId),
+      senderDeviceId: sender.deviceId,
+      type: "olm.v1",
+      ciphertext: Buffer.from("late"),
+    });
+    await apiFor(server, sender).post("/to-device", { messages: [message(recipient, "next")] });
+    const received = await collect(client, 2);
+    expect(received.map((d) => d.ciphertext)).toEqual([ciphertext("late"), ciphertext("next")]);
+    expect(received[0]!.id).toBe(lateId.toString());
+
+    client.send(GatewayOpcode.TO_DEVICE_ACK, { upToId: received[1]!.id });
+    await expect.poll(() => queuedFor(recipient.deviceId)).toBe(0);
+    client.close();
+  });
+
   it("takes messages from the TO_DEVICE_SEND gateway op, with the same rules, in order", async () => {
     const [sender, recipient] = await pair("op");
     const stranger = await registerUser(server, "opx");

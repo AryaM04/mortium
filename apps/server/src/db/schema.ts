@@ -155,7 +155,7 @@ export const crossSigningKeys = pgTable("cross_signing_keys", {
     .primaryKey()
     .references(() => users.id),
   masterKey: text("master_key").notNull(),
-  /** The device that uploaded the master key. Its Ed25519 key signed it. */
+  /** The device that vouches for the master key: its Ed25519 key signed it. A device that holds the key can take this place. */
   deviceId: text("device_id").notNull(),
   deviceSignature: text("device_signature").notNull(),
 });

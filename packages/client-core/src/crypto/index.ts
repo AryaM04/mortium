@@ -26,7 +26,7 @@ import { DeviceManager } from "./device-manager.js";
 import { KeyBackup, type BackupStatus, type BackupTimings, type RestoreProgress, type RestoreResult } from "./key-backup.js";
 import { MegolmMachine, type MegolmTimings } from "./megolm.js";
 import { ChannelMembership, membershipScope } from "./membership.js";
-import { OlmMachine, type EncryptResult, type ToDeviceHandler } from "./olm-machine.js";
+import { OlmMachine, isTemporaryError, type EncryptResult, type ToDeviceHandler } from "./olm-machine.js";
 import { KeyedQueue } from "./queue.js";
 import { SettingsKeys } from "./settings-key.js";
 import { cryptoStoreName, openCryptoStore, type CryptoStore } from "./store.js";
@@ -58,6 +58,11 @@ const MEMBER_LEFT_EVENTS = new Set([
 const ACK_INTERVAL_MS = 2000;
 /** Send a TO_DEVICE_ACK at once after this many messages. The server sends at most 100 before an ACK. */
 const ACK_BATCH = 50;
+/** The wait before the first new try of a to-device message that failed on a temporary error. It doubles up to the maximum. */
+const RETRY_FIRST_MS = 1000;
+const RETRY_MAX_MS = 30_000;
+/** The queue ids that the inbox keeps to find copies from other tabs. */
+const MAX_QUEUED_IDS = 1000;
 
 export interface StartCryptoOptions {
   userId: string;
@@ -181,7 +186,7 @@ export interface CryptoHandle {
     apply(changes: SearchChange[]): Promise<void>;
     query(query: IndexQuery): Promise<IndexResult[]>;
   };
-  /** Ask the server to send again every to-device message after the last processed one. */
+  /** Ask the server to send again every queued to-device message. */
   resyncToDevice(): void;
   /** Wait until every received message is processed. For tests. */
   whenIdle(): Promise<void>;
@@ -263,7 +268,7 @@ export async function startCrypto(options: StartCryptoOptions): Promise<CryptoHa
     },
     onUserChanged: (changedUserId) => {
       if (changedUserId === userId && selfVerified !== null) {
-        void checkSelfVerified();
+        void checkSelfVerified().catch((error: unknown) => log(`The device list could not be fetched: ${String(error)}`));
       }
       securityChanged();
     },
@@ -348,9 +353,9 @@ export async function startCrypto(options: StartCryptoOptions): Promise<CryptoHa
   });
   olm.onToDevice((event) => verification.handleToDevice(event));
 
-  /** True when the trusted master key of this user signed this device. */
+  /** True when the trusted master key of this user signed this device. It fetches the own devices when they are outdated. */
   async function isSelfVerified(): Promise<boolean> {
-    const self = (await store.getDevices(userId)).find((device) => device.deviceId === deviceId);
+    const self = (await devices.getDevices(userId)).find((device) => device.deviceId === deviceId);
     return self !== undefined && (await devices.isTrusted(self));
   }
 
@@ -384,16 +389,20 @@ export async function startCrypto(options: StartCryptoOptions): Promise<CryptoHa
   // ---- to-device inbox: one message at a time, in arrival order ----
   const inbox: ToDeviceDispatchPayload[] = [];
   let draining: Promise<void> | null = null;
-  let lastAckedId = await olm.lastProcessed();
   /**
-   * The highest queue id in the inbox or processed. Every tab forwards the
-   * TO_DEVICE dispatches of its own gateway session, and each session gets
-   * the queue in id order. Thus a lower or equal id is a copy.
+   * The queue ids in the inbox or processed by this run. Every tab forwards
+   * the TO_DEVICE dispatches of its own gateway session, so the same id can
+   * arrive more than one time. Ids do not arrive in order: a row with a
+   * lower id can commit on the server after a row with a higher id.
    */
-  let lastQueuedId = BigInt(lastAckedId);
+  const queuedIds = new Set<string>();
+  /** True when a message arrived after the last TO_DEVICE_ACK. */
+  let ackPending = false;
   let lastAckAt = 0;
   let ackTimer: ReturnType<typeof setTimeout> | null = null;
   let sinceAck = 0;
+  let retryTimer: ReturnType<typeof setTimeout> | null = null;
+  let retryDelay = RETRY_FIRST_MS;
 
   function sendAck(): void {
     if (ackTimer) {
@@ -401,13 +410,21 @@ export async function startCrypto(options: StartCryptoOptions): Promise<CryptoHa
     }
     ackTimer = null;
     sinceAck = 0;
+    if (!ackPending) {
+      return;
+    }
+    ackPending = false;
     void olm.lastProcessed().then((processed) => {
-      if (stopped || BigInt(processed) <= BigInt(lastAckedId)) {
+      if (stopped) {
         return;
       }
-      lastAckedId = processed;
+      // The server deletes the acknowledged rows. A message that waits in the inbox must stay.
+      let upToId = BigInt(processed);
+      for (const entry of inbox) {
+        upToId = BigInt(entry.id) <= upToId ? BigInt(entry.id) - 1n : upToId;
+      }
       lastAckAt = Date.now();
-      transport.ackToDevice(processed, false);
+      transport.ackToDevice(upToId.toString(), false);
     });
   }
 
@@ -419,25 +436,44 @@ export async function startCrypto(options: StartCryptoOptions): Promise<CryptoHa
     ackTimer = setTimeout(sendAck, wait);
   }
 
+  /** Process the inbox. A temporary error keeps the message first in the inbox, and a later try starts it again. */
   function drain(): Promise<void> {
     draining ??= (async () => {
-      while (inbox.length > 0 && !stopped) {
-        await olm.handleToDevice(inbox.shift()!);
-        sinceAck += 1;
-        if (sinceAck >= ACK_BATCH) {
-          sendAck();
+      try {
+        while (inbox.length > 0 && !stopped && !retryTimer) {
+          try {
+            await olm.handleToDevice(inbox[0]!);
+          } catch (error) {
+            if (isTemporaryError(error)) {
+              log(`A to-device message failed. The app tries again in ${retryDelay} ms: ${String(error)}`);
+              retryTimer = setTimeout(() => {
+                retryTimer = null;
+                void drain();
+              }, retryDelay);
+              retryDelay = Math.min(retryDelay * 2, RETRY_MAX_MS);
+              return;
+            }
+            log(`A to-device message could not be processed: ${String(error)}`);
+          }
+          inbox.shift();
+          retryDelay = RETRY_FIRST_MS;
+          ackPending = true;
+          sinceAck += 1;
+          if (sinceAck >= ACK_BATCH) {
+            sendAck();
+          }
         }
+      } finally {
+        draining = null;
+        scheduleAck();
       }
-      draining = null;
-      scheduleAck();
     })();
     return draining;
   }
 
-  /** Ask the server to send again every message after the last processed one. */
+  /** Ask the server to send again every queued message. The copies of processed messages are dropped. */
   async function resync(): Promise<void> {
     const processed = await olm.lastProcessed();
-    lastAckedId = processed;
     lastAckAt = Date.now();
     transport.ackToDevice(processed, true);
   }
@@ -452,11 +488,21 @@ export async function startCrypto(options: StartCryptoOptions): Promise<CryptoHa
     }
     if (dispatch.t === "TO_DEVICE") {
       const parsed = toDeviceDispatchPayloadSchema.safeParse(dispatch.d);
-      if (parsed.success && BigInt(parsed.data.id) > lastQueuedId) {
-        lastQueuedId = BigInt(parsed.data.id);
-        inbox.push(parsed.data);
-        void drain();
+      if (!parsed.success) {
+        return;
       }
+      // Each copy is acknowledged too, so the server can delete it.
+      ackPending = true;
+      if (queuedIds.has(parsed.data.id)) {
+        scheduleAck();
+        return;
+      }
+      queuedIds.add(parsed.data.id);
+      if (queuedIds.size > MAX_QUEUED_IDS) {
+        queuedIds.delete(queuedIds.values().next().value!);
+      }
+      inbox.push(parsed.data);
+      void drain();
     } else if (dispatch.t === "DEVICE_LIST_UPDATE") {
       const parsed = deviceListUpdatePayloadSchema.safeParse(dispatch.d);
       if (parsed.success) {
@@ -470,7 +516,19 @@ export async function startCrypto(options: StartCryptoOptions): Promise<CryptoHa
     } else if (dispatch.t === "READY" || dispatch.t === "RESUMED") {
       void resync();
       megolm.retryRequests();
+      if (retryTimer) {
+        // The connection is back: try the waiting message again now.
+        clearTimeout(retryTimer);
+        retryTimer = null;
+        retryDelay = RETRY_FIRST_MS;
+        void drain();
+      }
       if (dispatch.t === "READY") {
+        // Device lists can have changed while this device was offline.
+        void devices
+          .markAllOutdated()
+          .then(() => (stopped ? undefined : devices.refresh([userId])))
+          .catch((error: unknown) => log(`The device list could not be fetched: ${String(error)}`));
         // A different device can have made or deleted the key backup while this one was away.
         void backup.refresh().catch((error: unknown) => log(`The key backup could not be checked: ${String(error)}`));
         const parsed = readyPayloadSchema.safeParse(dispatch.d);
@@ -611,6 +669,9 @@ export async function startCrypto(options: StartCryptoOptions): Promise<CryptoHa
       verification.stop();
       if (ackTimer) {
         clearTimeout(ackTimer);
+      }
+      if (retryTimer) {
+        clearTimeout(retryTimer);
       }
       inbox.length = 0;
       store.close();
