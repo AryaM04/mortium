@@ -3,6 +3,7 @@
 // the mic track stays disabled until the key is held. See
 // docs/concepts/voice.md for the call this dialog controls.
 import { expect, test, type Page } from "@playwright/test";
+import { saveRecoveryKey } from "../lib/recovery-key.js";
 import { loadRootEnv } from "../env.js";
 
 loadRootEnv();
@@ -52,6 +53,7 @@ async function registerThroughUi(page: Page, user: ReturnType<typeof uniqueUser>
   await page.getByLabel("Password").fill(user.password);
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(`${WEB_ORIGIN}/app`);
+  await saveRecoveryKey(page);
 }
 
 async function createGuild(page: Page, guildName: string): Promise<void> {

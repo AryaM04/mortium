@@ -7,6 +7,7 @@
 // reachable. The forced-relay part also needs a reachable coturn, and
 // skips itself alone when that is not the case.
 import { expect, test, type Page } from "@playwright/test";
+import { saveRecoveryKey } from "../lib/recovery-key.js";
 import { isPortReachable } from "../lib/reachable.js";
 import { loadRootEnv } from "../env.js";
 
@@ -61,6 +62,7 @@ async function registerThroughUi(page: Page, user: ReturnType<typeof uniqueUser>
   await page.getByLabel("Password").fill(user.password);
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(`${WEB_ORIGIN}/app`);
+  await saveRecoveryKey(page);
 }
 
 async function createGuildWithInvite(page: Page, guildName: string): Promise<string> {

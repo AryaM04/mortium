@@ -6,6 +6,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { seedMessages, waitForCrypto } from "../lib/crypto-debug.js";
+import { saveRecoveryKey } from "../lib/recovery-key.js";
 
 const WEB_ORIGIN = "http://localhost:5173";
 
@@ -79,6 +80,11 @@ test("the main screens have no serious accessibility violation", async ({ page, 
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/app(\/|$)/);
   await waitForCrypto(page);
+
+  // The recovery key screen of a new account.
+  await expect(page.getByRole("heading", { name: "Save your recovery key" })).toBeVisible({ timeout: 20_000 });
+  await expectNoSeriousViolations(page, "recovery key");
+  await saveRecoveryKey(page);
 
   // The app shell with a guild and a chat.
   await page.goto(`${WEB_ORIGIN}/app/${guild.id}/${general.id}`);

@@ -1,6 +1,9 @@
 // The main 4-column layout: server rail, channel list, chat pane and
-// member list. `/app/@me` is Home: the friends and the DMs.
-import { Suspense, lazy, useEffect, useRef } from "react";
+// member list. `/app/@me` is Home: the friends and the DMs. The security
+// gate blocks the app until the encryption is safe (CRY-09).
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { useStore } from "zustand";
+import { getBackupVersionResponseSchema } from "@mortium/shared";
 import { Redirect, useParams, useLocation } from "wouter";
 import { ShortcutHandler } from "../components/ShortcutHandler.js";
 import { ServerRail } from "../components/ServerRail.js";
@@ -15,11 +18,15 @@ import { HomeView } from "./HomeView.js";
 import { useRealtime } from "../lib/useRealtime.js";
 import { clearLastLocation, readLastLocation, rememberLastLocation } from "../lib/lastLocation.js";
 import { showNotice } from "../lib/notice.js";
+import { securityStore } from "../lib/crypto.js";
+import { session } from "../lib/session.js";
+import { backupExists, gateScreen, type BackupCheck } from "../lib/security-gate.js";
 
 // Load the diagnostics panel only when a person opens the page with
 // "?diag" in a dev build. The lazy import keeps it out of the normal
 // app bundle, per the resource rules in CLAUDE.md.
 const DiagPanel = lazy(() => import("../diag/DiagPanel.js"));
+const SecurityGate = lazy(() => import("../components/SecurityGate.js"));
 
 // A stable fallback: a fresh `[]` on every render would break the store
 // subscription (it always looks "changed"), causing a render loop.
@@ -95,7 +102,7 @@ function GuildView({ guildId, channelId }: { guildId: string; channelId: string 
   );
 }
 
-export function AppShell() {
+function MainShell() {
   const params = useParams<{ guildId?: string; channelId?: string }>();
 
   return (
@@ -121,5 +128,41 @@ export function AppShell() {
         )}
       </div>
     </div>
+  );
+}
+
+export function AppShell() {
+  const [check, setCheck] = useState<BackupCheck>("pending");
+  // Select only the values that the gate uses, so a backup upload does not render the whole app again.
+  const version = useStore(securityStore, (s) => s.backup?.version ?? null);
+  // The crypto layer reads the backup in the background. Until then its
+  // state says "no backup", so ask the server when the answer matters.
+  const needCheck = useStore(securityStore, (s) => s.ready && s.backup?.version == null && (!s.deviceVerified || s.holdsMasterKey));
+  const screen = useStore(securityStore, (s) => gateScreen(s, check));
+  const hasBackup = useStore(securityStore, (s) => backupExists(s, check));
+
+  useEffect(() => {
+    if (!needCheck) {
+      return;
+    }
+    let alive = true;
+    // After an error the result stays "pending". The next change of the version checks again.
+    setCheck("pending");
+    session.apiClient
+      .request("GET", "/keys/backup/version", { schema: getBackupVersionResponseSchema })
+      .then((response) => alive && setCheck(response.backup ? "yes" : "no"))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [needCheck, version]);
+
+  if (screen === "none") {
+    return <MainShell />;
+  }
+  return (
+    <Suspense fallback={null}>
+      <SecurityGate screen={screen} hasBackup={hasBackup} />
+    </Suspense>
   );
 }
