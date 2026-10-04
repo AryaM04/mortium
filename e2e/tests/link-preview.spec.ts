@@ -8,6 +8,7 @@
 // it can fetch the fixture page on localhost (see playwright.config.ts).
 import { existsSync, readFileSync } from "node:fs";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { saveRecoveryKey } from "../lib/recovery-key.js";
 import { waitForCrypto } from "../lib/crypto-debug.js";
 
 const WEB_ORIGIN = "http://localhost:5173";
@@ -45,6 +46,7 @@ async function loginThroughUi(page: Page, user: ReturnType<typeof uniqueUser>): 
   await page.getByLabel("Password").fill(user.password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/app(\/|$)/);
+  await saveRecoveryKey(page);
 }
 
 test("A sends a link with a preview, and B sees the card without a fetch of the page", async ({

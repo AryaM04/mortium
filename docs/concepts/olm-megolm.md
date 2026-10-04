@@ -212,8 +212,12 @@ answer to `megolm.request`) and the settings key only when:
 This rule is the same for the devices of other users and for the other
 devices of the same user. A device that the server added cannot get
 keys. The UI shows an unsigned device as "Not verified". A new sign-in
-shows the banner "Verify this device to read old messages" with two
-buttons: "Verify with a different device" and "Use the recovery key".
+shows the blocking screen "Verify this device" in place of the app (the
+security gate, `apps/web/src/components/SecurityGate.tsx`). It has two
+ways forward: "Verify with another device" (SAS) and "Enter recovery
+key" (a restore that also imports the master key). An account without a
+key backup gets "Reset encryption" in place of the restore. There is no
+way to skip the screen.
 When the device becomes signed, it asks again for each key that it did
 not get, and for the settings key.
 
@@ -604,6 +608,11 @@ The code is `packages/client-core/src/crypto/key-backup.ts`,
   parameters above m = 256 MiB, t = 10, p = 4 (the server stores them).
 - To set up a backup, the user sees the key and types its last group
   again. Only then does the client make the backup on the server.
+- The backup is necessary (CRY-09). Else a sign-out of the only device
+  loses the master key. A device that holds the master key and finds no
+  backup on the server shows the blocking screen "Save your recovery
+  key" in place of the app. This occurs after the sign-up, after a reset
+  of the identity, and one time for accounts from before this rule.
 
 ### Backup key pair and encryption
 

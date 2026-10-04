@@ -1,12 +1,14 @@
 // End-to-end account flows: register, reload keeps the session, sign out
 // and back in, forgot/reset password through a real email, verify email
-// through a real email, and a wrong-password error.
+// through a real email, and a wrong-password error. A new account saves
+// its recovery key first. A new sign-in enters it to verify the device.
 //
 // These tests need a real Postgres and a real Mailpit. playwright.config.ts
 // checks both are reachable and sets E2E_AUTH_AVAILABLE; when they are not,
 // every test here skips with a clear message instead of failing.
 import { expect, test } from "@playwright/test";
 import { createMailpitClient } from "../lib/mailpit.js";
+import { enterRecoveryKey, saveRecoveryKey } from "../lib/recovery-key.js";
 
 const WEB_ORIGIN = "http://localhost:5173";
 const MAILPIT_UI_PORT = process.env.MAILPIT_UI_PORT ?? "8025";
@@ -39,6 +41,7 @@ test.describe("accounts", () => {
     await page.getByRole("button", { name: "Create account" }).click();
 
     await expect(page).toHaveURL(`${WEB_ORIGIN}/app`);
+    const recoveryKey = await saveRecoveryKey(page);
     await expect(page.getByText(user.displayName)).toBeVisible();
 
     // Reload: the session must survive from the stored tokens.
@@ -51,11 +54,13 @@ test.describe("accounts", () => {
     await page.getByRole("button", { name: "Sign out" }).click();
     await expect(page).toHaveURL(`${WEB_ORIGIN}/login`);
 
-    // Sign back in.
+    // Sign back in. This is a new device: it must enter the recovery key before it shows the app.
     await page.getByLabel("Email").fill(user.email);
     await page.getByLabel("Password").fill(user.password);
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(`${WEB_ORIGIN}/app`);
+    await expect(page.getByRole("heading", { name: "Verify this device" })).toBeVisible({ timeout: 30_000 });
+    await enterRecoveryKey(page, recoveryKey);
     await expect(page.getByText(user.displayName)).toBeVisible();
   });
 
@@ -68,6 +73,7 @@ test.describe("accounts", () => {
     await page.getByLabel("Password").fill(user.password);
     await page.getByRole("button", { name: "Create account" }).click();
     await expect(page).toHaveURL(`${WEB_ORIGIN}/app`);
+    await saveRecoveryKey(page);
 
     await page.getByRole("button", { name: "Open account settings" }).click();
     await page.getByRole("button", { name: "Sign out" }).click();
@@ -119,6 +125,7 @@ test.describe("accounts", () => {
     await page.getByLabel("Password").fill(user.password);
     await page.getByRole("button", { name: "Create account" }).click();
     await expect(page).toHaveURL(`${WEB_ORIGIN}/app`);
+    await saveRecoveryKey(page);
     await expect(page.getByText("Your email address is not verified yet.")).toBeVisible();
 
     const token = await mailpit.findHashLinkFor(user.email, "Confirm your email address", "token");

@@ -4,6 +4,7 @@
 // Needs a real Postgres (see auth.spec.ts): skips itself when it is not
 // reachable.
 import { expect, test, type APIRequestContext } from "@playwright/test";
+import { saveRecoveryKey } from "../lib/recovery-key.js";
 
 const WEB_ORIGIN = "http://localhost:5173";
 
@@ -42,6 +43,7 @@ test("the quick switcher, the channel keys and the help dialog work", async ({ p
   await page.getByLabel("Password").fill(user.password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/app(\/|$)/);
+  await saveRecoveryKey(page);
   await page.goto(`${WEB_ORIGIN}/app/${guild.id}/${general.id}`);
   const composer = page.getByRole("combobox", { name: "Write a message." });
   await expect(composer).toBeVisible({ timeout: 15_000 });

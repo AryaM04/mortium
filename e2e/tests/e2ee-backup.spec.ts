@@ -1,17 +1,18 @@
-// End-to-end tests of the key backup and of SAS device verification. A
-// new sign-in of the same user cannot read old messages. It becomes able
-// to read them after a restore with the recovery key, or after a SAS
-// verification from the first device.
+// End-to-end tests of the key backup and of SAS device verification. The
+// first device of a new account must save a recovery key. A new sign-in of
+// the same user sees the "Verify this device" screen in place of the app.
+// It reads the old messages after a restore with the recovery key, or
+// after a SAS verification from the first device.
 //
 // Needs a real Postgres (see auth.spec.ts): skips itself when it is not
 // reachable.
 import postgres from "postgres";
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Browser, type Page } from "@playwright/test";
+import { saveRecoveryKey } from "../lib/recovery-key.js";
 import { waitForCrypto } from "../lib/crypto-debug.js";
 import { E2E_DATABASE_NAME } from "../lib/ensure-e2e-db.js";
 
 const WEB_ORIGIN = "http://localhost:5173";
-const WAITING_TEXT = "This message cannot be read yet. The app asks for the key.";
 
 test.skip(
   process.env.E2E_AUTH_AVAILABLE !== "true",
@@ -76,8 +77,11 @@ async function backupSessionCount(userId: string): Promise<number> {
   }
 }
 
-/** One user with a guild, signed in on a first browser device that made the master key. */
-async function firstDevice(browser: import("@playwright/test").Browser, request: APIRequestContext) {
+/**
+ * One user with a guild, signed in on a first browser device that made the
+ * master key. The device must save a recovery key before it shows the app.
+ */
+async function firstDevice(browser: Browser, request: APIRequestContext) {
   const user = uniqueUser("A");
   const registered = await api(request, "/auth/register", undefined, user);
   const guild = await api(request, "/guilds", registered.accessToken, { name: "Backup Guild" });
@@ -85,59 +89,41 @@ async function firstDevice(browser: import("@playwright/test").Browser, request:
   const page = await (await browser.newContext()).newPage();
   await loginThroughUi(page, user);
   await waitForCrypto(page);
+  const recoveryKey = await saveRecoveryKey(page);
+  expect(recoveryKey).toMatch(/^([1-9A-HJ-NP-Za-km-z]{4} )+[1-9A-HJ-NP-Za-km-z]{1,4}$/);
   const channelUrl = `${WEB_ORIGIN}/app/${guild.id}/${channel.id}`;
   await page.goto(channelUrl);
-  return { user, userId: registered.user.id as string, page, channelUrl };
+  return { user, userId: registered.user.id as string, page, channelUrl, recoveryKey };
+}
+
+/** A second sign-in of the same user. It shows the "Verify this device" screen in place of the app. */
+async function newDevice(browser: Browser, user: TestUser): Promise<Page> {
+  const page = await (await browser.newContext()).newPage();
+  await loginThroughUi(page, user);
+  await waitForCrypto(page);
+  await expect(page.getByRole("heading", { name: "Verify this device" })).toBeVisible({ timeout: 20_000 });
+  return page;
 }
 
 test("a new device restores the history with the recovery key", async ({ browser, request }) => {
   test.setTimeout(120_000);
-  const { user, userId, page: first, channelUrl } = await firstDevice(browser, request);
+  const { user, userId, page: first, channelUrl, recoveryKey } = await firstDevice(browser, request);
   const secret = `backed up secret ${Date.now()}`;
   await sendMessage(first, secret);
   await expect(messageRow(first, secret)).toBeVisible();
-
-  // Set up the backup in Settings > Security. The user types the last group of the key again.
-  await first.getByRole("button", { name: "Open account settings" }).click();
-  await first.getByRole("button", { name: "Security: devices and secure backup" }).click();
-  const security = first.getByRole("dialog", { name: "Security" });
-  await expect(security.getByTestId("device-trust")).toHaveText(/^Verified\./);
-  await security.getByRole("button", { name: "Set up secure backup" }).click();
-  await security.getByRole("button", { name: "Make the recovery key" }).click();
-  const recoveryKey = (await security.getByTestId("recovery-key").textContent())!.trim();
-  expect(recoveryKey).toMatch(/^([1-9A-HJ-NP-Za-km-z]{4} )+[1-9A-HJ-NP-Za-km-z]{1,4}$/);
-  await security.getByLabel("Last group of the recovery key").fill("wrong");
-  await security.getByRole("button", { name: "Turn on the backup" }).click();
-  await expect(security.getByRole("alert")).toHaveText(/not the last group/);
-  await security.getByLabel("Last group of the recovery key").fill(recoveryKey.split(" ").at(-1)!);
-  await security.getByRole("button", { name: "Turn on the backup" }).click();
-  await expect(security.getByText("The backup is on.").first()).toBeVisible();
+  // The backup from the sign-up gets the new key in the background.
   await expect.poll(() => backupSessionCount(userId), { timeout: 20_000 }).toBeGreaterThanOrEqual(1);
-  await security.getByRole("button", { name: "Close" }).click();
-  await first.getByRole("dialog", { name: "Account settings" }).getByRole("button", { name: "Cancel" }).click();
 
-  // A second browser: a new device. It is not verified, so it cannot read the old message.
-  const second = await (await browser.newContext()).newPage();
-  await loginThroughUi(second, user);
-  await waitForCrypto(second);
+  // A second browser: a new device. A wrong key is rejected. The right key restores the history and verifies the device.
+  const second = await newDevice(browser, user);
+  await second.getByLabel("Recovery key").fill("1111 2222 3333");
+  await second.getByRole("button", { name: "Restore from backup" }).click();
+  await expect(second.getByRole("alert")).toHaveText(/not a valid recovery key/);
+  await second.getByLabel("Recovery key").fill(recoveryKey);
+  await second.getByRole("button", { name: "Restore from backup" }).click();
+  await expect(second.getByRole("heading", { name: "Verify this device" })).toHaveCount(0, { timeout: 30_000 });
   await second.goto(channelUrl);
-  await expect(second.getByText("Verify this device to read old messages.", { exact: false })).toBeVisible({ timeout: 20_000 });
-  await expect(messageRow(second, WAITING_TEXT)).toBeVisible({ timeout: 20_000 });
-
-  // A wrong key is rejected. The right key restores the history and verifies the device.
-  await second.getByRole("button", { name: "Use the recovery key" }).click();
-  const restore = second.getByRole("dialog", { name: "Security" });
-  await restore.getByLabel("Recovery key").fill("1111 2222 3333");
-  await restore.getByRole("button", { name: "Restore from backup" }).click();
-  await expect(restore.getByRole("alert")).toHaveText(/not a valid recovery key/);
-  await restore.getByLabel("Recovery key").fill(recoveryKey);
-  await restore.getByRole("button", { name: "Restore from backup" }).click();
-  await expect(restore.getByRole("status")).toHaveText(/The restore is complete: 1 message keys\. This device is verified now\./, {
-    timeout: 30_000,
-  });
-  await restore.getByRole("button", { name: "Close" }).click();
   await expect(messageRow(second, secret)).toBeVisible({ timeout: 20_000 });
-  await expect(second.getByText("Verify this device to read old messages.", { exact: false })).toHaveCount(0);
 
   // The restored device is signed, so the first device shares new keys with it at once.
   const after = `after the restore ${Date.now()}`;
@@ -152,14 +138,9 @@ test("the first device verifies a new device with SAS, and the new device reads 
   await sendMessage(first, secret);
   await expect(messageRow(first, secret)).toBeVisible();
 
-  const second = await (await browser.newContext()).newPage();
-  await loginThroughUi(second, user);
-  await waitForCrypto(second);
-  await second.goto(channelUrl);
-  await expect(messageRow(second, WAITING_TEXT)).toBeVisible({ timeout: 20_000 });
-
   // The new device asks. The first device accepts. Both show the same 7 emojis.
-  await second.getByRole("button", { name: "Verify with a different device" }).click();
+  const second = await newDevice(browser, user);
+  await second.getByRole("button", { name: "Verify with another device" }).click();
   const firstDialog = first.getByRole("dialog", { name: "Verification" });
   await firstDialog.getByRole("button", { name: "Accept" }).click();
   const secondDialog = second.getByRole("dialog", { name: "Verification" });
@@ -178,7 +159,8 @@ test("the first device verifies a new device with SAS, and the new device reads 
   await secondDialog.getByRole("button", { name: "Close" }).click();
   await firstDialog.getByRole("button", { name: "Close" }).click();
 
-  // Now verified, the new device asks again for the old key, and the first device answers.
+  // Now verified, the new device shows the app. It asks again for the old key, and the first device answers.
+  await expect(second.getByRole("heading", { name: "Verify this device" })).toHaveCount(0);
+  await second.goto(channelUrl);
   await expect(messageRow(second, secret)).toBeVisible({ timeout: 30_000 });
-  await expect(second.getByText("Verify this device to read old messages.", { exact: false })).toHaveCount(0);
 });

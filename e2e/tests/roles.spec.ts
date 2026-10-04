@@ -16,6 +16,7 @@
 // Needs a real Postgres (see auth.spec.ts): skips itself when it is not
 // reachable.
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { saveRecoveryKey } from "../lib/recovery-key.js";
 
 const WEB_ORIGIN = "http://localhost:5173";
 
@@ -101,6 +102,7 @@ async function loginThroughUi(page: Page, user: TestUser): Promise<void> {
   await page.getByLabel("Password").fill(user.password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/app(\/|$)/);
+  await saveRecoveryKey(page);
 }
 
 function composerBox(page: Page) {

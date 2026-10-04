@@ -5,6 +5,7 @@
 // Needs a real Postgres (see auth.spec.ts): skips itself when it is not
 // reachable.
 import { expect, test, type Page } from "@playwright/test";
+import { saveRecoveryKey } from "../lib/recovery-key.js";
 
 const WEB_ORIGIN = "http://localhost:5173";
 
@@ -31,6 +32,7 @@ async function registerThroughUi(page: Page, user: ReturnType<typeof uniqueUser>
   await page.getByLabel("Password").fill(user.password);
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(`${WEB_ORIGIN}/app`);
+  await saveRecoveryKey(page);
 }
 
 test.describe("guilds", () => {

@@ -1,7 +1,8 @@
 // The security settings: the verification state of this device and of
 // the other devices of the account, the key backup (set up, restore,
 // delete) and the identity reset. It loads only when it opens. See
-// docs/concepts/olm-megolm.md sections 4, 9 and 10.
+// docs/concepts/olm-megolm.md sections 4, 9 and 10. The security gate
+// (SecurityGate.tsx) uses the same backup, restore and reset parts.
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
 import type { OwnDevice } from "@mortium/client-core/crypto";
@@ -35,8 +36,21 @@ function Problem({ text }: { text: string | null }) {
 
 type SetupStep = { step: "idle" } | { step: "passphrase" } | { step: "show"; recoveryKey: string; create: () => Promise<void> } | { step: "done" };
 
-function BackupSetup() {
-  const [state, setState] = useState<SetupStep>({ step: "idle" });
+/** Save the recovery key as a text file. */
+function downloadKey(recoveryKey: string): void {
+  const url = URL.createObjectURL(new Blob([`Mortium recovery key
+${recoveryKey}
+`], { type: "text/plain" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "mortium-recovery-key.txt";
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Make the key backup. With `required`, it starts at the passphrase step and has no "Cancel". */
+export function BackupSetup({ required = false }: { required?: boolean }) {
+  const [state, setState] = useState<SetupStep>({ step: required ? "passphrase" : "idle" });
   const [passphrase, setPassphrase] = useState("");
   const [again, setAgain] = useState("");
   const [lastGroup, setLastGroup] = useState("");
@@ -101,9 +115,11 @@ function BackupSetup() {
         <input type="password" aria-label="Passphrase (optional)" placeholder="Passphrase (optional)" value={passphrase} onChange={(e) => setPassphrase(e.target.value)} className={field} style={fieldStyle} />
         <input type="password" aria-label="Type the passphrase again" placeholder="Type the passphrase again" value={again} onChange={(e) => setAgain(e.target.value)} className={field} style={fieldStyle} />
         <div className="flex justify-end gap-2">
-          <button type="button" className={button} onClick={() => setState({ step: "idle" })}>
-            Cancel
-          </button>
+          {!required && (
+            <button type="button" className={button} onClick={() => setState({ step: "idle" })}>
+              Cancel
+            </button>
+          )}
           <button type="button" className={button} style={primary} disabled={pending} onClick={() => void prepare()}>
             {pending ? "Making the key..." : "Make the recovery key"}
           </button>
@@ -121,14 +137,24 @@ function BackupSetup() {
       <code data-testid="recovery-key" className="rounded p-2 text-center font-mono text-sm" style={{ backgroundColor: "var(--color-bg-main)" }}>
         {state.recoveryKey}
       </code>
+      <div className="flex gap-3 text-sm">
+        <button type="button" className="underline" onClick={() => void navigator.clipboard?.writeText(state.recoveryKey)}>
+          Copy
+        </button>
+        <button type="button" className="underline" onClick={() => downloadKey(state.recoveryKey)}>
+          Download
+        </button>
+      </div>
       <label className="text-sm">
         Type the last group of the key to confirm that you wrote it down.
         <input aria-label="Last group of the recovery key" value={lastGroup} onChange={(e) => setLastGroup(e.target.value)} className={`${field} mt-1`} style={fieldStyle} />
       </label>
       <div className="flex justify-end gap-2">
-        <button type="button" className={button} onClick={() => setState({ step: "idle" })}>
-          Cancel
-        </button>
+        {!required && (
+          <button type="button" className={button} onClick={() => setState({ step: "idle" })}>
+            Cancel
+          </button>
+        )}
         <button type="button" className={button} style={primary} disabled={pending} onClick={() => void confirm(state.recoveryKey, state.create)}>
           Turn on the backup
         </button>
@@ -138,7 +164,7 @@ function BackupSetup() {
   );
 }
 
-function Restore() {
+export function Restore() {
   const [usePassphrase, setUsePassphrase] = useState(false);
   const [value, setValue] = useState("");
   const [pending, setPending] = useState(false);
@@ -197,7 +223,7 @@ function Restore() {
   );
 }
 
-function ResetIdentity() {
+export function ResetIdentity() {
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);

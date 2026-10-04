@@ -6,6 +6,7 @@
 // The STREAM_IN_USE rejection needs no real capture, so it always runs.
 // See docs/concepts/voice.md for the signaling design this test exercises.
 import { expect, test, type Page } from "@playwright/test";
+import { saveRecoveryKey } from "../lib/recovery-key.js";
 import { loadRootEnv } from "../env.js";
 
 loadRootEnv();
@@ -55,6 +56,7 @@ async function registerThroughUi(page: Page, user: ReturnType<typeof uniqueUser>
   await page.getByLabel("Password").fill(user.password);
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(`${WEB_ORIGIN}/app`);
+  await saveRecoveryKey(page);
 }
 
 async function createGuildWithInvite(page: Page, guildName: string): Promise<string> {

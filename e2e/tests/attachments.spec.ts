@@ -8,6 +8,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import postgres from "postgres";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { saveRecoveryKey } from "../lib/recovery-key.js";
 import { waitForCrypto } from "../lib/crypto-debug.js";
 import { E2E_DATABASE_NAME } from "../lib/ensure-e2e-db.js";
 
@@ -45,6 +46,7 @@ async function loginThroughUi(page: Page, user: ReturnType<typeof uniqueUser>): 
   await page.getByLabel("Password").fill(user.password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/app(\/|$)/);
+  await saveRecoveryKey(page);
 }
 
 /** Draw a 400 x 300 PNG in the page, so the test needs no image file. */

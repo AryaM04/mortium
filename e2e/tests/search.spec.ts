@@ -6,6 +6,7 @@
 // reachable.
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { seedMessages, waitForCrypto } from "../lib/crypto-debug.js";
+import { saveRecoveryKey } from "../lib/recovery-key.js";
 
 const WEB_ORIGIN = "http://localhost:5173";
 
@@ -59,6 +60,7 @@ test("search finds a message, the filters work, and a click shows the message", 
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/app(\/|$)/);
   await waitForCrypto(page);
+  await saveRecoveryKey(page);
   await page.goto(`${WEB_ORIGIN}/app/${guild.id}/${random.id}`);
 
   // The oldest message of #general is far above the first page (50 events).
@@ -114,6 +116,7 @@ test("a jump keeps the message on the screen when the next page loads", async ({
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/app(\/|$)/);
   await waitForCrypto(page);
+  await saveRecoveryKey(page);
   await page.goto(`${WEB_ORIGIN}/app/${guild.id}/${random.id}`);
   const fillers = Array.from({ length: 55 }, (_, i) => `filler number ${i}`);
   await seedMessages(page, general.id, ["The pancake recipe is here", ...fillers]);
