@@ -225,7 +225,9 @@ export function Composer(props: ComposerProps) {
 
   // Close the mention listbox and cancel any pending search when the
   // channel changes, so a stale query from another channel never shows.
+  // Clear the text too: a draft or an edit belongs to one channel (UI-03).
   useEffect(() => {
+    setText("");
     closeMentionMenu();
     // Files belong to one channel. Cancel the uploads when the channel changes.
     setUploads((current) => {

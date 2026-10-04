@@ -178,7 +178,6 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
           <MessageAnnouncer channelId={channelId} guildId={guildId} />
           <TypingIndicator channelId={channelId} guildId={guildId} />
           <Composer
-            key={channelId}
             channelId={channelId}
             guildId={guildId}
             dmRecipients={dmChannel?.recipients}
