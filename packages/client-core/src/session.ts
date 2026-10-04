@@ -14,7 +14,7 @@ import {
   type UpdateMeRequest,
   type User,
 } from "@mortium/shared";
-import { createApiClient, type ApiClient, type TokenSet } from "./api.js";
+import { ApiError, createApiClient, type ApiClient, type TokenSet } from "./api.js";
 import type { Platform } from "./platform.js";
 
 export type SessionStatus = "loading" | "signedOut" | "signedIn";
@@ -86,23 +86,53 @@ export function createSession(options: CreateSessionOptions): Session {
     channel?.postMessage({ type: "signed-in" } satisfies BroadcastMessage);
   }
 
+  // The wait times, in ms, between the tries to load the user.
+  // The last time repeats.
+  const RETRY_DELAYS = [1_000, 2_000, 5_000, 10_000, 30_000];
+
   const store = createStore<SessionStore>((set, get) => {
+    // The number of the latest restore. A newer restore stops the older one.
+    let restoreCount = 0;
+
     async function fetchMe(): Promise<void> {
       const user = await apiClient.request<User>("GET", "/users/@me", { schema: meResultSchema });
       set({ status: "signedIn", user });
     }
 
     async function clearSession(): Promise<void> {
+      restoreCount++;
       await apiClient.setTokens(null);
       set({ status: "signedOut", user: null, deviceId: null });
       channel?.postMessage({ type: "signed-out" } satisfies BroadcastMessage);
     }
 
+    // Load the user of the stored tokens. Clear the session only when the
+    // server rejects the tokens. After a network error or a server error,
+    // keep the tokens and try again, because the tokens are still good.
+    async function restore(deviceId: string): Promise<void> {
+      const id = ++restoreCount;
+      set({ deviceId });
+      for (let attempt = 0; id === restoreCount; attempt++) {
+        try {
+          await fetchMe();
+          return;
+        } catch (error) {
+          if (error instanceof ApiError && error.status === 401) {
+            await clearSession();
+            return;
+          }
+        }
+        const delay = RETRY_DELAYS[Math.min(attempt, RETRY_DELAYS.length - 1)];
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+
     channel?.addEventListener("message", (event: MessageEvent<BroadcastMessage>) => {
       if (event.data.type === "signed-out" && get().status !== "signedOut") {
+        restoreCount++;
         set({ status: "signedOut", user: null, deviceId: null });
       } else if (event.data.type === "signed-in" && get().status !== "signedIn") {
-        void fetchMe().catch(() => clearSession());
+        void apiClient.getTokens().then((tokens) => tokens && restore(tokens.deviceId));
       }
     });
 
@@ -117,12 +147,7 @@ export function createSession(options: CreateSessionOptions): Session {
           set({ status: "signedOut", user: null, deviceId: null });
           return;
         }
-        set({ deviceId: tokens.deviceId });
-        try {
-          await fetchMe();
-        } catch {
-          await clearSession();
-        }
+        await restore(tokens.deviceId);
       },
 
       async register(input) {

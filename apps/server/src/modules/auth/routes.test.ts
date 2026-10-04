@@ -1,8 +1,11 @@
 // Integration tests for the auth routes. They use a real Postgres database
 // (see test/db.ts) and a fake mailer, and drive the app through app.inject.
 import type { FastifyInstance } from "fastify";
+import { eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, expect, it } from "vitest";
 import { buildApp } from "../../app.js";
+import { refreshTokens } from "../../db/schema.js";
+import { hashRefreshToken } from "./tokens.js";
 import { createFakeMailer, type FakeMailer } from "../../mailer.js";
 import { createTestDb, describeWithDb, type TestDb } from "../../../test/db.js";
 import { buildTestConfig } from "../../../test/helpers.js";
@@ -147,7 +150,26 @@ describeWithDb("auth routes", () => {
     expect(body.refreshToken).not.toBe(refreshToken);
     expect(typeof body.accessToken).toBe("string");
 
-    // The old token cannot be used again.
+    // A client can lose the reply and send the old token again. The old
+    // token works for a short time and the device stays signed in.
+    const retryResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/refresh",
+      payload: { refreshToken },
+    });
+    expect(retryResponse.statusCode).toBe(200);
+    const nextResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/refresh",
+      payload: { refreshToken: body.refreshToken },
+    });
+    expect(nextResponse.statusCode).toBe(200);
+
+    // After the grace time, the old token is a theft alarm.
+    await testDb.db
+      .update(refreshTokens)
+      .set({ revokedAt: new Date(Date.now() - 60_000) })
+      .where(eq(refreshTokens.tokenHash, hashRefreshToken(refreshToken)));
     const reuseResponse = await app.inject({
       method: "POST",
       url: "/api/v1/auth/refresh",
@@ -155,9 +177,15 @@ describeWithDb("auth routes", () => {
     });
     expect(reuseResponse.statusCode).toBe(401);
     expect(reuseResponse.json().error.code).toBe("TOKEN_REUSED");
+    const revokedResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/refresh",
+      payload: { refreshToken: nextResponse.json().refreshToken },
+    });
+    expect(revokedResponse.statusCode).toBe(401);
   });
 
-  it("lets only one of two parallel refreshes with the same token succeed", async () => {
+  it("lets two parallel refreshes with the same token both succeed", async () => {
     const registerResponse = await register("hank@example.com", "hank");
     const { refreshToken } = registerResponse.json();
 
@@ -166,8 +194,7 @@ describeWithDb("auth routes", () => {
       app.inject({ method: "POST", url: "/api/v1/auth/refresh", payload: { refreshToken } }),
     ]);
 
-    const codes = [first.statusCode, second.statusCode].sort();
-    expect(codes).toEqual([200, 401]);
+    expect([first.statusCode, second.statusCode]).toEqual([200, 200]);
   });
 
   it("rejects an unknown refresh token", async () => {

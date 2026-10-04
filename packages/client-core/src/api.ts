@@ -139,10 +139,11 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
    * token first: another tab may already have rotated it, in which case
    * we reuse its result instead of calling the server a second time,
    * since the server treats a second use of a rotated refresh token as
-   * theft (TOKEN_REUSED) and signs the device out.
+   * theft (TOKEN_REUSED) and signs the device out. The browser has no
+   * lock on a plain-http address. There, run the refresh with no lock.
    */
   async function refresh(tokensBeforeRefresh: TokenSet): Promise<TokenSet> {
-    return navigator.locks.request("auth-refresh", async () => {
+    const refreshOnce = async (): Promise<TokenSet> => {
       const current = await getTokens();
       if (!current) {
         throw new ApiError(401, "SIGNED_OUT", "The session was signed out.");
@@ -172,7 +173,8 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       };
       await setTokens(next);
       return next;
-    });
+    };
+    return navigator.locks ? navigator.locks.request("auth-refresh", refreshOnce) : refreshOnce();
   }
 
   async function request<T>(method: string, path: string, requestOptions: RequestOptions<T> = {}): Promise<T> {

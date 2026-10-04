@@ -10,6 +10,10 @@ import { settingsStore } from "./settings.js";
 
 export const HOME_PATH = "/app/@me";
 
+// The ids of the group DMs that the user is leaving now. The Home view
+// shows no "no longer in this conversation" notice for these.
+export const leftDmIds = new Set<string>();
+
 export function dmPath(channelId: string): string {
   return `${HOME_PATH}/${channelId}`;
 }

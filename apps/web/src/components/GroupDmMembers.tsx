@@ -8,6 +8,7 @@ import { Avatar } from "./Avatar.js";
 import { PickFriendsDialog } from "./PickFriendsDialog.js";
 import { session } from "../lib/session.js";
 import { describeError } from "../lib/errors.js";
+import { leftDmIds } from "../lib/dms.js";
 import { useRealtime } from "../lib/useRealtime.js";
 import { presenceUiStore } from "../lib/presence.js";
 
@@ -41,6 +42,16 @@ export default function GroupDmMembers({ channel }: { channel: DmChannelJson }) 
       await action();
     } catch (err) {
       setError(describeError(err));
+    }
+  }
+
+  async function leaveGroup(): Promise<void> {
+    leftDmIds.add(channel.id);
+    try {
+      await removeDmRecipient(session.apiClient, channel.id, selfUserId ?? "");
+    } catch (err) {
+      leftDmIds.delete(channel.id);
+      throw err;
     }
   }
 
@@ -111,7 +122,7 @@ export default function GroupDmMembers({ channel }: { channel: DmChannelJson }) 
               </button>
               <button
                 type="button"
-                onClick={() => void run(() => removeDmRecipient(session.apiClient, channel.id, selfUserId ?? ""))}
+                onClick={() => void run(leaveGroup)}
                 className="rounded px-2 py-1 text-xs font-medium"
                 style={{ backgroundColor: "var(--color-danger)", color: "white" }}
               >

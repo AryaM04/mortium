@@ -64,3 +64,38 @@ describe("session sign-in", () => {
     await expect(tokenAtSignIn!).resolves.toBe("access");
   });
 });
+
+describe("session start", () => {
+  it("keeps the tokens after a network error and tries again", async () => {
+    const platform = slowPlatform();
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () =>
+        new Response(JSON.stringify(AUTH_RESULT), { status: 200, headers: { "content-type": "application/json" } }),
+    );
+    const first = createSession({ baseUrl: "/api/v1", platform });
+    await first.store.getState().login({ email: "alice@example.test", password: "correct-horse-battery-staple" });
+
+    // A new start of the app: the server cannot be reached at first.
+    fetchMock.mockReset();
+    fetchMock.mockRejectedValueOnce(new TypeError("fetch failed")).mockImplementation(
+      async () =>
+        new Response(JSON.stringify(AUTH_RESULT.user), { status: 200, headers: { "content-type": "application/json" } }),
+    );
+    vi.useFakeTimers();
+    try {
+      const { store, apiClient } = createSession({ baseUrl: "/api/v1", platform });
+      const started = store.getState().init();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(store.getState().status).toBe("loading");
+      expect((await apiClient.getTokens())?.refreshToken).toBe("refresh");
+
+      await vi.advanceTimersByTimeAsync(1_000);
+      await started;
+      expect(store.getState().status).toBe("signedIn");
+      expect(store.getState().deviceId).toBe("device-1");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

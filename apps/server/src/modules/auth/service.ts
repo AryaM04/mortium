@@ -31,6 +31,9 @@ export interface AuthDeps {
   log?: { warn(details: object, message: string): void };
 }
 
+// The time after a rotation in which the old refresh token still works.
+const REFRESH_GRACE_MS = 30_000;
+
 // A constant hash, verified against when the user does not exist or has no
 // password. This keeps the login timing path the same in every case, so an
 // attacker cannot tell a missing account from a wrong password by timing.
@@ -239,54 +242,89 @@ export async function refreshSession(deps: AuthDeps, refreshToken: string): Prom
   const newTokenHash = hashRefreshToken(newRefreshToken);
   const newExpiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-  // A single conditional UPDATE, guarded by revoked_at IS NULL and the
-  // expiry. Of two parallel calls with the same token, only one matches
-  // this WHERE clause and gets a row back; the database serializes it.
-  const rotated = await db
-    .update(refreshTokens)
-    .set({ revokedAt: now })
-    .where(
-      and(eq(refreshTokens.tokenHash, tokenHash), isNull(refreshTokens.revokedAt), gt(refreshTokens.expiresAt, now)),
-    )
-    .returning({
-      userId: refreshTokens.userId,
-      deviceId: refreshTokens.deviceId,
-    });
+  // The revoke of the old token and the insert of the new token are one
+  // transaction. A fault cannot leave a device with no valid token.
+  const outcome = await db.transaction(async (tx) => {
+    const insertNewToken = (userId: bigint, deviceId: string) =>
+      tx.insert(refreshTokens).values({
+        id: nextId(),
+        userId,
+        deviceId,
+        tokenHash: newTokenHash,
+        expiresAt: newExpiresAt,
+        revokedAt: null,
+      });
 
-  const rotatedRow = rotated[0];
+    // A single conditional UPDATE, guarded by revoked_at IS NULL and the
+    // expiry. Of two parallel calls with the same token, only one matches
+    // this WHERE clause and gets a row back; the database serializes it.
+    const rotated = await tx
+      .update(refreshTokens)
+      .set({ revokedAt: now })
+      .where(
+        and(eq(refreshTokens.tokenHash, tokenHash), isNull(refreshTokens.revokedAt), gt(refreshTokens.expiresAt, now)),
+      )
+      .returning({
+        userId: refreshTokens.userId,
+        deviceId: refreshTokens.deviceId,
+      });
+    const rotatedRow = rotated[0];
+    if (rotatedRow) {
+      await insertNewToken(rotatedRow.userId, rotatedRow.deviceId);
+      return { kind: "rotated" as const, ...rotatedRow };
+    }
 
-  if (!rotatedRow) {
-    const existing = await db
-      .select({ deviceId: refreshTokens.deviceId, revokedAt: refreshTokens.revokedAt })
+    const existing = await tx
+      .select({ userId: refreshTokens.userId, deviceId: refreshTokens.deviceId, revokedAt: refreshTokens.revokedAt })
       .from(refreshTokens)
       .where(eq(refreshTokens.tokenHash, tokenHash))
       .limit(1);
     const existingRow = existing[0];
-
-    if (existingRow && existingRow.revokedAt !== null) {
-      // The token was already used once. It may be stolen: revoke every
-      // refresh token of this device, so a copied token cannot be reused.
-      await db
-        .update(refreshTokens)
-        .set({ revokedAt: now })
-        .where(and(eq(refreshTokens.deviceId, existingRow.deviceId), isNull(refreshTokens.revokedAt)));
-      await retireDeviceKeys(deps, [existingRow.deviceId]);
-      throw new AppError(401, "TOKEN_REUSED", "This refresh token was already used. All sessions on this device are signed out.");
+    if (!existingRow || existingRow.revokedAt === null) {
+      return { kind: "invalid" as const };
     }
 
+    // A client can lose the reply of a refresh and send the old token again.
+    // Accept the old token for a short time after the rotation, but only
+    // while the device still has a valid token. A sign-out or a theft
+    // alarm revokes all tokens of the device, so these never match.
+    if (now.getTime() - existingRow.revokedAt.getTime() < REFRESH_GRACE_MS) {
+      const successor = await tx
+        .select({ id: refreshTokens.id })
+        .from(refreshTokens)
+        .where(
+          and(
+            eq(refreshTokens.deviceId, existingRow.deviceId),
+            isNull(refreshTokens.revokedAt),
+            gt(refreshTokens.expiresAt, now),
+          ),
+        )
+        .limit(1);
+      if (successor.length > 0) {
+        await insertNewToken(existingRow.userId, existingRow.deviceId);
+        return { kind: "rotated" as const, userId: existingRow.userId, deviceId: existingRow.deviceId };
+      }
+    }
+
+    // The token was already used once, and not just now. It may be stolen:
+    // revoke every refresh token of this device, so a copied token cannot
+    // be reused.
+    await tx
+      .update(refreshTokens)
+      .set({ revokedAt: now })
+      .where(and(eq(refreshTokens.deviceId, existingRow.deviceId), isNull(refreshTokens.revokedAt)));
+    return { kind: "reused" as const, deviceId: existingRow.deviceId };
+  });
+
+  if (outcome.kind === "invalid") {
     throw new AppError(401, "INVALID_REFRESH_TOKEN", "The refresh token is not valid or has expired.");
   }
+  if (outcome.kind === "reused") {
+    await retireDeviceKeys(deps, [outcome.deviceId]);
+    throw new AppError(401, "TOKEN_REUSED", "This refresh token was already used. All sessions on this device are signed out.");
+  }
 
-  const { userId, deviceId } = rotatedRow;
-
-  await db.insert(refreshTokens).values({
-    id: nextId(),
-    userId,
-    deviceId,
-    tokenHash: newTokenHash,
-    expiresAt: newExpiresAt,
-    revokedAt: null,
-  });
+  const { userId, deviceId } = outcome;
 
   const { accessToken, accessTokenExpiresAt } = await signAccessToken(config.jwtSecret, {
     userId,

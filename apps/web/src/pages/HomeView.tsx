@@ -5,7 +5,7 @@ import { useLocation } from "wouter";
 import { DmColumn } from "../components/DmColumn.js";
 import { ChatPane } from "../components/ChatPane.js";
 import { useRealtime } from "../lib/useRealtime.js";
-import { HOME_PATH, unhideDm } from "../lib/dms.js";
+import { HOME_PATH, leftDmIds, unhideDm } from "../lib/dms.js";
 import { showNotice } from "../lib/notice.js";
 
 // The Friends page loads only when it opens, to keep the main bundle small.
@@ -20,7 +20,8 @@ export function HomeView({ channelId }: { channelId: string | null }) {
   const channel = useRealtime((s) => (channelId ? s.privateChannels[channelId] : undefined));
   const sessionId = useRealtime((s) => s.sessionId);
   const [, navigate] = useLocation();
-  const wasLoadedRef = useRef(false);
+  // The id of the DM that was loaded last. Only that DM can be "lost".
+  const loadedChannelIdRef = useRef<string | null>(null);
 
   // An opened DM shows in the list again, also when the user closed it before.
   useEffect(() => {
@@ -32,16 +33,19 @@ export function HomeView({ channelId }: { channelId: string | null }) {
   // The user left the group, or the owner removed the user: go back to Home.
   useEffect(() => {
     if (channel) {
-      wasLoadedRef.current = true;
+      loadedChannelIdRef.current = channel.id;
       return;
     }
-    if (wasLoadedRef.current) {
-      wasLoadedRef.current = false;
-      showNotice("You are no longer in this conversation.");
-      navigate(HOME_PATH);
+    if (channelId && channelId === loadedChannelIdRef.current) {
+      loadedChannelIdRef.current = null;
+      // The user knows about a group that the user left. Show no notice then.
+      if (!leftDmIds.delete(channelId)) {
+        showNotice("You are no longer in this conversation.");
+      }
+      navigate(HOME_PATH, { replace: true });
     } else if (channelId && sessionId) {
       // The first READY came and has no such DM.
-      navigate(HOME_PATH);
+      navigate(HOME_PATH, { replace: true });
     }
   }, [channel, channelId, sessionId, navigate]);
 
