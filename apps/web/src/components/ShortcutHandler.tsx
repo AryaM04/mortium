@@ -2,7 +2,7 @@
 // until a shortcut opens a dialog. The dialogs load at that time.
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { navigate } from "wouter/use-browser-location";
-import { isChannelUnread, isDmHidden, sortDmChannels } from "@morticord/client-core";
+import { isChannelUnread, isDmHidden, sortDmChannels } from "@mortium/client-core";
 import { realtimeStore } from "../lib/realtime.js";
 import { messagesStore } from "../lib/messages.js";
 import { settingsStore } from "../lib/settings.js";

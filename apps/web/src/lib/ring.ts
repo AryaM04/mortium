@@ -4,7 +4,7 @@
 // ring sound" setting is on. The audio context closes when the ring stops.
 import { createStore } from "zustand/vanilla";
 import { useStore } from "zustand";
-import { playRingSoundOf } from "@morticord/client-core";
+import { playRingSoundOf } from "@mortium/client-core";
 import { realtimeStore } from "./realtime.js";
 import { settingsStore } from "./settings.js";
 import { voiceStore } from "./voice.js";

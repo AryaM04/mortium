@@ -52,7 +52,7 @@ if (!authInfraAvailable) {
   await ensureE2eDatabase({
     host: process.env.POSTGRES_HOST ?? "localhost",
     port: postgresPort,
-    user: process.env.POSTGRES_USER ?? "morticord",
+    user: process.env.POSTGRES_USER ?? "mortium",
     password: process.env.POSTGRES_PASSWORD ?? "",
   });
 }
@@ -78,7 +78,7 @@ const webServers: WebServerEntry[] = [
 if (authInfraAvailable) {
   webServers.push(
     {
-      command: "pnpm --filter @morticord/server dev",
+      command: "pnpm --filter @mortium/server dev",
       url: `http://localhost:${apiPort}/api/v1/health`,
       reuseExistingServer: false,
       cwd: repoRoot,
@@ -87,7 +87,7 @@ if (authInfraAvailable) {
       env: {
         ...process.env,
         API_PORT: String(apiPort),
-        POSTGRES_DB: "morticord_e2e",
+        POSTGRES_DB: "mortium_e2e",
         AUTH_RATE_LIMIT_PER_MINUTE: "1000",
         // attachments.spec.ts reads the stored files here.
         DATA_DIR: E2E_DATA_DIR,
@@ -98,7 +98,7 @@ if (authInfraAvailable) {
       timeout: 30_000,
     },
     {
-      command: "pnpm --filter @morticord/web dev",
+      command: "pnpm --filter @mortium/web dev",
       url: `http://localhost:${WEB_PORT}`,
       // A reused web server can proxy to an API server with another database.
       reuseExistingServer: false,

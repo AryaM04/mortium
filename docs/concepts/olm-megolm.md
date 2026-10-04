@@ -746,12 +746,12 @@ Each message has `txnId` (16 random bytes, base64url).
    responder checks the commitment. Thus neither device can choose its
    key after it saw the other key.
 5. Both devices show 7 emojis: vodozemac SAS bytes with the info
-   `MORTICORD_SAS_EMOJI_V1|<initiator userId>|<deviceId>|<key>|<responder userId>|<deviceId>|<key>|<txnId>`,
+   `MORTIUM_SAS_EMOJI_V1|<initiator userId>|<deviceId>|<key>|<responder userId>|<deviceId>|<key>|<txnId>`,
    and the Matrix emoji table.
 6. The user clicks "They match". The device sends `mac`: a MAC of its
    Ed25519 key (key id `ed25519:<deviceId>`), a MAC of the master key of
    its user (key id `master`), and a MAC of the sorted key ids. The MAC
-   info is `MORTICORD_SAS_MAC_V1|<sender userId>|<deviceId>|<receiver userId>|<deviceId>|<txnId>|<keyId>`.
+   info is `MORTIUM_SAS_MAC_V1|<sender userId>|<deviceId>|<receiver userId>|<deviceId>|<txnId>|<keyId>`.
 7. The receiver checks each MAC with the keys in its device list. The
    master MAC must match the trusted master key or the new key of an
    identity change. For a different user, the master MAC is necessary.

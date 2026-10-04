@@ -6,8 +6,8 @@
 // DM header, and shows the call view above the messages during a DM call.
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "zustand";
-import { dmOtherRecipients, needsStaleRefetch, type AggregatedMessage } from "@morticord/client-core";
-import { Permission, hasPermission } from "@morticord/shared";
+import { dmOtherRecipients, needsStaleRefetch, type AggregatedMessage } from "@mortium/client-core";
+import { Permission, hasPermission } from "@mortium/shared";
 import { ConnectionBanner } from "./ConnectionBanner.js";
 import { Composer, type EditTarget, type ReplyTarget } from "./Composer.js";
 import { MessageList } from "./MessageList.js";
@@ -18,7 +18,7 @@ import { DmHeader } from "./DmHeader.js";
 import { useRealtime } from "../lib/useRealtime.js";
 import { useMessages } from "../lib/useMessages.js";
 import { messagesStore } from "../lib/messages.js";
-import { selfChannelPermissions } from "@morticord/client-core";
+import { selfChannelPermissions } from "@mortium/client-core";
 import { displayNameOf } from "../lib/members.js";
 import { voiceStore } from "../lib/voice.js";
 import { jumpStore } from "../lib/jump.js";

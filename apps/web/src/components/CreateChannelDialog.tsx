@@ -1,8 +1,8 @@
 // Create a channel (text or voice, optionally inside a category) or a
 // category (no parent, no type choice).
 import { useEffect, useRef, useState } from "react";
-import { channelNameSchema, type ChannelJson } from "@morticord/shared";
-import { createChannel } from "@morticord/client-core";
+import { channelNameSchema, type ChannelJson } from "@mortium/shared";
+import { createChannel } from "@mortium/client-core";
 import { session } from "../lib/session.js";
 import { describeError } from "../lib/errors.js";
 import { realtimeStore } from "../lib/realtime.js";

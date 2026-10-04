@@ -8,8 +8,8 @@ import {
   type GatewayClient,
   type GatewayDispatch,
   type GatewayState,
-} from "@morticord/client-core";
-import { GatewayOpcode } from "@morticord/shared";
+} from "@mortium/client-core";
+import { GatewayOpcode } from "@mortium/shared";
 import { session } from "./session.js";
 import { messagesStore } from "./messages.js";
 import { gatewayUrl } from "./server-url.js";

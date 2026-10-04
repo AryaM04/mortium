@@ -5,7 +5,7 @@
 // Every WebRTC and Web Audio object is a small hand-written fake; no real
 // network or DOM is used.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { VoiceStateJson } from "@morticord/shared";
+import type { VoiceStateJson } from "@mortium/shared";
 import {
   ADAPTIVE_TICK_MS,
   comparePeerKeys,

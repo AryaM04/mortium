@@ -1,12 +1,12 @@
 # electron-builder config of the Linux app: an AppImage and a deb package
-# for x64 (arm64 with --arm64). Run "pnpm --filter @morticord/desktop-electron package".
-appId: com.morticord.desktop
+# for x64 (arm64 with --arm64). Run "pnpm --filter @mortium/desktop-electron package".
+appId: com.mortium.desktop
 # No space in the product name: the deb installs to /opt/<product name>, and the
 # SUID sandbox helper of Chromium cannot start an app from a path with a space.
 # The desktop file keeps the name with a space (linux.desktop below).
-productName: morticord
-executableName: morticord
-artifactName: morticord-${version}-${arch}.${ext}
+productName: mortium
+executableName: mortium
+artifactName: mortium-${version}-${arch}.${ext}
 copyright: Copyright © 2026 Arya Mortazavi
 directories:
   output: release
@@ -26,8 +26,8 @@ extraResources:
 # uiohook-napi has prebuilt N-API binaries, which work in every Electron version.
 npmRebuild: false
 protocols:
-  - name: Morticord
-    schemes: [morticord]
+  - name: Mortium
+    schemes: [mortium]
 linux:
   target: [AppImage, deb]
   category: Network
@@ -37,7 +37,7 @@ linux:
   syncDesktopName: true
   desktop:
     entry:
-      Name: Morticord
+      Name: Mortium
 deb:
   # The default list of electron-builder, and: libasound2 (audio of Chromium), libxt6 and
   # libxrandr2 (the push-to-talk key hook). libsecret gives safeStorage the key ring.
@@ -57,7 +57,7 @@ deb:
 publish:
   provider: github
   owner: AryaM04
-  repo: morticord
+  repo: mortium
   releaseType: draft
 electronFuses:
   runAsNode: false

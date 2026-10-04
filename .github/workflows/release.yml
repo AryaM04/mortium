@@ -171,7 +171,7 @@ jobs:
           projectPath: apps/desktop-tauri
           tauriScript: pnpm exec tauri
           tagName: v${{ needs.plan.outputs.version }}
-          releaseName: Morticord v${{ needs.plan.outputs.version }}
+          releaseName: Mortium v${{ needs.plan.outputs.version }}
           commitish: ${{ needs.plan.outputs.sha }}
           releaseBody: See the assets below for the Windows and macOS installers.
           releaseDraft: true
@@ -229,7 +229,7 @@ jobs:
       - name: Build the AppImage and the deb package
         working-directory: apps/desktop-electron
         run: |
-          pnpm --filter @morticord/web build
+          pnpm --filter @mortium/web build
           node build.mjs
           pnpm exec electron-builder --linux AppImage deb --publish never
 
@@ -238,7 +238,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if ! gh release view "$TAG" > /dev/null 2>&1; then
-            gh release create "$TAG" --draft --target "${{ needs.plan.outputs.sha }}" --title "Morticord $TAG" --notes "See the assets below for the Windows, macOS and Linux installers."
+            gh release create "$TAG" --draft --target "${{ needs.plan.outputs.sha }}" --title "Mortium $TAG" --notes "See the assets below for the Windows, macOS and Linux installers."
           fi
           cd apps/desktop-electron/release
           gh release upload "$TAG" ./*.AppImage ./*.deb latest-linux.yml --clobber

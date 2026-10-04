@@ -2,7 +2,7 @@
 // never in the path or query string, so it never reaches a server log).
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useLocation } from "wouter";
-import { resetPasswordRequestSchema } from "@morticord/shared";
+import { resetPasswordRequestSchema } from "@mortium/shared";
 import { AuthLayout } from "../components/AuthLayout.js";
 import { FormField } from "../components/FormField.js";
 import { describeError } from "../lib/errors.js";

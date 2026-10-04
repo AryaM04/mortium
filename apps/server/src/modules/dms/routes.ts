@@ -2,7 +2,7 @@
 // The rename route, PATCH /channels/:id, lives with the guild channel routes,
 // because both kinds of channel share that path.
 import type { FastifyInstance } from "fastify";
-import { createDmRequestSchema } from "@morticord/shared";
+import { createDmRequestSchema } from "@mortium/shared";
 import type { AppDeps } from "../../app.js";
 import { AppError } from "../../errors.js";
 import { addRecipient, createDm, listDmChannels, removeRecipient } from "./service.js";

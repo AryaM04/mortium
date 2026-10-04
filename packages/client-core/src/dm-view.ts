@@ -1,6 +1,6 @@
 // Small view helpers for DMs and group DMs: the other people, the name
 // to show, and the order of the DM list.
-import type { DmChannelJson, User } from "@morticord/shared";
+import type { DmChannelJson, User } from "@mortium/shared";
 import { compareIds } from "./messages-store.js";
 
 /** The people in a DM other than the signed-in user. */

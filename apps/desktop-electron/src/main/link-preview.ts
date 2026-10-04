@@ -2,8 +2,8 @@
 // its image with the same code and the same address rules as the server
 // (packages/link-preview-fetch), so a link cannot reach the private
 // network of the user. The fetch never logs the URL.
-import { createLinkPreviewFetcher, LinkPreviewError, type LinkPreviewFetcher } from "@morticord/link-preview-fetch";
-import type { DesktopLinkPreview } from "@morticord/shared";
+import { createLinkPreviewFetcher, LinkPreviewError, type LinkPreviewFetcher } from "@mortium/link-preview-fetch";
+import type { DesktopLinkPreview } from "@mortium/shared";
 
 export function createLinkPreview(fetcher: LinkPreviewFetcher = createLinkPreviewFetcher()) {
   /** The preview of a link, or null when the page has no preview or the link is not allowed. */

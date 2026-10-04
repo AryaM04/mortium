@@ -4,7 +4,7 @@
 // know or care which one. Old development data can have events with the
 // plaintext codec `plain-v1`. The client can still read them, but it never
 // makes one.
-import { decodeBase64Url, decodePlainPayload, type DecryptedPayload, type EventJson } from "@morticord/shared";
+import { decodeBase64Url, decodePlainPayload, type DecryptedPayload, type EventJson } from "@mortium/shared";
 
 /**
  * The result of decoding one event's ciphertext back to a payload. When

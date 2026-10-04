@@ -3,7 +3,7 @@
 // guild. A right-click on a guild icon sets its notification level.
 import { useState } from "react";
 import { Link } from "wouter";
-import { aggregateGuildUnread, countUnreadMessages, formatBadgeCount } from "@morticord/client-core";
+import { aggregateGuildUnread, countUnreadMessages, formatBadgeCount } from "@mortium/client-core";
 import { useRealtime } from "../lib/useRealtime.js";
 import { useMessages } from "../lib/useMessages.js";
 import { CreateOrJoinGuildDialog } from "./CreateOrJoinGuildDialog.js";

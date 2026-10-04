@@ -63,7 +63,7 @@ function messageRow(page: Page, text: string) {
 }
 
 async function backupSessionCount(userId: string): Promise<number> {
-  const user = process.env.POSTGRES_USER ?? "morticord";
+  const user = process.env.POSTGRES_USER ?? "mortium";
   const password = encodeURIComponent(process.env.POSTGRES_PASSWORD ?? "");
   const host = process.env.POSTGRES_HOST ?? "localhost";
   const port = process.env.POSTGRES_PORT ?? "5432";

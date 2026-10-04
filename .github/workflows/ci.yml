@@ -12,18 +12,18 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: morticord
-          POSTGRES_PASSWORD: morticord
-          POSTGRES_DB: morticord
+          POSTGRES_USER: mortium
+          POSTGRES_PASSWORD: mortium
+          POSTGRES_DB: mortium
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U morticord"
+          --health-cmd "pg_isready -U mortium"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
     env:
-      TEST_DATABASE_URL: postgres://morticord:morticord@localhost:5432/postgres
+      TEST_DATABASE_URL: postgres://mortium:mortium@localhost:5432/postgres
     steps:
       - name: Check out the code
         uses: actions/checkout@v5
@@ -119,13 +119,13 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: morticord
+          POSTGRES_USER: mortium
           POSTGRES_PASSWORD: change-me
-          POSTGRES_DB: morticord
+          POSTGRES_DB: mortium
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U morticord"
+          --health-cmd "pg_isready -U mortium"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -154,7 +154,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install the Playwright browser
-        run: pnpm --filter @morticord/e2e exec playwright install --with-deps chromium
+        run: pnpm --filter @mortium/e2e exec playwright install --with-deps chromium
 
       - name: Copy the environment file
         # On Linux, 127.0.0.1 in the container is not the host. Coturn must
@@ -215,7 +215,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install the Playwright browser
-        run: pnpm --filter @morticord/e2e exec playwright install --with-deps chromium
+        run: pnpm --filter @mortium/e2e exec playwright install --with-deps chromium
 
       - name: Make the environment file
         # The relay uses the host IP address. The runner has no router, so the
@@ -236,7 +236,7 @@ jobs:
         env:
           TURN_EXPECT_PROD_RULES: "true"
           TURN_TEST_REQUIRED: "true"
-        run: pnpm --filter @morticord/e2e exec playwright test webrtc-turn turn-peer-rules
+        run: pnpm --filter @mortium/e2e exec playwright test webrtc-turn turn-peer-rules
 
       - name: Show the coturn log
         if: failure()
@@ -255,13 +255,13 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: morticord
+          POSTGRES_USER: mortium
           POSTGRES_PASSWORD: change-me
-          POSTGRES_DB: morticord
+          POSTGRES_DB: mortium
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U morticord"
+          --health-cmd "pg_isready -U mortium"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -302,7 +302,7 @@ jobs:
       - name: Build the deb package
         working-directory: apps/desktop-electron
         run: |
-          pnpm --filter @morticord/web build
+          pnpm --filter @mortium/web build
           node build.mjs
           pnpm exec electron-builder --linux deb --publish never
 
@@ -313,7 +313,7 @@ jobs:
         # The server must allow the origin of the Linux app.
         run: |
           cp .env.example .env
-          echo "CORS_ALLOWED_ORIGINS=app://morticord" >> .env
+          echo "CORS_ALLOWED_ORIGINS=app://mortium" >> .env
           cd apps/server
           nohup pnpm exec tsx --env-file=../../.env src/index.ts > ../../server.log 2>&1 &
           for _ in $(seq 1 60); do
@@ -332,14 +332,14 @@ jobs:
         run: |
           dbus-run-session -- bash -c '
             echo -n "ci-password" | gnome-keyring-daemon --unlock --components=secrets > /dev/null
-            xvfb-run -a -s "-screen 0 1280x800x24" node apps/desktop-electron/scripts/smoke.mjs /opt/morticord/morticord http://localhost:3000
+            xvfb-run -a -s "-screen 0 1280x800x24" node apps/desktop-electron/scripts/smoke.mjs /opt/mortium/mortium http://localhost:3000
           '
 
       - name: Run the smoke test without a key ring
         env:
           SMOKE_EXPECT_NO_KEY_RING: "1"
           XDG_CONFIG_HOME: ${{ runner.temp }}/config-no-key-ring
-        run: xvfb-run -a node apps/desktop-electron/scripts/smoke.mjs /opt/morticord/morticord http://localhost:3000
+        run: xvfb-run -a node apps/desktop-electron/scripts/smoke.mjs /opt/mortium/mortium http://localhost:3000
 
       - name: Show the API server log
         if: failure()
@@ -370,4 +370,4 @@ jobs:
         run: docker compose build
 
       - name: Show the image sizes
-        run: docker images --format '{{.Repository}} {{.Size}}' | grep morticord
+        run: docker images --format '{{.Repository}} {{.Size}}' | grep mortium

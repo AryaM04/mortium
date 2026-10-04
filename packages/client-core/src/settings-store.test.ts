@@ -1,7 +1,7 @@
 // Tests for the synced settings store, the notification rule, the DM view
 // helpers and the DM order in the realtime store.
 import { describe, expect, it } from "vitest";
-import { decodeBase64Url, encodeBase64Url, type DmChannelJson, type User } from "@morticord/shared";
+import { decodeBase64Url, encodeBase64Url, type DmChannelJson, type User } from "@mortium/shared";
 import { ApiError, type ApiClient } from "./api.js";
 import { dmDisplayName, dmOtherRecipients, sortDmChannels } from "./dm-view.js";
 import { shouldNotify, type NotificationInput } from "./notifications.js";

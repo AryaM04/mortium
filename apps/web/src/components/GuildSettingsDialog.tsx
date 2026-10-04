@@ -4,14 +4,14 @@
 // CLAUDE.md's bundle-size rule), loaded only the first time it is opened.
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { guildNameSchema, hasPermission, Permission, type GuildJson } from "@morticord/shared";
+import { guildNameSchema, hasPermission, Permission, type GuildJson } from "@mortium/shared";
 import {
   deleteGuild,
   removeGuildIcon,
   selfGuildPermissions,
   updateGuild,
   uploadGuildIcon,
-} from "@morticord/client-core";
+} from "@mortium/client-core";
 import { session } from "../lib/session.js";
 import { describeError } from "../lib/errors.js";
 import { realtimeStore } from "../lib/realtime.js";

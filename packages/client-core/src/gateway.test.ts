@@ -2,7 +2,7 @@
 // reconnect, resume, invalid session, backoff growth and cap, no
 // reconnect on a fatal close code, and timer cleanup on close().
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GatewayCloseCode, GatewayOpcode } from "@morticord/shared";
+import { GatewayCloseCode, GatewayOpcode } from "@mortium/shared";
 import { createGatewayClient, type GatewayDispatch, type GatewayState, type WebSocketLike } from "./gateway.js";
 
 class FakeSocket implements WebSocketLike {

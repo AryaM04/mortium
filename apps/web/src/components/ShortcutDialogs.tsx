@@ -2,7 +2,7 @@
 // list. They load only when a shortcut opens them.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { navigate } from "wouter/use-browser-location";
-import { dmDisplayName, sortDmChannels } from "@morticord/client-core";
+import { dmDisplayName, sortDmChannels } from "@mortium/client-core";
 import { realtimeStore } from "../lib/realtime.js";
 import { dmPath } from "../lib/dms.js";
 import { fuzzyFilter } from "../lib/fuzzy.js";

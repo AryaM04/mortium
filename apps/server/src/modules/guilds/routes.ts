@@ -20,7 +20,7 @@ import {
   updateRoleRequestSchema,
   voiceModerationRequestSchema,
   channelOrderRequestSchema,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { AppDeps } from "../../app.js";
 import { guilds } from "../../db/schema.js";
 import { AppError } from "../../errors.js";

@@ -8,6 +8,6 @@ export default defineConfig({
   dbCredentials: {
     url:
       process.env.DATABASE_URL ??
-      "postgres://morticord:morticord@localhost:5432/morticord",
+      "postgres://mortium:mortium@localhost:5432/mortium",
   },
 });

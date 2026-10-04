@@ -2,7 +2,7 @@
 // messages, only @mentions, or nothing. The level is a synced setting.
 import { moveMenuFocus } from "../lib/menu-keys.js";
 import { useEffect, useRef } from "react";
-import { notificationLevelOf, type NotificationLevel } from "@morticord/client-core";
+import { notificationLevelOf, type NotificationLevel } from "@mortium/client-core";
 import { settingsStore, useSettings } from "../lib/settings.js";
 
 const LEVELS: Array<{ value: NotificationLevel; label: string }> = [

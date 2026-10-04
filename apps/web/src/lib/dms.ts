@@ -2,8 +2,8 @@
 // closed DM again, and close a DM. A close only hides the DM on this
 // account (in the synced settings). The history stays on the server.
 import { navigate } from "wouter/use-browser-location";
-import { hiddenDmsOf, openDm } from "@morticord/client-core";
-import type { DmChannelJson } from "@morticord/shared";
+import { hiddenDmsOf, openDm } from "@mortium/client-core";
+import type { DmChannelJson } from "@mortium/shared";
 import { session } from "./session.js";
 import { realtimeStore } from "./realtime.js";
 import { settingsStore } from "./settings.js";

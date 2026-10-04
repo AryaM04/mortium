@@ -1,6 +1,6 @@
 # Known issues
 
-This file records the known defects in Morticord. A code review found them
+This file records the known defects in Mortium. A code review found them
 on 2026-10-01. The review read the code. It did not run the app.
 
 ## How to use this file
@@ -623,12 +623,12 @@ What occurs now when the user reloads the page in a voice channel:
 - Cause: `infra/scripts/restore.sh:108-110` makes the `api-data` volume through the backup image. That image has no `/data` folder owned by 100:101, so the volume belongs to root. The backup service runs as 100:101 (`docker-compose.yml:269`, `infra/scripts/backup.sh:66-67`).
 - Fix: In the backup `Dockerfile`, make `/data` and set its owner to 100:101.
 
-### OPS-03: The Linux AppImage cannot open `morticord://` links, so OAuth sign-in fails there
+### OPS-03: The Linux AppImage cannot open `mortium://` links, so OAuth sign-in fails there
 
 - Severity: Medium. Confidence: Suspected. Status: Open.
 - Symptom: GitHub or Google sign-in from the AppImage opens the browser, but the final link opens nothing. The deb package works.
 - Cause: `apps/desktop-electron/src/main/index.ts:413-416` registers the link handler only through the desktop file of the deb package. An AppImage without desktop integration has no desktop file.
-- Fix: For an AppImage, write a desktop file with `MimeType=x-scheme-handler/morticord` and register it with `xdg-mime`. Alternatively, document that the AppImage needs desktop integration.
+- Fix: For an AppImage, write a desktop file with `MimeType=x-scheme-handler/mortium` and register it with `xdg-mime`. Alternatively, document that the AppImage needs desktop integration.
 
 ### OPS-04: `latest.json` can lose the Windows or macOS entry
 

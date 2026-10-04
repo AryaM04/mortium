@@ -3,7 +3,7 @@
 // devices show the same 7 emojis only when no one changed the keys on the
 // way. Then each device sends a MAC of its device key and of the master
 // key of its user. See docs/concepts/olm-megolm.md section 10.
-import { encodeBase64Url, type DeviceRef } from "@morticord/shared";
+import { encodeBase64Url, type DeviceRef } from "@mortium/shared";
 import type { DeviceList } from "./device-list.js";
 import type { DeviceManager } from "./device-manager.js";
 import type { DecryptedToDevice, EncryptResult } from "./olm-machine.js";
@@ -573,7 +573,7 @@ export class VerificationMachine {
     const me = `${this.deps.userId}|${this.deps.deviceId}|${flow.ourKey}`;
     const them = `${flow.view.otherUserId}|${flow.view.otherDeviceId}|${flow.theirKey}`;
     const [first, second] = flow.view.initiatedByMe ? [me, them] : [them, me];
-    return `MORTICORD_SAS_EMOJI_V1|${first}|${second}|${flow.view.txnId}`;
+    return `MORTIUM_SAS_EMOJI_V1|${first}|${second}|${flow.view.txnId}`;
   }
 
   /** The MAC info. `outgoing` is true for the MAC that this device sends. */
@@ -581,7 +581,7 @@ export class VerificationMachine {
     const me = `${this.deps.userId}|${this.deps.deviceId}`;
     const them = `${flow.view.otherUserId}|${flow.view.otherDeviceId}`;
     const [sender, receiver] = outgoing ? [me, them] : [them, me];
-    return `MORTICORD_SAS_MAC_V1|${sender}|${receiver}|${flow.view.txnId}|${keyId}`;
+    return `MORTIUM_SAS_MAC_V1|${sender}|${receiver}|${flow.view.txnId}|${keyId}`;
   }
 
   private setPhase(flow: Flow, phase: VerificationPhase): void {

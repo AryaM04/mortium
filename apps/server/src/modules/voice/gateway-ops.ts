@@ -16,7 +16,7 @@ import {
   Permission,
   type VoiceJoinPayload,
   type VoiceStatePayload,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { DbClient } from "../../db/client.js";
 import { channels } from "../../db/schema.js";
 import { isMessagingBlocked, isPrivateChannelType, isRecipient } from "../dms/access.js";

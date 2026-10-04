@@ -3,7 +3,7 @@
 // call the API, and read gateway dispatches.
 import type { FastifyInstance } from "fastify";
 import WebSocket from "ws";
-import { encodeBase64Url, GatewayOpcode, type GatewayEnvelope } from "@morticord/shared";
+import { encodeBase64Url, GatewayOpcode, type GatewayEnvelope } from "@mortium/shared";
 import { buildApp } from "../src/app.js";
 import { createFakeMailer } from "../src/mailer.js";
 import { GatewayService } from "../src/modules/gateway/service.js";

@@ -4,7 +4,7 @@
 // account.
 import { useState, type FormEvent } from "react";
 import { Link } from "wouter";
-import { forgotPasswordRequestSchema } from "@morticord/shared";
+import { forgotPasswordRequestSchema } from "@mortium/shared";
 import { AuthLayout } from "../components/AuthLayout.js";
 import { FormField } from "../components/FormField.js";
 import { describeError } from "../lib/errors.js";

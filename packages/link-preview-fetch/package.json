@@ -1,5 +1,5 @@
 {
-  "name": "@morticord/link-preview-fetch",
+  "name": "@mortium/link-preview-fetch",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,7 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@morticord/shared": "workspace:*"
+    "@mortium/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",

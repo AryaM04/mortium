@@ -10,7 +10,7 @@ import {
   type OverwriteInput,
   type RoleInput,
   type RoleJson,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { RealtimeState } from "./realtime-store.js";
 
 function memberContext(

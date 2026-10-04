@@ -3,7 +3,7 @@
 // A caller with no member context is not a guild member: the route must
 // answer 404, not 403, so a non-member cannot tell the guild exists.
 import { and, eq, inArray } from "drizzle-orm";
-import { computePermissions, hasPermission, Permission, type OverwriteInput, type RoleInput } from "@morticord/shared";
+import { computePermissions, hasPermission, Permission, type OverwriteInput, type RoleInput } from "@mortium/shared";
 import type { DbClient } from "../../db/client.js";
 import { channels, guildMembers, guilds, memberRoles, permissionOverwrites, roles } from "../../db/schema.js";
 import { AppError } from "../../errors.js";

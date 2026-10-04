@@ -6,7 +6,7 @@ import type { FastifyInstance } from "fastify";
 import {
   type DesktopAsset,
   type DesktopLatestResponse,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { AppDeps } from "../../app.js";
 import { AppError } from "../../errors.js";
 
@@ -85,7 +85,7 @@ export async function registerDesktopRoutes(
 
   async function load(): Promise<DesktopLatestResponse> {
     const response = await fetchFunction(`https://api.github.com/repos/${repo}/releases/latest`, {
-      headers: { "User-Agent": "morticord-server", Accept: "application/vnd.github+json" },
+      headers: { "User-Agent": "mortium-server", Accept: "application/vnd.github+json" },
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!response.ok) {

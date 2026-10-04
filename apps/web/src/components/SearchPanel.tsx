@@ -4,8 +4,8 @@
 // so it finds only the messages that this device decrypted.
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { dmDisplayName, type RealtimeState } from "@morticord/client-core";
-import { foldText, isEmptyQuery, makeSnippet, parseSearchQuery, type IndexResult } from "@morticord/client-core/search";
+import { dmDisplayName, type RealtimeState } from "@mortium/client-core";
+import { foldText, isEmptyQuery, makeSnippet, parseSearchQuery, type IndexResult } from "@mortium/client-core/search";
 import { realtimeStore } from "../lib/realtime.js";
 import { displayNameOf } from "../lib/members.js";
 import { dmPath } from "../lib/dms.js";

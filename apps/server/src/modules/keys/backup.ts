@@ -15,7 +15,7 @@ import {
   type GetBackupSessionsQuery,
   type GetBackupSessionsResponse,
   type PutBackupSessionsRequest,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { DbClient } from "../../db/client.js";
 import { devices, keyBackupSecrets, keyBackupSessions, keyBackupVersions, users } from "../../db/schema.js";
 import { AppError } from "../../errors.js";

@@ -1,7 +1,7 @@
 // A dialog that picks friends from the friend list: for a new group DM,
 // and for the owner to add people to a group DM.
 import { useEffect, useRef, useState } from "react";
-import type { User } from "@morticord/shared";
+import type { User } from "@mortium/shared";
 import { Avatar } from "./Avatar.js";
 import { useRealtime } from "../lib/useRealtime.js";
 import { describeError } from "../lib/errors.js";

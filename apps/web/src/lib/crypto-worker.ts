@@ -2,8 +2,8 @@
 // has the user and the device), and every tab of that device connects to
 // it. It runs the crypto layer, the WASM file and the local search index.
 // See docs/concepts/olm-megolm.md section 13.
-import { webPlatform } from "@morticord/client-core";
-import { createCryptoHost, startCrypto } from "@morticord/client-core/crypto";
+import { webPlatform } from "@mortium/client-core";
+import { createCryptoHost, startCrypto } from "@mortium/client-core/crypto";
 
 const log = (message: string) => console.warn(`[crypto] ${message}`);
 

@@ -2,8 +2,8 @@
 // messages that this tab decoded and the redactions, and gives them to
 // the index module (`search-indexer.ts`) in batches. That module loads
 // only on the first batch. See docs/concepts/search.md.
-import type { DecryptedPayload, EventJson } from "@morticord/shared";
-import type { SearchChange } from "@morticord/client-core/search";
+import type { DecryptedPayload, EventJson } from "@mortium/shared";
+import type { SearchChange } from "@mortium/client-core/search";
 
 /** The queue keeps at most this many changes while the index is not ready. The oldest go first. */
 const MAX_QUEUE = 5000;

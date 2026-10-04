@@ -4,7 +4,7 @@
 // button to jump back to the bottom once the user has scrolled away.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
-import { aggregateEvent, type AggregatedMessage } from "@morticord/client-core";
+import { aggregateEvent, type AggregatedMessage } from "@mortium/client-core";
 import { useStore } from "zustand";
 import { useMessages } from "../lib/useMessages.js";
 import { jumpStore, requestJump } from "../lib/jump.js";

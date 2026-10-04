@@ -1,6 +1,6 @@
 // Loads the vodozemac WASM module one time. The web app reaches this file
 // only through a dynamic import, so the WASM file is not in the main bundle.
-import init, * as wasm from "@morticord/crypto-wasm";
+import init, * as wasm from "@mortium/crypto-wasm";
 
 export type Wasm = typeof wasm;
 

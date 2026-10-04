@@ -1,7 +1,7 @@
 // Invite logic and database access: create, preview, accept, list, delete.
 import { randomInt } from "node:crypto";
 import { and, eq, gt, lt, sql } from "drizzle-orm";
-import { DispatchEvent, Permission } from "@morticord/shared";
+import { DispatchEvent, Permission } from "@mortium/shared";
 import { isUniqueViolation, type DbClient } from "../../db/client.js";
 import { bans, channels, guildMembers, guilds, invites, users } from "../../db/schema.js";
 import { AppError } from "../../errors.js";

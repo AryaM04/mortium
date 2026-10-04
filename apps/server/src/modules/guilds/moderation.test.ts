@@ -3,7 +3,7 @@
 import type { FastifyInstance } from "fastify";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, expect, it } from "vitest";
-import { encodeBase64Url, encodePlainPayload, Permission } from "@morticord/shared";
+import { encodeBase64Url, encodePlainPayload, Permission } from "@mortium/shared";
 import { buildApp } from "../../app.js";
 import { events } from "../../db/schema.js";
 import { createFakeMailer } from "../../mailer.js";

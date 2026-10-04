@@ -9,7 +9,7 @@ import {
   type CreateEventRequest,
   type EventJson,
   type ListEventsResponse,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { ApiClient } from "./api.js";
 
 export function postEvent(api: ApiClient, channelId: string, input: CreateEventRequest): Promise<EventJson> {

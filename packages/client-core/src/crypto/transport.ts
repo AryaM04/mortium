@@ -28,7 +28,7 @@ import {
   type UploadKeysRequest,
   type UploadKeysResponse,
   type UploadSignatureRequest,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { ApiClient } from "../api.js";
 
 export interface CryptoTransport {

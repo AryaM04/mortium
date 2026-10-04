@@ -9,7 +9,7 @@ import {
   encodeBase64Url,
   type PutSettingsRequest,
   type SettingsResponse,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { DbClient } from "../../db/client.js";
 import { userSettings } from "../../db/schema.js";
 import { AppError } from "../../errors.js";

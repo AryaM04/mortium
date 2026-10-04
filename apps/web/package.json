@@ -1,5 +1,5 @@
 {
-  "name": "@morticord/web",
+  "name": "@mortium/web",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,8 +12,8 @@
     "generate:emoji-data": "node scripts/generate-emoji-data.mjs"
   },
   "dependencies": {
-    "@morticord/client-core": "workspace:*",
-    "@morticord/shared": "workspace:*",
+    "@mortium/client-core": "workspace:*",
+    "@mortium/shared": "workspace:*",
     "@tauri-apps/api": "^2.12.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

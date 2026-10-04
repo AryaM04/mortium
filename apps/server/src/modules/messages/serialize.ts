@@ -1,5 +1,5 @@
 // Turn an `events` database row into the wire event shape.
-import { encodeBase64Url, type EventCodec, type EventJson, type EventRelType } from "@morticord/shared";
+import { encodeBase64Url, type EventCodec, type EventJson, type EventRelType } from "@mortium/shared";
 import type { events } from "../../db/schema.js";
 
 export type EventRow = typeof events.$inferSelect;

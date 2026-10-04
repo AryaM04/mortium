@@ -5,7 +5,7 @@ import {
   relationshipSchema,
   sendFriendRequestSchema,
   type RelationshipJson,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { ApiClient } from "./api.js";
 
 export async function listRelationships(api: ApiClient): Promise<RelationshipJson[]> {

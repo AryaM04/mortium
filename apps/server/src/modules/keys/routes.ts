@@ -13,7 +13,7 @@ import {
   resetMasterKeyRequestSchema,
   uploadKeysRequestSchema,
   uploadSignatureRequestSchema,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { AppDeps } from "../../app.js";
 import { AppError } from "../../errors.js";
 import { createEventRateLimiter, type EventRateLimiter } from "../messages/service.js";

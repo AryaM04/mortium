@@ -9,8 +9,8 @@ import {
   Permission,
   type ChannelMembersResponse,
   type EventJson,
-} from "@morticord/shared";
-import { Account, GroupSession, InboundGroupSession } from "@morticord/crypto-wasm";
+} from "@mortium/shared";
+import { Account, GroupSession, InboundGroupSession } from "@mortium/crypto-wasm";
 import { cryptoStoreName, openCryptoStore } from "./store.js";
 import { FakeServer, initWasmForTests, newClient, verifyWithSas, type TestClient } from "./test/fake-server.js";
 

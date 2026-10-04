@@ -7,8 +7,8 @@
 // gets a preview card, made on this device (see lib/link-preview.ts). The
 // message takes the preview only when it is ready at send time.
 import { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
-import { MAX_ATTACHMENTS, type Attachment, type GuildMemberJson, type LinkEmbed, type User } from "@morticord/shared";
-import { findFirstLink, formatFileSize, linkPreviewsOf, searchGuildMembers } from "@morticord/client-core";
+import { MAX_ATTACHMENTS, type Attachment, type GuildMemberJson, type LinkEmbed, type User } from "@mortium/shared";
+import { findFirstLink, formatFileSize, linkPreviewsOf, searchGuildMembers } from "@mortium/client-core";
 import { messagesStore } from "../lib/messages.js";
 import { session } from "../lib/session.js";
 import { useSettings } from "../lib/settings.js";

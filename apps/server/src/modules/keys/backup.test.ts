@@ -2,7 +2,7 @@
 // different device and the master key reset. Real Postgres.
 import { randomBytes } from "node:crypto";
 import { afterAll, beforeAll, expect, it } from "vitest";
-import { backupSignedText, deviceKeysSignedText, encodeBase64Url } from "@morticord/shared";
+import { backupSignedText, deviceKeysSignedText, encodeBase64Url } from "@mortium/shared";
 import { describeWithDb } from "../../../test/db.js";
 import { randomCurveKey, TestDeviceKeys, TestSigner } from "../../../test/keys.js";
 import {

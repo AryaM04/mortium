@@ -12,7 +12,7 @@ import {
   type DecryptedPayload,
   type Embed,
   type EventJson,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import { ApiError, type ApiClient } from "./api.js";
 import { claimAttachment } from "./attachments.js";
 import type { PayloadCodec } from "./codec.js";

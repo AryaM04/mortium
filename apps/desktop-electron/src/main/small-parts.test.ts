@@ -1,7 +1,7 @@
 // Tests for the small parts of the main process: deep links, the window
 // state, the update rule and the link preview result.
 import { describe, expect, it, vi } from "vitest";
-import { LinkPreviewError } from "@morticord/link-preview-fetch";
+import { LinkPreviewError } from "@mortium/link-preview-fetch";
 import { deepLinksIn, PendingLinks } from "./deep-links.js";
 import { createLinkPreview } from "./link-preview.js";
 import { canUpdateItself } from "./updates.js";
@@ -9,23 +9,23 @@ import { restorableState } from "./window-state.js";
 
 describe("deep links", () => {
   it("finds the links of the app scheme in the arguments", () => {
-    const argv = ["/opt/Morticord/morticord", "--no-sandbox", "morticord://invite/abc", "https://x.test"];
-    expect(deepLinksIn(argv, "morticord")).toEqual(["morticord://invite/abc"]);
-    expect(deepLinksIn([`morticord://${"a".repeat(3000)}`], "morticord")).toEqual([]);
+    const argv = ["/opt/Mortium/mortium", "--no-sandbox", "mortium://invite/abc", "https://x.test"];
+    expect(deepLinksIn(argv, "mortium")).toEqual(["mortium://invite/abc"]);
+    expect(deepLinksIn([`mortium://${"a".repeat(3000)}`], "mortium")).toEqual([]);
   });
 
   it("keeps links until the page takes them, then sends them at once, and holds again on a reload", () => {
     const send = vi.fn();
     const pending = new PendingLinks(send);
-    pending.add(["morticord://invite/a"]);
+    pending.add(["mortium://invite/a"]);
     expect(send).not.toHaveBeenCalled();
-    expect(pending.take()).toEqual(["morticord://invite/a"]);
-    pending.add(["morticord://invite/b"]);
-    expect(send).toHaveBeenCalledWith(["morticord://invite/b"]);
+    expect(pending.take()).toEqual(["mortium://invite/a"]);
+    pending.add(["mortium://invite/b"]);
+    expect(send).toHaveBeenCalledWith(["mortium://invite/b"]);
     pending.hold();
-    pending.add(["morticord://invite/c"]);
+    pending.add(["mortium://invite/c"]);
     expect(send).toHaveBeenCalledTimes(1);
-    expect(pending.take()).toEqual(["morticord://invite/c"]);
+    expect(pending.take()).toEqual(["mortium://invite/c"]);
     expect(pending.take()).toEqual([]);
   });
 });
@@ -49,7 +49,7 @@ describe("restorableState", () => {
 
 describe("canUpdateItself", () => {
   it("is true only for a packaged AppImage", () => {
-    expect(canUpdateItself(true, { APPIMAGE: "/home/u/morticord.AppImage" })).toBe(true);
+    expect(canUpdateItself(true, { APPIMAGE: "/home/u/mortium.AppImage" })).toBe(true);
     expect(canUpdateItself(true, {})).toBe(false);
     expect(canUpdateItself(false, { APPIMAGE: "/x.AppImage" })).toBe(false);
   });

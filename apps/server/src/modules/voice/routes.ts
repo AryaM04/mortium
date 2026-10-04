@@ -1,7 +1,7 @@
 // The voice REST route: TURN credentials and the voice audio bitrate. Voice join/leave/state/signal go
 // through the gateway, not REST (see modules/voice/gateway-ops.ts).
 import type { FastifyInstance } from "fastify";
-import type { TurnCredentialsResponse } from "@morticord/shared";
+import type { TurnCredentialsResponse } from "@mortium/shared";
 import type { AppDeps } from "../../app.js";
 import { createTurnCredentials } from "../../turn.js";
 

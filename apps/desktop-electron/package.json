@@ -1,22 +1,22 @@
 {
-  "name": "@morticord/desktop-electron",
-  "productName": "Morticord",
-  "desktopName": "morticord.desktop",
+  "name": "@mortium/desktop-electron",
+  "productName": "Mortium",
+  "desktopName": "mortium.desktop",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
-  "description": "The Linux desktop app of Morticord.",
+  "description": "The Linux desktop app of Mortium.",
   "author": {
     "name": "Arya Mortazavi",
     "email": "28908254+AryaM04@users.noreply.github.com"
   },
-  "homepage": "https://github.com/AryaM04/morticord",
+  "homepage": "https://github.com/AryaM04/mortium",
   "license": "UNLICENSED",
   "main": "dist/main.cjs",
   "scripts": {
     "build": "node build.mjs",
-    "start": "pnpm --filter @morticord/web build && node build.mjs && electron .",
-    "package": "pnpm --filter @morticord/web build && node build.mjs && electron-builder --linux",
+    "start": "pnpm --filter @mortium/web build && node build.mjs && electron .",
+    "package": "pnpm --filter @mortium/web build && node build.mjs && electron-builder --linux",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run"
@@ -25,8 +25,8 @@
     "uiohook-napi": "^1.5.5"
   },
   "devDependencies": {
-    "@morticord/link-preview-fetch": "workspace:*",
-    "@morticord/shared": "workspace:*",
+    "@mortium/link-preview-fetch": "workspace:*",
+    "@mortium/shared": "workspace:*",
     "@types/node": "^22.10.1",
     "electron": "^44.5.0",
     "electron-builder": "^26.15.3",

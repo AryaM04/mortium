@@ -3,7 +3,7 @@
 // use) and flags a later change. The client never trusts the server for
 // keys: a device with a bad signature is dropped. See
 // docs/concepts/olm-megolm.md section 4.
-import { deviceKeysSignedText, masterKeySignedText, type QueriedUser } from "@morticord/shared";
+import { deviceKeysSignedText, masterKeySignedText, type QueriedUser } from "@mortium/shared";
 import type { KeyedQueue } from "./queue.js";
 import type { CryptoStore, DeviceRecord, UserRecord } from "./store.js";
 import type { CryptoTransport } from "./transport.js";

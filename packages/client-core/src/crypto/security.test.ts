@@ -1,7 +1,7 @@
 // Tests of the key backup, the recovery key, SAS verification and identity
 // changes, with the real vodozemac WASM and the fake server.
 import { beforeAll, describe, expect, it } from "vitest";
-import { decodeBase64Url, encodeBase64Url, type ChannelMembersResponse, type EventJson } from "@morticord/shared";
+import { decodeBase64Url, encodeBase64Url, type ChannelMembersResponse, type EventJson } from "@mortium/shared";
 import { WrongRecoveryKeyError } from "./key-backup.js";
 import { decodeRecoveryKey, encodeRecoveryKey } from "./recovery-key.js";
 import {

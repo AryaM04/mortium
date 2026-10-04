@@ -7,7 +7,7 @@
 // number of live voice sessions:
 //   userPeer:     userId    -> VoiceState (a user's one live voice state)
 //   channelPeers: channelId -> peerKey -> VoiceState (who is in a channel)
-import type { VoiceErrorCode, VoiceStateUpdatePayload } from "@morticord/shared";
+import type { VoiceErrorCode, VoiceStateUpdatePayload } from "@mortium/shared";
 
 /** How many peers a voice channel can hold at once. */
 export const VOICE_CHANNEL_CAP = 10;

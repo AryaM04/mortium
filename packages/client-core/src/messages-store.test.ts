@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { encodeBase64Url, encodePlainPayload, type DecryptedPayload, type EventJson } from "@morticord/shared";
+import { encodeBase64Url, encodePlainPayload, type DecryptedPayload, type EventJson } from "@mortium/shared";
 import type { ApiClient } from "./api.js";
 import { createFakeCodec } from "./test/fake-codec.js";
 import {

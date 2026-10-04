@@ -68,7 +68,7 @@ export function emojiInCategory(list: EmojiRecord[], category: (typeof CATEGORY_
 
 // ---- recent emoji (localStorage) ------------------------------------------
 
-const RECENT_STORAGE_KEY = "morticord:recent-emoji";
+const RECENT_STORAGE_KEY = "mortium:recent-emoji";
 export const MAX_RECENT_EMOJI = 24;
 
 /** Move `emoji` to the front of `recent`, remove any duplicate, and cap the length. */

@@ -39,7 +39,7 @@ The full plan is in the plan file that `CLAUDE.md` names.
 - The **refresh token** is 32 random bytes as base64url. The server keeps only its SHA-256 hash. It is valid for 30 days. Each refresh gives a new refresh token and revokes the old one (rotation).
   If a client sends a revoked refresh token again, the server revokes all refresh tokens of that device, because the token was possibly stolen.
 - Tokens go in the response body. The client keeps them in `platform.secureStore`. We do not use cookies, because the desktop shells use a different origin from the API.
-- The desktop app has its own origin (`http://tauri.localhost` on Windows, `tauri://localhost` on macOS, `app://morticord` on Linux). The server sends CORS headers, without credentials, only to the origins in `CORS_ALLOWED_ORIGINS`. The gateway refuses a WebSocket upgrade from an origin that is not the web origin, the same host or an allowed origin.
+- The desktop app has its own origin (`http://tauri.localhost` on Windows, `tauri://localhost` on macOS, `app://mortium` on Linux). The server sends CORS headers, without credentials, only to the origins in `CORS_ALLOWED_ORIGINS`. The gateway refuses a WebSocket upgrade from an origin that is not the web origin, the same host or an allowed origin.
 - Passwords use argon2id through `@node-rs/argon2` (it has prebuilt binaries for all platforms, including Alpine).
 - Auth routes have a rate limit (`@fastify/rate-limit`, in memory).
 
@@ -48,7 +48,7 @@ The full plan is in the plan file that `CLAUDE.md` names.
 - `src/index.ts` only starts the server. `src/app.ts` exports `buildApp(deps)`, which returns a Fastify instance and does not listen. Tests call `buildApp` with test dependencies.
 - Put each feature in `src/modules/<feature>/`: `routes.ts` (thin: validate, call service, reply), `service.ts` (logic and database access), and tests.
 - Put side effects behind small interfaces that `buildApp` receives: `mailer`, `clock` (only if a test needs it). Tests use in-memory fakes.
-- The server runs the Drizzle migrations at start. Make new migrations with `pnpm --filter @morticord/server db:generate`. Do not edit an old migration.
+- The server runs the Drizzle migrations at start. Make new migrations with `pnpm --filter @mortium/server db:generate`. Do not edit an old migration.
 - Use transactions when one action writes more than one row that must stay consistent.
 - Use `request.log` or `app.log`. Do not use `console.log`.
 

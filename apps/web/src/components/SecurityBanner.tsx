@@ -4,7 +4,7 @@
 // only when they open. See docs/concepts/olm-megolm.md sections 4 and 10.
 import { Suspense, lazy, useState } from "react";
 import { useStore } from "zustand";
-import type { RealtimeState } from "@morticord/client-core";
+import type { RealtimeState } from "@mortium/client-core";
 import { currentCrypto, securityStore } from "../lib/crypto.js";
 import { memberUser } from "../lib/members.js";
 import { realtimeStore } from "../lib/realtime.js";

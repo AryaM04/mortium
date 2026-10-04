@@ -1,7 +1,7 @@
 // Server settings > Bans: the ban list, with unban. Loaded only when the
 // Bans tab opens.
 import { useEffect, useState } from "react";
-import { listBans, unbanMember } from "@morticord/client-core";
+import { listBans, unbanMember } from "@mortium/client-core";
 import { session } from "../lib/session.js";
 import { describeError } from "../lib/errors.js";
 import { realtimeStore } from "../lib/realtime.js";

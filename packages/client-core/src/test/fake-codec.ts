@@ -1,6 +1,6 @@
 // A fake payload codec for message store tests. It does not encrypt: the
 // bytes are plain JSON. Tests only. The app uses the Megolm codec.
-import { decodeBase64Url, decodePlainPayload, encodePlainPayload } from "@morticord/shared";
+import { decodeBase64Url, decodePlainPayload, encodePlainPayload } from "@mortium/shared";
 import type { DecodeResult, PayloadCodec } from "../codec.js";
 
 export interface FakeCodec extends PayloadCodec {

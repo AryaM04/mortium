@@ -1,6 +1,6 @@
 // Channel event routes: post, list, redact and mark read.
 import type { FastifyInstance } from "fastify";
-import { createEventRequestSchema, listEventsQuerySchema, updateReadStateRequestSchema } from "@morticord/shared";
+import { createEventRequestSchema, listEventsQuerySchema, updateReadStateRequestSchema } from "@mortium/shared";
 import type { AppDeps } from "../../app.js";
 import { AppError } from "../../errors.js";
 import {

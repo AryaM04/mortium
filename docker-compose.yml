@@ -29,7 +29,7 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-    image: morticord-caddy
+    image: mortium-caddy
     restart: unless-stopped
     depends_on:
       api:
@@ -64,7 +64,7 @@ services:
     build:
       context: .
       dockerfile: apps/server/Dockerfile
-    image: morticord-api
+    image: mortium-api
     restart: unless-stopped
     depends_on:
       postgres:
@@ -84,7 +84,7 @@ services:
       WEB_ORIGIN: https://${DOMAIN}
       PUBLIC_API_URL: https://${DOMAIN}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
-      DESKTOP_URL_SCHEME: ${DESKTOP_URL_SCHEME:-morticord}
+      DESKTOP_URL_SCHEME: ${DESKTOP_URL_SCHEME:-mortium}
       TURN_SECRET: ${TURN_SECRET}
       TURN_DOMAIN: ${DOMAIN}
       TURN_PORT: ${TURN_PORT:-3478}
@@ -102,7 +102,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       AUTH_RATE_LIMIT_PER_MINUTE: ${AUTH_RATE_LIMIT_PER_MINUTE:-10}
-      RELEASES_REPO: ${RELEASES_REPO-AryaM04/morticord}
+      RELEASES_REPO: ${RELEASES_REPO-AryaM04/mortium}
       ALLOW_PLAINTEXT_EVENTS: ${ALLOW_PLAINTEXT_EVENTS:-false}
       MAX_ATTACHMENT_BYTES: ${MAX_ATTACHMENT_BYTES:-26214400}
       ATTACHMENT_QUOTA_BYTES: ${ATTACHMENT_QUOTA_BYTES:-2147483648}
@@ -191,7 +191,7 @@ services:
     build:
       context: .
       dockerfile: infra/backup/Dockerfile
-    image: morticord-backup
+    image: mortium-backup
     restart: unless-stopped
     command: ["loop"]
     depends_on:

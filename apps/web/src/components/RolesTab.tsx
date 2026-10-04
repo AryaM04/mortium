@@ -9,7 +9,7 @@ import {
   Permission,
   type PermissionName,
   type RoleJson,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import {
   buildSelfContext,
   canManageRole,
@@ -17,8 +17,8 @@ import {
   deleteRole,
   reorderRoles,
   updateRole,
-} from "@morticord/client-core";
-import type { RealtimeState } from "@morticord/client-core";
+} from "@mortium/client-core";
+import type { RealtimeState } from "@mortium/client-core";
 import { session } from "../lib/session.js";
 import { describeError } from "../lib/errors.js";
 import { realtimeStore } from "../lib/realtime.js";

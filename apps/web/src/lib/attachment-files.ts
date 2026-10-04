@@ -8,8 +8,8 @@ import {
   isInlineImage,
   thumbnailSize,
   type FileSecrets,
-} from "@morticord/client-core";
-import type { Attachment, AttachmentThumbnail } from "@morticord/shared";
+} from "@mortium/client-core";
+import type { Attachment, AttachmentThumbnail } from "@mortium/shared";
 import { session } from "./session.js";
 import { apiBaseUrl } from "./server-url.js";
 

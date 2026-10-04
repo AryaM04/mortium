@@ -2,7 +2,7 @@
 // security settings (encryption), and sign out. Uses the native <dialog> element, which gives us a modal,
 // focus trapping and Escape-to-close for free.
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
-import { displayNameSchema } from "@morticord/shared";
+import { displayNameSchema } from "@mortium/shared";
 import { useLocation } from "wouter";
 import { FormField } from "./FormField.js";
 import { Avatar } from "./Avatar.js";

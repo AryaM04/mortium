@@ -4,7 +4,7 @@
 // apps/server/test/db.ts.
 import postgres from "postgres";
 
-export const E2E_DATABASE_NAME = "morticord_e2e";
+export const E2E_DATABASE_NAME = "mortium_e2e";
 
 export interface PostgresConnectionInfo {
   host: string;

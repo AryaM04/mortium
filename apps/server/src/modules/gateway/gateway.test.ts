@@ -9,7 +9,7 @@ import {
   GatewayCloseCode,
   GatewayOpcode,
   type GatewayEnvelope,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import { buildApp } from "../../app.js";
 import { createFakeMailer } from "../../mailer.js";
 import { createTestDb, describeWithDb, type TestDb } from "../../../test/db.js";

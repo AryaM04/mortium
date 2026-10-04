@@ -9,7 +9,7 @@ import {
   toDeviceDispatchPayloadSchema,
   type DeviceRef,
   type ToDeviceDispatchPayload,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import { decodePlainEvent, type PayloadCodec } from "../codec.js";
 import type { SecureStore } from "../platform.js";
 import {
@@ -203,11 +203,11 @@ async function deriveLocalIndexKeys(pickleKey: Uint8Array): Promise<LocalIndexKe
     info: new TextEncoder().encode(info),
   });
   const [encryptionKey, tokenKey] = await Promise.all([
-    crypto.subtle.deriveKey(params("morticord local search text"), base, { name: "AES-GCM", length: 256 }, false, [
+    crypto.subtle.deriveKey(params("mortium local search text"), base, { name: "AES-GCM", length: 256 }, false, [
       "encrypt",
       "decrypt",
     ]),
-    crypto.subtle.deriveKey(params("morticord local search words"), base, { name: "HMAC", hash: "SHA-256" }, false, [
+    crypto.subtle.deriveKey(params("mortium local search words"), base, { name: "HMAC", hash: "SHA-256" }, false, [
       "sign",
     ]),
   ]);

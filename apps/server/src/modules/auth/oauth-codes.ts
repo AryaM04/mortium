@@ -2,7 +2,7 @@
 // browser redirect) never puts the access and refresh tokens in a URL.
 // The map lives in process memory: one server process, no extra store.
 import { randomBytes } from "node:crypto";
-import type { AuthResult } from "@morticord/shared";
+import type { AuthResult } from "@mortium/shared";
 
 const CODE_TTL_MS = 60_000;
 const MAX_CODES = 1000;

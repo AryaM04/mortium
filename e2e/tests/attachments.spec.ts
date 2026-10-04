@@ -116,7 +116,7 @@ test("an encrypted image and file go from A to B, and the server stores only cip
 
   // 4. The files on disk are ciphertext, and the message claimed them.
   const sql = postgres(
-    `postgres://${process.env.POSTGRES_USER ?? "morticord"}:${encodeURIComponent(process.env.POSTGRES_PASSWORD ?? "")}@${process.env.POSTGRES_HOST ?? "localhost"}:${process.env.POSTGRES_PORT ?? "5432"}/${E2E_DATABASE_NAME}`,
+    `postgres://${process.env.POSTGRES_USER ?? "mortium"}:${encodeURIComponent(process.env.POSTGRES_PASSWORD ?? "")}@${process.env.POSTGRES_HOST ?? "localhost"}:${process.env.POSTGRES_PORT ?? "5432"}/${E2E_DATABASE_NAME}`,
     { max: 1 },
   );
   try {

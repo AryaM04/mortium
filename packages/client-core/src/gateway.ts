@@ -38,7 +38,7 @@ import {
   voiceStateUpdatePayloadSchema,
   voiceErrorPayloadSchema,
   type DispatchEventName,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import { z } from "zod";
 
 /** The connection's own lifecycle state, for a connection banner and the like. */

@@ -19,7 +19,7 @@ export function buildTestConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     voiceAudioBitrateBps: 128_000,
     webOrigin: "http://localhost:5173",
     corsAllowedOrigins: [],
-    desktopUrlScheme: "morticord",
+    desktopUrlScheme: "mortium",
     dataDir: "./data-test",
     smtp: { host: "localhost", port: 1025, from: "Test <no-reply@example.com>" },
     oauth: {},
@@ -38,11 +38,11 @@ export function buildTestConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     maxAttachmentBytes: 25 * 1024 * 1024,
     attachmentQuotaBytes: 2 * 1024 * 1024 * 1024,
     linkPreviewTestAllowLoopback: false,
-    releasesRepo: "AryaM04/morticord",
+    releasesRepo: "AryaM04/mortium",
     ...overrides,
   };
 }
 
 export async function mkTempDataDir(): Promise<string> {
-  return mkdtemp(path.join(tmpdir(), "morticord-test-"));
+  return mkdtemp(path.join(tmpdir(), "mortium-test-"));
 }

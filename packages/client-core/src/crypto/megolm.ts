@@ -11,7 +11,7 @@ import {
   type DecryptedPayload,
   type DeviceRef,
   type EventJson,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { AccountHolder } from "./account.js";
 import type { DeviceList } from "./device-list.js";
 import type { ChannelMembership, MembershipScope } from "./membership.js";

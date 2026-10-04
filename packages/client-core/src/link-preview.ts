@@ -7,7 +7,7 @@ import {
   decodeBase64Url,
   linkPreviewResponseSchema,
   MAX_EMBED_URL_LENGTH,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { ApiClient } from "./api.js";
 
 /** A preview that the platform made, before its image is encrypted and uploaded. */

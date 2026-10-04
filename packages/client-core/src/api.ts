@@ -2,7 +2,7 @@
 // the shared zod schemas, and holds the token refresh logic described in
 // docs/concepts/auth.md: refresh once on an expired access token, and keep
 // the refresh single-flight both inside one tab and across tabs.
-import { errorResponseSchema, type RefreshResult } from "@morticord/shared";
+import { errorResponseSchema, type RefreshResult } from "@mortium/shared";
 import type { z } from "zod";
 import type { Platform } from "./platform.js";
 

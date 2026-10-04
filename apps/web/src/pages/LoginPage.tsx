@@ -1,7 +1,7 @@
 // The sign-in page.
 import { useState, type FormEvent } from "react";
 import { Link, useLocation } from "wouter";
-import { loginRequestSchema } from "@morticord/shared";
+import { loginRequestSchema } from "@mortium/shared";
 import { AuthLayout } from "../components/AuthLayout.js";
 import { FormField } from "../components/FormField.js";
 import { DownloadLink } from "../components/DownloadLink.js";

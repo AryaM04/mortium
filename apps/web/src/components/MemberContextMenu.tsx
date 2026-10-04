@@ -8,7 +8,7 @@ import {
   Permission,
   type GuildMemberJson,
   type RoleJson,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import {
   addMemberRole,
   applyVoiceModeration,
@@ -21,7 +21,7 @@ import {
   sendFriendRequest,
   updateMember,
   type SelfContext,
-} from "@morticord/client-core";
+} from "@mortium/client-core";
 import { session } from "../lib/session.js";
 import { describeError } from "../lib/errors.js";
 import { realtimeStore } from "../lib/realtime.js";

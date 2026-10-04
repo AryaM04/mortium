@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { encodeBase64Url, encodePlainPayload, type EventJson } from "@morticord/shared";
+import { encodeBase64Url, encodePlainPayload, type EventJson } from "@mortium/shared";
 import { decodePlainEvent } from "./codec.js";
 
 function baseEvent(overrides: Partial<EventJson> = {}): EventJson {

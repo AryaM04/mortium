@@ -55,7 +55,7 @@ address with `GET /api/v1/health` and sends its own origin in the
 origin. Thus, the server must list the app origins:
 
 ```
-CORS_ALLOWED_ORIGINS=http://tauri.localhost,tauri://localhost,app://morticord
+CORS_ALLOWED_ORIGINS=http://tauri.localhost,tauri://localhost,app://mortium
 ```
 
 The last value is the origin of the Linux app.
@@ -83,10 +83,10 @@ the system browser.
 | Service | How it works |
 |---|---|
 | Secure store | The OS key store: Windows Credential Manager, macOS Keychain (`keyring` crate). It keeps only small values: the tokens, the pickle key and the server address. The bulk crypto data stays in IndexedDB, encrypted with the pickle key. |
-| Notifications | Windows: a toast. A click opens `morticord://notification/<id>`, and the app opens the channel. macOS: the notification center. A click brings the app to the front, but it does not open the channel. |
+| Notifications | Windows: a toast. A click opens `mortium://notification/<id>`, and the app opens the channel. macOS: the notification center. A click brings the app to the front, but it does not open the channel. |
 | Push to talk | A global shortcut (`tauri-plugin-global-shortcut`). The Pressed and Released states go to the push-to-talk controller of the web app, also while the window has no focus. The voice settings record a key with its modifiers, for example Ctrl + Shift + T. Other apps do not get a registered key, so use a function key or a key with a modifier. |
-| Deep links | Scheme `morticord` (`plugins.deep-link` in `tauri.conf.json`). `morticord://invite/<code>` opens the invite page. The single-instance plugin gives a link to the running app. |
-| OAuth | The app opens the system browser at `/api/v1/auth/oauth/<provider>/start?client=desktop`. The server sends the browser back to `morticord://auth/callback#code=...` (see `auth.md`). |
+| Deep links | Scheme `mortium` (`plugins.deep-link` in `tauri.conf.json`). `mortium://invite/<code>` opens the invite page. The single-instance plugin gives a link to the running app. |
+| OAuth | The app opens the system browser at `/api/v1/auth/oauth/<provider>/start?client=desktop`. The server sends the browser back to `mortium://auth/callback#code=...` (see `auth.md`). |
 | Link previews | The Rust command `link_preview_fetch` fetches the page and the image. It uses the same rules as the server route: only ports 80 and 443, each resolved address is checked (no private, loopback, link-local or unique-local address), each redirect is checked, 3 s, 512 KiB of HTML and a 2 MiB image. The web app reads the page with the same `readHtmlMeta` as the server. |
 | Tray | Show, Mute, Deafen and Quit. Mute and Deafen work during a call. By default, the close button keeps the app in the tray. The account settings can turn this off. |
 | Window state | `tauri-plugin-window-state` restores the size and the position. |
@@ -105,7 +105,7 @@ the system browser.
 ## Updates and signing
 
 The app asks for
-`https://github.com/AryaM04/morticord/releases/latest/download/latest.json`
+`https://github.com/AryaM04/mortium/releases/latest/download/latest.json`
 30 s after start and then every 6 hours. When a newer version exists, the
 app shows a prompt. It installs the update only after the user clicks
 "Install and restart". The updater checks the signature of the download
@@ -117,7 +117,7 @@ installer.
 
 To make a new key pair:
 
-1. Run `pnpm --filter @morticord/desktop-tauri exec tauri signer generate -w <path-outside-the-repo>`.
+1. Run `pnpm --filter @mortium/desktop-tauri exec tauri signer generate -w <path-outside-the-repo>`.
 2. Put the content of the `.pub` file in `plugins.updater.pubkey` in
    `tauri.conf.json`.
 3. In the GitHub repository settings, add the secret
@@ -130,7 +130,7 @@ files without a login, so the check fails there.
 
 ## Build and release
 
-- `pnpm --filter @morticord/desktop-tauri build` makes the MSI and the NSIS installer
+- `pnpm --filter @mortium/desktop-tauri build` makes the MSI and the NSIS installer
   on Windows (in `src-tauri/target/release/bundle`). A local build makes
   no updater files, so it needs no signing key.
 - `.github/workflows/release.yml` runs when CI passes on a push to main.
@@ -187,7 +187,7 @@ and loads `apps/web/src/desktop/desktop-platform.ts` with a dynamic import.
 
 ### Window and security
 
-- The window loads the web build from the `app://morticord` protocol,
+- The window loads the web build from the `app://mortium` protocol,
   not from `file://`. Thus the page has a stable origin, which the server
   can allow in `CORS_ALLOWED_ORIGINS`. The protocol serves only files of
   the web build. A path without a file extension gets `index.html`.
@@ -215,7 +215,7 @@ The first start shows the same server address page as the Tauri app. The
 window is a secure page, and Chromium blocks http requests from a secure
 page. Thus the Linux app needs an https address. It accepts http only for
 this computer (`localhost`). The app keeps the address in `settings.json`
-in the user data folder (`~/.config/Morticord`). The address is not a
+in the user data folder (`~/.config/Mortium`). The address is not a
 secret.
 
 ### Services of the Linux app
@@ -225,8 +225,8 @@ secret.
 | Secure store | Electron `safeStorage`: each value is encrypted with a key from the system key ring (GNOME Keyring or KWallet, through the Secret Service API). The file `secure-store.json` holds only ciphertext. Without a key ring, Electron uses the `basic_text` backend, which is plain text in practice. The app then refuses to keep secrets, and shows a page with the fix (see below). |
 | Notifications | An Electron notification (libnotify). A click shows the window and opens the channel. |
 | Push to talk | On X11, `uiohook-napi` reads the key down and key up events of the whole desktop session, also while the window has no focus. Other apps also get the key, so use a key that they do not use, such as a function key. The hook runs only during a call in push-to-talk mode. On Wayland, see "Push to talk on Wayland" below. |
-| Deep links | Scheme `morticord`. The deb package registers it in its desktop file. At start, the app also calls `setAsDefaultProtocolClient`. A second start of the app gives its link to the running app (single instance lock), and then stops. |
-| OAuth | The same flow as the Tauri app: the system browser, then `morticord://auth/callback`. |
+| Deep links | Scheme `mortium`. The deb package registers it in its desktop file. At start, the app also calls `setAsDefaultProtocolClient`. A second start of the app gives its link to the running app (single instance lock), and then stops. |
+| OAuth | The same flow as the Tauri app: the system browser, then `mortium://auth/callback`. |
 | Link previews | The main process uses the fetch of the server (`packages/link-preview-fetch`), with the same address rules. Thus a link cannot reach the private network of the user. |
 | Tray | Show, Mute, Deafen and Quit. By default, the close button keeps the app in the tray. The tray uses the StatusNotifierItem protocol. GNOME shows it only with the AppIndicator extension. Without a tray icon, start the app again to show the window, or turn off "Keep the app in the tray" in the account settings. |
 | Window state | The app keeps the size, the position and the maximized state in `window-state.json`. It does not use a position that is not on a screen. |
@@ -282,26 +282,26 @@ main process. The app gets the screens and the windows from
   `latest-linux.yml`. The Linux files have no code signature.
 - The deb package does not update itself. To update, install the new deb
   package with the package manager, for example
-  `sudo apt install ./morticord-<version>-amd64.deb`.
+  `sudo apt install ./mortium-<version>-amd64.deb`.
 - The updater URL must be public, the same as for the Tauri app.
 
 ### Build, test and release the Linux app
 
-- Run `pnpm --filter @morticord/desktop-electron package` on Linux.
+- Run `pnpm --filter @mortium/desktop-electron package` on Linux.
   This makes the web build, bundles the Electron code with esbuild, and
   runs electron-builder. The output is in `apps/desktop-electron/release`:
-  `morticord-<version>-x86_64.AppImage` (about 120 MiB),
-  `morticord-<version>-amd64.deb` (about 95 MiB, 285 MiB after the
+  `mortium-<version>-x86_64.AppImage` (about 120 MiB),
+  `mortium-<version>-amd64.deb` (about 95 MiB, 285 MiB after the
   install) and `latest-linux.yml`. Most of the size is Electron
   (Chromium). The code of the app is less than 1 MiB, and the web build
   is 1.4 MiB. Add `--arm64` for an arm64 build.
-- The deb package installs to `/opt/morticord`. The product name of
+- The deb package installs to `/opt/mortium`. The product name of
   the package has no space: the SUID sandbox helper of Chromium cannot
   start an app from a path with a space.
 - To start the app from the repository, run
   `node apps/desktop-electron/node_modules/electron/install.js` one time
   (pnpm does not run the install script of Electron). Then run
-  `pnpm --filter @morticord/desktop-electron start`.
+  `pnpm --filter @mortium/desktop-electron start`.
 - The "electron" job of `.github/workflows/ci.yml` installs the deb package
   on Ubuntu, starts Postgres and the API, and runs
   `apps/desktop-electron/scripts/smoke.mjs` under `xvfb-run` with an
@@ -337,5 +337,5 @@ capture APIs. It is not part of the normal app.
      and the track settings, then it stops the track.
 
 To run the same check inside the Tauri shell, start the shell in dev mode
-(`pnpm --filter @morticord/desktop-tauri dev`) and add `?diag` to the window URL
+(`pnpm --filter @mortium/desktop-tauri dev`) and add `?diag` to the window URL
 through the same dev server, since the shell loads that URL directly.

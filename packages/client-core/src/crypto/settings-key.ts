@@ -3,7 +3,7 @@
 // and shares it with the other devices of the same user through Olm
 // (`settings.key`). A device without the key asks for it
 // (`settings.request`). See docs/concepts/olm-megolm.md section 11.
-import { decodeBase64Url, encodeBase64Url } from "@morticord/shared";
+import { decodeBase64Url, encodeBase64Url } from "@mortium/shared";
 import type { DeviceList } from "./device-list.js";
 import type { DecryptedToDevice, EncryptResult } from "./olm-machine.js";
 import type { CryptoStore } from "./store.js";

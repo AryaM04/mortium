@@ -1,5 +1,5 @@
-// Deep links, such as "morticord://invite/abc" or
-// "morticord://auth/callback#code=x". The scheme comes from
+// Deep links, such as "mortium://invite/abc" or
+// "mortium://auth/callback#code=x". The scheme comes from
 // plugins.deep-link in tauri.conf.json. A link can arrive before the web
 // app listens for it (a link that starts the app), so the links wait in a
 // buffer until the web app calls `desktop_init`.
@@ -8,7 +8,7 @@ use std::sync::Mutex;
 use tauri::{Emitter, Manager};
 use tauri_plugin_deep_link::DeepLinkExt;
 
-const DEFAULT_SCHEME: &str = "morticord";
+const DEFAULT_SCHEME: &str = "mortium";
 
 /// The URL scheme of this app.
 pub fn scheme<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> String {
@@ -86,21 +86,21 @@ mod tests {
     #[test]
     fn keeps_only_links_of_this_app() {
         let urls = vec![
-            url::Url::parse("morticord://invite/abc").unwrap(),
+            url::Url::parse("mortium://invite/abc").unwrap(),
             url::Url::parse("https://example.com/").unwrap(),
-            url::Url::parse("morticord://auth/callback#code=x").unwrap(),
+            url::Url::parse("mortium://auth/callback#code=x").unwrap(),
         ];
         assert_eq!(
-            own_links("morticord", urls),
-            ["morticord://invite/abc", "morticord://auth/callback#code=x"]
+            own_links("mortium", urls),
+            ["mortium://invite/abc", "mortium://auth/callback#code=x"]
         );
     }
 
     #[test]
     fn gives_the_waiting_links_once() {
         let pending = PendingLinks::new();
-        pending.0.lock().unwrap().as_mut().unwrap().push("morticord://invite/a".into());
-        assert_eq!(pending.take(), ["morticord://invite/a"]);
+        pending.0.lock().unwrap().as_mut().unwrap().push("mortium://invite/a".into());
+        assert_eq!(pending.take(), ["mortium://invite/a"]);
         assert!(pending.take().is_empty());
         assert!(pending.0.lock().unwrap().is_none());
     }

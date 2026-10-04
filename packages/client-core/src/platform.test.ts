@@ -6,7 +6,7 @@ import { webPlatform } from "./platform.js";
 
 function readRaw(key: string): Promise<unknown> {
   return new Promise((resolve, reject) => {
-    const open = indexedDB.open("morticord-secure-store", 1);
+    const open = indexedDB.open("mortium-secure-store", 1);
     open.onsuccess = () => {
       const request = open.result.transaction("kv", "readonly").objectStore("kv").get(key);
       request.onsuccess = () => {
@@ -21,7 +21,7 @@ function readRaw(key: string): Promise<unknown> {
 
 function writeRaw(key: string, value: unknown): Promise<void> {
   return new Promise((resolve, reject) => {
-    const open = indexedDB.open("morticord-secure-store", 1);
+    const open = indexedDB.open("mortium-secure-store", 1);
     open.onsuccess = () => {
       const tx = open.result.transaction("kv", "readwrite");
       tx.objectStore("kv").put(value, key);

@@ -2,7 +2,7 @@
 // no overwrites, so the message and voice code branch here instead of
 // building a guild member context. See docs/concepts/dms-and-friends.md.
 import { and, eq } from "drizzle-orm";
-import { DM_PERMISSIONS } from "@morticord/shared";
+import { DM_PERMISSIONS } from "@mortium/shared";
 import type { DbClient } from "../../db/client.js";
 import { channelRecipients, channels } from "../../db/schema.js";
 import { AppError } from "../../errors.js";

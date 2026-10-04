@@ -1,7 +1,7 @@
 // Sign-in buttons for the OAuth providers the server has turned on. The
 // list comes from GET /auth/providers, not a hard-coded guess.
 import { useEffect, useState } from "react";
-import type { OAuthProvider } from "@morticord/shared";
+import type { OAuthProvider } from "@mortium/shared";
 import { desktopFeatures } from "../lib/platform.js";
 import { serverUrl } from "../lib/server-url.js";
 import { session } from "../lib/session.js";

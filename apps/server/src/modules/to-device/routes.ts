@@ -1,7 +1,7 @@
 // The to-device send route. Delivery happens over the gateway, in
 // service.ts. See docs/concepts/olm-megolm.md section 6.
 import type { FastifyInstance } from "fastify";
-import { MAX_TO_DEVICE_MESSAGES, sendToDeviceRequestSchema } from "@morticord/shared";
+import { MAX_TO_DEVICE_MESSAGES, sendToDeviceRequestSchema } from "@mortium/shared";
 import type { AppDeps } from "../../app.js";
 import { checkRate } from "../keys/routes.js";
 import { createEventRateLimiter } from "../messages/service.js";

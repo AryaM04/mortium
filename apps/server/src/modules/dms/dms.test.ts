@@ -1,7 +1,7 @@
 // Integration tests for DMs and group DMs: open, list, add, remove, leave,
 // rename, messages, and blocks. Real Postgres and a real `ws` client.
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { GatewayOpcode } from "@morticord/shared";
+import { GatewayOpcode } from "@mortium/shared";
 import { channelRecipients, channels, events } from "../../db/schema.js";
 import { describeWithDb } from "../../../test/db.js";
 import {

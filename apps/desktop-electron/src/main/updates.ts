@@ -4,7 +4,7 @@
 // updates through the package manager, so the app does not check then.
 // The web app asks 30 s after start and then every 6 hours, and installs
 // only after the user clicks "Install and restart".
-import type { DesktopUpdateInfo } from "@morticord/shared";
+import type { DesktopUpdateInfo } from "@mortium/shared";
 
 /** True when this copy of the app can update itself: a packaged AppImage. */
 export function canUpdateItself(isPackaged: boolean, env: NodeJS.ProcessEnv): boolean {

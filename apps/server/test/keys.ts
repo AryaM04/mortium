@@ -7,7 +7,7 @@ import {
   masterKeySignedText,
   oneTimeKeySignedText,
   type DeviceKeys,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import { apiFor, type TestServer, type TestUser } from "./social.js";
 
 /** Unpadded standard base64, the vodozemac form. */

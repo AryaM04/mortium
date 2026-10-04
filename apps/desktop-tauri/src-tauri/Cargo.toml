@@ -1,7 +1,7 @@
 [package]
 name = "desktop-tauri"
 version = "0.0.0"
-description = "Desktop app for Morticord, built with Tauri."
+description = "Desktop app for Mortium, built with Tauri."
 edition = "2021"
 rust-version = "1.98"
 

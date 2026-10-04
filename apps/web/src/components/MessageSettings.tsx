@@ -1,6 +1,6 @@
 // The message part of the account settings: link previews for the
 // messages that this user sends (a synced setting).
-import { linkPreviewsOf } from "@morticord/client-core";
+import { linkPreviewsOf } from "@mortium/client-core";
 import { settingsStore, useSettings } from "../lib/settings.js";
 
 export default function MessageSettings() {

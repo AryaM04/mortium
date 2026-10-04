@@ -9,7 +9,7 @@ import {
   type CreateRoleRequest,
   type RoleOrderRequest,
   type UpdateRoleRequest,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { DbClient } from "../../db/client.js";
 import { guildMembers, memberRoles, roles } from "../../db/schema.js";
 import { AppError } from "../../errors.js";

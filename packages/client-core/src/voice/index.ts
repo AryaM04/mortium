@@ -1,5 +1,5 @@
 // Public surface of the voice subpackage. Import this only from
-// "@morticord/client-core/voice", never from the main barrel: voice
+// "@mortium/client-core/voice", never from the main barrel: voice
 // pulls in WebRTC- and Web Audio-shaped types, and the plan keeps it out
 // of the main bundle until a call actually starts.
 export {

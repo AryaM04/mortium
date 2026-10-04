@@ -10,7 +10,7 @@
 // Both keys come from the pickle key of the crypto store (see
 // `deriveLocalIndexKeys`). The trade-off of word tags against one
 // encrypted blob is in docs/concepts/search.md.
-import type { DecryptedPayload, EventJson } from "@morticord/shared";
+import type { DecryptedPayload, EventJson } from "@mortium/shared";
 import { tokenize, type HasFilter } from "./text.js";
 
 /** The index keeps at most this many messages. It drops the oldest first. */

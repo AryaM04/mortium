@@ -2,7 +2,7 @@
 // queue, acknowledgements, the window, resync, the sender visibility rule,
 // the limits and the queue bound. Real Postgres and a real ws.
 import { eq } from "drizzle-orm";
-import { GatewayOpcode, encodeBase64Url } from "@morticord/shared";
+import { GatewayOpcode, encodeBase64Url } from "@mortium/shared";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { toDeviceQueue } from "../../db/schema.js";
 import { describeWithDb } from "../../../test/db.js";

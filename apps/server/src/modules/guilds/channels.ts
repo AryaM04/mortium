@@ -1,6 +1,6 @@
 // Channel logic and database access: create, update, delete and reorder.
 import { and, eq, inArray } from "drizzle-orm";
-import { DispatchEvent, Permission, type ChannelType } from "@morticord/shared";
+import { DispatchEvent, Permission, type ChannelType } from "@mortium/shared";
 import type { DbClient } from "../../db/client.js";
 import { channels } from "../../db/schema.js";
 import { AppError } from "../../errors.js";

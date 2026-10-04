@@ -2,11 +2,11 @@
 // group), the body, a reply preview line, the reactions row and the
 // hover actions (react, reply, edit, delete).
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import type { AggregatedMessage } from "@morticord/client-core";
+import type { AggregatedMessage } from "@mortium/client-core";
 import { Markdown, MarkdownInline } from "./Markdown.js";
 import { Avatar } from "./Avatar.js";
 import { EmojiPickerButton } from "./EmojiPickerButton.js";
-import type { User } from "@morticord/shared";
+import type { User } from "@mortium/shared";
 
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "🎉"];
 

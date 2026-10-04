@@ -3,7 +3,7 @@
 // rules. Real Postgres, driven through app.inject (see test/db.ts).
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, expect, it } from "vitest";
-import { Permission } from "@morticord/shared";
+import { Permission } from "@mortium/shared";
 import { buildApp } from "../../app.js";
 import { createFakeMailer } from "../../mailer.js";
 import { createTestDb, describeWithDb, type TestDb } from "../../../test/db.js";

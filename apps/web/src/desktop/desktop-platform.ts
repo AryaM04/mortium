@@ -17,8 +17,8 @@ import {
   countUnreadMessages,
   type NotifyOptions,
   type Platform,
-} from "@morticord/client-core";
-import type { DesktopBridge, DesktopInit } from "@morticord/shared";
+} from "@mortium/client-core";
+import type { DesktopBridge, DesktopInit } from "@mortium/shared";
 import { installDesktopPlatform, type DesktopFeatures } from "../lib/platform.js";
 import { setServerOrigin } from "../lib/server-url.js";
 import { messagesStore } from "../lib/messages.js";
@@ -101,8 +101,8 @@ function makeFeatures(init: DesktopInit): DesktopFeatures {
 }
 
 /**
- * Open a deep link: "morticord://invite/<code>", "morticord://auth/callback#code=<code>"
- * or "morticord://notification/<id>".
+ * Open a deep link: "mortium://invite/<code>", "mortium://auth/callback#code=<code>"
+ * or "mortium://notification/<id>".
  */
 function openDeepLink(link: string): void {
   let url: URL;
@@ -111,7 +111,7 @@ function openDeepLink(link: string): void {
   } catch {
     return;
   }
-  // In "morticord://invite/abc", the host is "invite" and the path is "/abc".
+  // In "mortium://invite/abc", the host is "invite" and the path is "/abc".
   const parts = `${url.host}${url.pathname}`.split("/").filter((part) => part.length > 0);
   if (parts[0] === "invite" && parts.length === 2 && INVITE_CODE.test(parts[1]!)) {
     navigate(`/invite/${parts[1]}`);

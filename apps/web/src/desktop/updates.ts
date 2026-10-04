@@ -3,7 +3,7 @@
 // checks the signature of the download. The app installs an update only
 // after the user clicks "Install and restart". The prompt is plain DOM, so
 // it adds no code to the web bundle.
-import type { DesktopUpdateInfo as UpdateInfo } from "@morticord/shared";
+import type { DesktopUpdateInfo as UpdateInfo } from "@mortium/shared";
 import { commands, errorText } from "./bridge.js";
 
 const FIRST_CHECK_DELAY_MS = 30_000;

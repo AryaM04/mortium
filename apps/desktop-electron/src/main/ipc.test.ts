@@ -127,7 +127,7 @@ describe("registerCalls", () => {
   it("registers one channel for each call and refuses an untrusted sender", async () => {
     const listeners = new Map<string, (event: CallEvent, ...args: unknown[]) => Promise<CallResult>>();
     const services = fakeServices();
-    const trusted = { url: "app://morticord/", parent: null };
+    const trusted = { url: "app://mortium/", parent: null };
     registerCalls(
       { handle: (channel, listener) => listeners.set(channel, listener) },
       createCallHandlers(services),

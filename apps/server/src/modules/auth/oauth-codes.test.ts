@@ -1,6 +1,6 @@
 // Tests for the one-time OAuth exchange code store.
 import { beforeEach, describe, expect, it } from "vitest";
-import type { AuthResult } from "@morticord/shared";
+import type { AuthResult } from "@mortium/shared";
 import { clearOAuthCodesForTests, consumeOAuthCode, storeOAuthCode } from "./oauth-codes.js";
 
 const sampleResult: AuthResult = {

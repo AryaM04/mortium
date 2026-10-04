@@ -1,6 +1,6 @@
 // Synced user settings routes.
 import type { FastifyInstance } from "fastify";
-import { MAX_SETTINGS_BYTES, putSettingsRequestSchema } from "@morticord/shared";
+import { MAX_SETTINGS_BYTES, putSettingsRequestSchema } from "@mortium/shared";
 import type { AppDeps } from "../../app.js";
 import { getSettings, putSettings } from "./service.js";
 

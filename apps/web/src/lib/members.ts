@@ -2,8 +2,8 @@
 // for message authors, mentions, typing text and voice tiles. A guild
 // channel uses the guild member rows. A DM (guild id null) uses the DM
 // recipients and the friend list.
-import type { RealtimeState } from "@morticord/client-core";
-import type { User } from "@morticord/shared";
+import type { RealtimeState } from "@mortium/client-core";
+import type { User } from "@mortium/shared";
 import { session } from "./session.js";
 import { serverUrl } from "./server-url.js";
 

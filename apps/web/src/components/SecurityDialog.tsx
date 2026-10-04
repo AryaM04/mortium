@@ -4,7 +4,7 @@
 // docs/concepts/olm-megolm.md sections 4, 9 and 10.
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
-import type { OwnDevice } from "@morticord/client-core/crypto";
+import type { OwnDevice } from "@mortium/client-core/crypto";
 import { currentCrypto, securityStore } from "../lib/crypto.js";
 import { describeError } from "../lib/errors.js";
 

@@ -1,7 +1,7 @@
 // The rule that decides when a new message shows a desktop notification.
 // It is a pure function, so each app shell can use it with its own
 // notification service (see `Platform.notify`).
-import type { PresenceStatus } from "@morticord/shared";
+import type { PresenceStatus } from "@mortium/shared";
 import type { NotificationLevel } from "./settings-store.js";
 
 export interface NotificationInput {

@@ -12,8 +12,8 @@ import {
   isChannelUnread,
   isDmHidden,
   sortDmChannels,
-} from "@morticord/client-core";
-import type { DmChannelJson } from "@morticord/shared";
+} from "@mortium/client-core";
+import type { DmChannelJson } from "@mortium/shared";
 import { Avatar } from "./Avatar.js";
 import { UserPanel } from "./UserPanel.js";
 import { VoiceStatusPanel } from "./VoiceStatusPanel.js";

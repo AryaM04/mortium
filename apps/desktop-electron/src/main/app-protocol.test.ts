@@ -62,11 +62,11 @@ describe("the protocol handler", () => {
   writeFileSync(join(webRoot, "assets", "crypto.wasm"), Buffer.from([0, 97, 115, 109]));
   writeFileSync(join(desktopRoot, "picker.html"), "<!doctype html><title>picker</title>");
   let server: string | null = null;
-  const handler = createAppProtocolHandler({ webRoot, desktopRoot, host: "morticord", serverOrigin: () => server });
+  const handler = createAppProtocolHandler({ webRoot, desktopRoot, host: "mortium", serverOrigin: () => server });
 
   it("serves the page with the policy of the chosen server", async () => {
     server = "https://chat.example.com";
-    const response = await handler(new Request("app://morticord/app/1/2"));
+    const response = await handler(new Request("app://mortium/app/1/2"));
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
     expect(response.headers.get("content-security-policy")).toContain("wss://chat.example.com");
@@ -75,15 +75,15 @@ describe("the protocol handler", () => {
   });
 
   it("serves WASM with its type, and the picker page from the desktop folder", async () => {
-    const wasm = await handler(new Request("app://morticord/assets/crypto.wasm"));
+    const wasm = await handler(new Request("app://mortium/assets/crypto.wasm"));
     expect(wasm.headers.get("content-type")).toBe("application/wasm");
-    const picker = await handler(new Request("app://morticord/__desktop/picker.html"));
+    const picker = await handler(new Request("app://mortium/__desktop/picker.html"));
     expect(await picker.text()).toContain("<title>picker</title>");
   });
 
   it("gives 404 for another host, a missing file and a write method", async () => {
     expect((await handler(new Request("app://other-host/"))).status).toBe(404);
-    expect((await handler(new Request("app://morticord/assets/missing.js"))).status).toBe(404);
-    expect((await handler(new Request("app://morticord/", { method: "POST", body: "x" }))).status).toBe(404);
+    expect((await handler(new Request("app://mortium/assets/missing.js"))).status).toBe(404);
+    expect((await handler(new Request("app://mortium/", { method: "POST", body: "x" }))).status).toBe(404);
   });
 });

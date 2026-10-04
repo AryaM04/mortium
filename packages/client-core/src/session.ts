@@ -13,7 +13,7 @@ import {
   type RegisterRequest,
   type UpdateMeRequest,
   type User,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import { createApiClient, type ApiClient, type TokenSet } from "./api.js";
 import type { Platform } from "./platform.js";
 

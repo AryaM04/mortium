@@ -14,8 +14,8 @@ COPY packages/shared packages/shared
 COPY packages/link-preview-fetch packages/link-preview-fetch
 COPY apps/server apps/server
 COPY tsconfig.base.json tsconfig.base.json
-RUN pnpm --filter @morticord/server build:bundle
-RUN pnpm --filter @morticord/server deploy --legacy --prod /out/server
+RUN pnpm --filter @mortium/server build:bundle
+RUN pnpm --filter @mortium/server deploy --legacy --prod /out/server
 
 # The runtime image copies only the node binary from the node image. This
 # leaves out npm, yarn and corepack, which the server does not need.

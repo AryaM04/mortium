@@ -3,8 +3,8 @@
 // Megolm. The crypto layer loads lazily (see crypto.ts), so the codec here
 // waits for it. It can still read old plaintext events without it.
 import { createStore } from "zustand/vanilla";
-import { createMessagesStore, decodePlainEvent, type PayloadCodec } from "@morticord/client-core";
-import type { CryptoClient } from "@morticord/client-core/crypto-client";
+import { createMessagesStore, decodePlainEvent, type PayloadCodec } from "@mortium/client-core";
+import type { CryptoClient } from "@mortium/client-core/crypto-client";
 import { session } from "./session.js";
 import { gatewaySend } from "./realtime.js";
 import { queueDecoded, queueRedacted } from "./search-queue.js";

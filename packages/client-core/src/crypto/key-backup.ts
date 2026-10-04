@@ -10,7 +10,7 @@ import {
   encodeBase64Url,
   type BackupPassphraseParams,
   type BackupVersion,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { AccountHolder } from "./account.js";
 import type { DeviceList } from "./device-list.js";
 import type { DeviceManager } from "./device-manager.js";

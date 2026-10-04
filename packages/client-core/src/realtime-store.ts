@@ -14,7 +14,7 @@ import type {
   User,
   VisiblePresenceStatus,
   VoiceStateJson,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { GatewayDispatch } from "./gateway.js";
 
 export interface RealtimeState {

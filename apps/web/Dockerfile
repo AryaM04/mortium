@@ -11,7 +11,7 @@ COPY packages/shared/package.json packages/shared/package.json
 COPY packages/client-core/package.json packages/client-core/package.json
 COPY packages/crypto-wasm/package.json packages/crypto-wasm/package.json
 COPY apps/web/package.json apps/web/package.json
-RUN pnpm install --frozen-lockfile --filter @morticord/web...
+RUN pnpm install --frozen-lockfile --filter @mortium/web...
 COPY tsconfig.base.json tsconfig.base.json
 COPY packages/shared packages/shared
 COPY packages/client-core packages/client-core
@@ -20,8 +20,8 @@ COPY packages/crypto-wasm/pkg packages/crypto-wasm/pkg
 COPY apps/web apps/web
 # Run the type check and the bundler as two steps. Do not use the "build"
 # script, so the image build has the same result in every place.
-RUN pnpm --filter @morticord/web exec tsc --noEmit \
-  && pnpm --filter @morticord/web exec vite build
+RUN pnpm --filter @mortium/web exec tsc --noEmit \
+  && pnpm --filter @mortium/web exec vite build
 
 FROM caddy:2-alpine
 # Caddy runs as a user without rights. Docker lets a process in a container

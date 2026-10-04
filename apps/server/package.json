@@ -1,5 +1,5 @@
 {
-  "name": "@morticord/server",
+  "name": "@mortium/server",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -16,8 +16,8 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
-    "@morticord/link-preview-fetch": "workspace:*",
-    "@morticord/shared": "workspace:*",
+    "@mortium/link-preview-fetch": "workspace:*",
+    "@mortium/shared": "workspace:*",
     "@fastify/cookie": "^11.1.2",
     "@fastify/cors": "^11.3.0",
     "@fastify/rate-limit": "^11.2.0",

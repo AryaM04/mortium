@@ -12,7 +12,7 @@ export interface DesktopInit {
   version: string;
   /** The server origin that the user chose, or null before the first choice. */
   serverUrl: string | null;
-  /** The deep links that started the app, such as "morticord://invite/abc". */
+  /** The deep links that started the app, such as "mortium://invite/abc". */
   deepLinks: string[];
   /** A reason in plain words when the app cannot keep secrets safely, or null. The app then does not start. */
   secureStoreUnavailableReason?: string | null;
@@ -55,7 +55,7 @@ export interface DesktopBridge {
   setServerUrl(url: string | null): Promise<void>;
   /** Make the preview of a link with the address rules of the server. Null when the page has no preview. */
   fetchLinkPreview(url: string): Promise<DesktopLinkPreview | null>;
-  /** Show a system notification. A click sends the deep link "morticord://notification/<id>". */
+  /** Show a system notification. A click sends the deep link "mortium://notification/<id>". */
   notify(id: string, title: string, body: string): Promise<void>;
   /** Register a global push-to-talk shortcut such as "Control+Shift+KeyT", or remove it (null). */
   setPushToTalk(shortcut: string | null): Promise<void>;

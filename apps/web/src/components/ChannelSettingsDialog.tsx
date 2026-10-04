@@ -4,8 +4,8 @@
 // only the first time it opens).
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { channelNameSchema, type ChannelJson } from "@morticord/shared";
-import { deleteChannel, updateChannel } from "@morticord/client-core";
+import { channelNameSchema, type ChannelJson } from "@mortium/shared";
+import { deleteChannel, updateChannel } from "@mortium/client-core";
 import { session } from "../lib/session.js";
 import { describeError } from "../lib/errors.js";
 import { realtimeStore } from "../lib/realtime.js";

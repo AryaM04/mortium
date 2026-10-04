@@ -1,7 +1,7 @@
 // Integration tests for the synced user settings: the blob, the version
 // check, the size limit, and USER_SETTINGS_UPDATE to the other sessions.
 import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
-import { encodeBase64Url, MAX_SETTINGS_BYTES } from "@morticord/shared";
+import { encodeBase64Url, MAX_SETTINGS_BYTES } from "@mortium/shared";
 import { describeWithDb } from "../../../test/db.js";
 import {
   apiFor,

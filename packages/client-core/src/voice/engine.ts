@@ -6,7 +6,7 @@
 // gateway call comes through `VoiceEngineDeps`, so a test can supply
 // fakes for all of it. See docs/concepts/voice.md for the wire protocol
 // this engine's signal transport rides on.
-import type { VoiceErrorCode, VoiceStateJson } from "@morticord/shared";
+import type { VoiceErrorCode, VoiceStateJson } from "@mortium/shared";
 import { applyOpusFec, capOpusBitrate } from "./sdp.js";
 import { chooseVideoEncoding, type VideoEncodingKind } from "./adaptive.js";
 import type { PeerKey, SignalPayload, SignalTransport } from "./signal-transport.js";

@@ -2,8 +2,8 @@
 // an invite code or a full invite URL.
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { guildNameSchema } from "@morticord/shared";
-import { createGuild, acceptInvite } from "@morticord/client-core";
+import { guildNameSchema } from "@mortium/shared";
+import { createGuild, acceptInvite } from "@mortium/client-core";
 import { session } from "../lib/session.js";
 import { describeError } from "../lib/errors.js";
 import { realtimeStore } from "../lib/realtime.js";

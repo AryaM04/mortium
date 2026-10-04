@@ -1,5 +1,5 @@
 // The app:// protocol. The window loads the web build from
-// "app://morticord", not from file://, so the page has a stable origin
+// "app://mortium", not from file://, so the page has a stable origin
 // that the server can allow (CORS_ALLOWED_ORIGINS). Each response has the
 // content security policy (CSP) of the app, with the chosen server added.
 import { readFile } from "node:fs/promises";

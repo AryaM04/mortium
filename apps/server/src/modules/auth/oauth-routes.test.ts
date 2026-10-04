@@ -84,10 +84,10 @@ describeWithDb("OAuth redirect flow", () => {
   });
 
   it("builds the return URL for each app", () => {
-    const config = { webOrigin: "https://chat.example.com", desktopUrlScheme: "morticord" };
+    const config = { webOrigin: "https://chat.example.com", desktopUrlScheme: "mortium" };
     expect(oauthReturnUrl(config, undefined)).toBe("https://chat.example.com/auth/callback");
     expect(oauthReturnUrl(config, "web")).toBe("https://chat.example.com/auth/callback");
-    expect(oauthReturnUrl(config, "desktop")).toBe("morticord://auth/callback");
+    expect(oauthReturnUrl(config, "desktop")).toBe("mortium://auth/callback");
   });
 
   it("sends the web app back to its own origin with a code", async () => {
@@ -102,14 +102,14 @@ describeWithDb("OAuth redirect flow", () => {
     const { state, cookie } = await startFlow("?client=desktop");
     stubGitHub();
     const location = await callback(state, cookie);
-    expect(location).toMatch(/^morticord:\/\/auth\/callback#code=/);
+    expect(location).toMatch(/^mortium:\/\/auth\/callback#code=/);
     expect(await exchange(location)).toBe(200);
   });
 
   it("sends a desktop error to the URL scheme too", async () => {
     const { cookie } = await startFlow("?client=desktop");
     const location = await callback("wrong-state", cookie);
-    expect(location).toBe("morticord://auth/callback#error=OAUTH_STATE_INVALID");
+    expect(location).toBe("mortium://auth/callback#error=OAUTH_STATE_INVALID");
   });
 
   it("ignores an unknown client value and keeps the web return", async () => {

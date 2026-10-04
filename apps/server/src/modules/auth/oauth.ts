@@ -2,7 +2,7 @@
 // logic in completeOAuthLogin. Route handlers stay in routes.ts.
 import { and, eq } from "drizzle-orm";
 import { GitHub, Google } from "arctic";
-import type { OAuthProvider } from "@morticord/shared";
+import type { OAuthProvider } from "@mortium/shared";
 import type { AppConfig } from "../../config.js";
 import { isUniqueViolation, type DbClient } from "../../db/client.js";
 import { oauthAccounts, users } from "../../db/schema.js";
@@ -56,7 +56,7 @@ interface GitHubEmail {
 
 /** Fetch the GitHub profile and the primary, verified email of the signed-in user. */
 export async function fetchGitHubProfile(accessToken: string): Promise<OAuthProfile> {
-  const headers = { Authorization: `Bearer ${accessToken}`, "User-Agent": "morticord" };
+  const headers = { Authorization: `Bearer ${accessToken}`, "User-Agent": "mortium" };
 
   const userResponse = await fetch("https://api.github.com/user", { headers });
   if (!userResponse.ok) {

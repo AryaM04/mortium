@@ -1,7 +1,7 @@
 // Grouped permission metadata for the Roles tab and the channel
 // Permissions tab: which group each permission sits in, and a one-line
 // plain-word description of what it does.
-import { Permission, type PermissionName } from "@morticord/shared";
+import { Permission, type PermissionName } from "@mortium/shared";
 
 export interface PermissionGroup {
   label: string;

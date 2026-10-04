@@ -6,7 +6,7 @@ import type { FastifyInstance } from "fastify";
 import { createHmac } from "node:crypto";
 import WebSocket from "ws";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { GatewayCloseCode, GatewayOpcode, Permission, type GatewayEnvelope } from "@morticord/shared";
+import { GatewayCloseCode, GatewayOpcode, Permission, type GatewayEnvelope } from "@mortium/shared";
 import { buildApp } from "../../app.js";
 import { permissionOverwrites } from "../../db/schema.js";
 import { createFakeMailer } from "../../mailer.js";

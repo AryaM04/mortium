@@ -1,6 +1,6 @@
 // Role-hierarchy helpers shared by role, member-role and moderation logic.
 // See docs/concepts/permissions.md for the rules these functions enforce.
-import { hasPermission, Permission } from "@morticord/shared";
+import { hasPermission, Permission } from "@mortium/shared";
 import type { DbClient } from "../../db/client.js";
 import { AppError } from "../../errors.js";
 import { guildPermissions, loadMemberContext, type MemberContext } from "./member-context.js";

@@ -2,8 +2,8 @@
 // realtime reducer cases, the DM permissions, the messages store with DM
 // channel ids, the gateway client's payload checks, and the API wrappers.
 import { describe, expect, it, vi } from "vitest";
-import { DM_PERMISSIONS, Permission, encodeBase64Url } from "@morticord/shared";
-import type { DmChannelJson, RelationshipJson, User } from "@morticord/shared";
+import { DM_PERMISSIONS, Permission, encodeBase64Url } from "@mortium/shared";
+import type { DmChannelJson, RelationshipJson, User } from "@mortium/shared";
 import { ApiError, type ApiClient } from "./api.js";
 import { createFakeCodec } from "./test/fake-codec.js";
 import { acceptFriendRequest, blockUser, listRelationships, removeRelationship, sendFriendRequest } from "./friends-api.js";

@@ -2,7 +2,7 @@
 // binds the sender and the recipient into the plaintext, so the server
 // cannot send a message to a different device or say that it comes from a
 // different device. See docs/concepts/olm-megolm.md section 6.
-import { encodeBase64Url } from "@morticord/shared";
+import { encodeBase64Url } from "@mortium/shared";
 
 export interface EnvelopeParty {
   userId: string;

@@ -1,7 +1,7 @@
 // Users routes: the signed-in user's own profile, and the public avatar file.
 import type { FastifyInstance } from "fastify";
 import { eq } from "drizzle-orm";
-import { updateMeRequestSchema } from "@morticord/shared";
+import { updateMeRequestSchema } from "@mortium/shared";
 import type { AppDeps } from "../../app.js";
 import { users } from "../../db/schema.js";
 import { AppError } from "../../errors.js";

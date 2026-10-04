@@ -2,7 +2,7 @@
 // the main frame of the app window, on the app origin) and each argument,
 // and then calls a service. The result goes back as a `CallResult`, so
 // the web app gets the plain error message.
-import type { DesktopInit, DesktopLinkPreview, DesktopUpdateInfo } from "@morticord/shared";
+import type { DesktopInit, DesktopLinkPreview, DesktopUpdateInfo } from "@mortium/shared";
 import { CALLS, callChannel, type CallName, type CallResult } from "../shared/channels.js";
 import {
   ArgumentError,

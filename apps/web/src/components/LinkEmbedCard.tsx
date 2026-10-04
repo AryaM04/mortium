@@ -1,7 +1,7 @@
 // The card of one link preview: site name, title (a link), description
 // and image. The sender made it. This client never fetches the URL. The
 // image is an encrypted attachment, or a local object URL in the composer.
-import type { LinkEmbed } from "@morticord/shared";
+import type { LinkEmbed } from "@mortium/shared";
 import { useDecryptedUrl } from "./AttachmentList.js";
 
 function EmbedImage({ image }: { image: NonNullable<LinkEmbed["image"]> }) {

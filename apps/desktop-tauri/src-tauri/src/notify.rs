@@ -107,9 +107,9 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn escapes_text_in_the_toast_xml() {
-        let xml = toast_xml("morticord://notification/1", "A <b> & \"c\"", "it's");
+        let xml = toast_xml("mortium://notification/1", "A <b> & \"c\"", "it's");
         assert!(xml.contains("<text>A &lt;b&gt; &amp; &quot;c&quot;</text>"));
         assert!(xml.contains("<text>it&apos;s</text>"));
-        assert!(xml.contains("launch=\"morticord://notification/1\""));
+        assert!(xml.contains("launch=\"mortium://notification/1\""));
     }
 }

@@ -2,8 +2,8 @@
 // member can change it) and the call button.
 import { useState } from "react";
 import { useStore } from "zustand";
-import { dmDisplayName, dmOtherRecipients, renameGroupDm } from "@morticord/client-core";
-import { groupDmNameSchema, type DmChannelJson } from "@morticord/shared";
+import { dmDisplayName, dmOtherRecipients, renameGroupDm } from "@mortium/client-core";
+import { groupDmNameSchema, type DmChannelJson } from "@mortium/shared";
 import { Avatar } from "./Avatar.js";
 import { session } from "../lib/session.js";
 import { describeError } from "../lib/errors.js";

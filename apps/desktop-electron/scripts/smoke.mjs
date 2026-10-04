@@ -52,7 +52,7 @@ async function findPage() {
     if (exitCode !== null) fail(`the app stopped with code ${exitCode}`);
     try {
       const targets = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json();
-      const page = targets.find((target) => target.type === "page" && target.url.startsWith("app://morticord/"));
+      const page = targets.find((target) => target.type === "page" && target.url.startsWith("app://mortium/"));
       if (page) return page;
     } catch {
       // The debugging port is not open yet.

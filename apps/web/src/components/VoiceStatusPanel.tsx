@@ -4,7 +4,7 @@
 // controls. See docs/concepts/voice.md for the call this panel controls.
 import { useState } from "react";
 import { useStore } from "zustand";
-import { dmDisplayName } from "@morticord/client-core";
+import { dmDisplayName } from "@mortium/client-core";
 import { useRealtime } from "../lib/useRealtime.js";
 import {
   cameraSupported,

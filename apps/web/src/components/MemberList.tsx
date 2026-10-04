@@ -5,8 +5,8 @@
 // (or a click) opens the member context menu.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "zustand";
-import { listGuildMembers } from "@morticord/client-core";
-import type { GuildMemberJson, RoleJson } from "@morticord/shared";
+import { listGuildMembers } from "@mortium/client-core";
+import type { GuildMemberJson, RoleJson } from "@mortium/shared";
 import { session } from "../lib/session.js";
 import { realtimeStore } from "../lib/realtime.js";
 import { useRealtime } from "../lib/useRealtime.js";

@@ -4,7 +4,7 @@
 // deletes the rows once the client acknowledges them. TO_DEVICE never
 // goes through the resume buffer. See docs/concepts/olm-megolm.md section 6.
 import { and, eq, gt, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
-import { decodeBase64Url, encodeBase64Url, DispatchEvent, type DeviceRef, type ToDeviceMessage } from "@morticord/shared";
+import { decodeBase64Url, encodeBase64Url, DispatchEvent, type DeviceRef, type ToDeviceMessage } from "@mortium/shared";
 import type { FastifyBaseLogger } from "fastify";
 import type { DbClient } from "../../db/client.js";
 import { devices, toDeviceQueue } from "../../db/schema.js";

@@ -10,7 +10,7 @@ import type {
   OverwriteInput,
   RoleJson,
   VoiceStateJson,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { ChannelRow, GuildRow, RoleRow } from "./member-context.js";
 
 export interface InviteRow {

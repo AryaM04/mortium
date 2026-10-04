@@ -1,8 +1,8 @@
 // The member list of a group DM. The owner can add friends and remove
 // people. Every member can leave the group.
 import { useState } from "react";
-import { addDmRecipient, removeDmRecipient } from "@morticord/client-core";
-import { MAX_GROUP_DM_MEMBERS, type DmChannelJson } from "@morticord/shared";
+import { addDmRecipient, removeDmRecipient } from "@mortium/client-core";
+import { MAX_GROUP_DM_MEMBERS, type DmChannelJson } from "@mortium/shared";
 import { useStore } from "zustand";
 import { Avatar } from "./Avatar.js";
 import { PickFriendsDialog } from "./PickFriendsDialog.js";

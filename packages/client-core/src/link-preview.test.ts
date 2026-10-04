@@ -1,7 +1,7 @@
 // Tests for the link finder of the sender-side link preview, and for the
 // web platform's server fetcher (it never throws, and it decodes the image).
 import { describe, expect, it } from "vitest";
-import { encodeBase64Url } from "@morticord/shared";
+import { encodeBase64Url } from "@mortium/shared";
 import type { ApiClient } from "./api.js";
 import { createServerLinkPreviewFetcher, findFirstLink } from "./link-preview.js";
 

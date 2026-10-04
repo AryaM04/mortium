@@ -3,7 +3,7 @@
 // right CHANNEL_CREATE / CHANNEL_DELETE dispatches. See
 // docs/concepts/permissions.md "Where the server uses this".
 import { eq } from "drizzle-orm";
-import { DispatchEvent } from "@morticord/shared";
+import { DispatchEvent } from "@mortium/shared";
 import type { DbClient } from "../../db/client.js";
 import { guildMembers } from "../../db/schema.js";
 import type { GatewayService } from "../gateway/service.js";

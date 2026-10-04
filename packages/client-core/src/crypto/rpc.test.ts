@@ -4,7 +4,7 @@
 // crypto layer (one copy is processed, and one tab sends the acks).
 import { IDBFactory } from "fake-indexeddb";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import type { ToDeviceDispatchPayload } from "@morticord/shared";
+import type { ToDeviceDispatchPayload } from "@mortium/shared";
 import { ApiError } from "../api.js";
 import { connectCryptoWorker, CryptoWorkerLostError, type CryptoWorkerClient } from "./client.js";
 import { createCryptoHost, type CryptoHost, type HostedCrypto } from "./host.js";

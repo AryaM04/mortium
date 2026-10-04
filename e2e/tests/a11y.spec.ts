@@ -158,18 +158,18 @@ test("the download page has no serious accessibility violation", async ({ page }
       json: {
         version: "0.2.0",
         publishedAt: "2026-09-30T12:00:00Z",
-        notesUrl: "https://github.com/AryaM04/morticord/releases/tag/v0.2.0",
+        notesUrl: "https://github.com/AryaM04/mortium/releases/tag/v0.2.0",
         assets: [
-          { platform: "windows", kind: "installer", name: "Morticord_0.2.0_x64-setup.exe", size: 5_000_000, url: "https://example.test/a.exe" },
-          { platform: "macos", kind: "dmg", name: "Morticord_0.2.0_aarch64.dmg", size: 7_000_000, url: "https://example.test/a.dmg" },
-          { platform: "linux", kind: "appimage", name: "morticord-0.2.0-x86_64.AppImage", size: 8_000_000, url: "https://example.test/a.AppImage" },
-          { platform: "linux", kind: "deb", name: "morticord-0.2.0-amd64.deb", size: 4_000_000, url: "https://example.test/a.deb" },
+          { platform: "windows", kind: "installer", name: "Mortium_0.2.0_x64-setup.exe", size: 5_000_000, url: "https://example.test/a.exe" },
+          { platform: "macos", kind: "dmg", name: "Mortium_0.2.0_aarch64.dmg", size: 7_000_000, url: "https://example.test/a.dmg" },
+          { platform: "linux", kind: "appimage", name: "mortium-0.2.0-x86_64.AppImage", size: 8_000_000, url: "https://example.test/a.AppImage" },
+          { platform: "linux", kind: "deb", name: "mortium-0.2.0-amd64.deb", size: 4_000_000, url: "https://example.test/a.deb" },
         ],
       },
     }),
   );
   await page.goto(`${WEB_ORIGIN}/download`);
-  await expect(page.getByRole("heading", { name: "Download Morticord" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Download Mortium" })).toBeVisible();
   await expect(page.getByText("Version 0.2.0")).toBeVisible();
   await expectNoSeriousViolations(page, "download");
 });

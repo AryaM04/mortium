@@ -6,7 +6,7 @@ import {
   putSettingsRequestSchema,
   settingsResponseSchema,
   type SettingsResponse,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { ApiClient } from "./api.js";
 
 export function getSettings(api: ApiClient): Promise<SettingsResponse> {

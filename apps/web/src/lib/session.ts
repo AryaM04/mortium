@@ -1,7 +1,7 @@
 // The one session instance for this tab. Every page reads it through the
 // `useSession` hook in `useSession.ts`, and never calls `fetch` directly
 // (see docs/architecture.md section 7).
-import { createSession } from "@morticord/client-core";
+import { createSession } from "@mortium/client-core";
 import { sessionPlatform } from "./platform.js";
 import { apiBaseUrl } from "./server-url.js";
 

@@ -3,8 +3,8 @@
 // forgets everything on sign-out. The blob is encrypted with the settings
 // key of the user, so the settings wait for the crypto layer.
 import { useStore } from "zustand";
-import { createSettingsStore, type SettingsCipher, type SettingsStore } from "@morticord/client-core";
-import type { CryptoClient } from "@morticord/client-core/crypto-client";
+import { createSettingsStore, type SettingsCipher, type SettingsStore } from "@mortium/client-core";
+import type { CryptoClient } from "@mortium/client-core/crypto-client";
 import { cryptoReady } from "./messages.js";
 import { session } from "./session.js";
 import { realtimeStore } from "./realtime.js";

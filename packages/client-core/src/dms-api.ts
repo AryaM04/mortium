@@ -8,7 +8,7 @@ import {
   updateGroupDmRequestSchema,
   type DmChannelJson,
   type UpdateGroupDmRequest,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { ApiClient } from "./api.js";
 
 /** One id opens (or finds) the 1:1 DM. Two to nine ids make a new group DM. */

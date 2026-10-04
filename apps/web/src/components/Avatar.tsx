@@ -1,7 +1,7 @@
 // A user's avatar image, or their initials when there is no avatar or the
 // image fails to load.
 import { useState } from "react";
-import type { User } from "@morticord/shared";
+import type { User } from "@mortium/shared";
 import { serverUrl } from "../lib/server-url.js";
 
 function initialsOf(name: string): string {

@@ -3,7 +3,7 @@
 // the list. See docs/concepts/olm-megolm.md section 10.
 import { useEffect, useRef } from "react";
 import { useStore } from "zustand";
-import type { VerificationView } from "@morticord/client-core/crypto";
+import type { VerificationView } from "@mortium/client-core/crypto";
 import { currentCrypto, securityStore } from "../lib/crypto.js";
 import { realtimeStore } from "../lib/realtime.js";
 import { nameOfUser } from "./SecurityBanner.js";

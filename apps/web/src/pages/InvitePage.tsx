@@ -2,8 +2,8 @@
 // visitors go to sign in first, then come back here.
 import { useEffect, useState } from "react";
 import { Redirect, useLocation, useParams } from "wouter";
-import { acceptInvite, getInvitePreview } from "@morticord/client-core";
-import type { InvitePreview } from "@morticord/shared";
+import { acceptInvite, getInvitePreview } from "@mortium/client-core";
+import type { InvitePreview } from "@mortium/shared";
 import { session } from "../lib/session.js";
 import { useSession } from "../lib/useSession.js";
 import { describeError } from "../lib/errors.js";

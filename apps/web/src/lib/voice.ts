@@ -1,18 +1,18 @@
 // The voice call for this tab: join, leave, mute, deafen, and the state a
 // voice status panel reads. The engine itself lives in
-// `@morticord/client-core/voice` and is loaded only on the first
+// `@mortium/client-core/voice` and is loaded only on the first
 // join, per the resource rule in CLAUDE.md (load heavy parts, such as
 // voice, only when needed).
 import { createStore } from "zustand/vanilla";
-import { GatewayOpcode } from "@morticord/shared";
-import { getTurnCredentials } from "@morticord/client-core";
-import type { CryptoClient } from "@morticord/client-core/crypto-client";
+import { GatewayOpcode } from "@mortium/shared";
+import { getTurnCredentials } from "@mortium/client-core";
+import type { CryptoClient } from "@mortium/client-core/crypto-client";
 import type {
   VoiceDebugPeerStats,
   VoiceEngine,
   VoiceEngineErrorEvent,
   VoicePeerState,
-} from "@morticord/client-core/voice";
+} from "@mortium/client-core/voice";
 import { session } from "./session.js";
 import { cryptoReady } from "./messages.js";
 import { gatewaySend, realtimeStore, subscribeDispatch } from "./realtime.js";
@@ -179,7 +179,7 @@ async function loadEngine(): Promise<VoiceEngine> {
   }
   if (!engineLoad) {
     engineLoad = (async () => {
-      const mod = await import("@morticord/client-core/voice");
+      const mod = await import("@mortium/client-core/voice");
       const selfUserId = realtimeStore.getState().selfUserId;
       const selfDeviceId = session.store.getState().deviceId;
       if (!selfUserId || !selfDeviceId) {

@@ -16,8 +16,8 @@ export interface VoiceDeviceSettings {
   pttKeyCode: string | null;
 }
 
-const DEVICE_KEY = "morticord:voice-devices";
-const PER_USER_KEY = "morticord:voice-per-user";
+const DEVICE_KEY = "mortium:voice-devices";
+const PER_USER_KEY = "mortium:voice-per-user";
 
 function defaultDeviceSettings(): VoiceDeviceSettings {
   return {

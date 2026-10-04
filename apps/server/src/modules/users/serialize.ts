@@ -1,5 +1,5 @@
 // Turn a database user row into the JSON shape the API sends.
-import type { User } from "@morticord/shared";
+import type { User } from "@mortium/shared";
 import type { users } from "../../db/schema.js";
 
 export type UserRow = typeof users.$inferSelect;

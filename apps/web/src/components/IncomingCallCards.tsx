@@ -2,7 +2,7 @@
 // page. "Accept" joins the call and opens the DM. "Decline" hides the card
 // on this tab only. The call goes on for the other people.
 import { useLocation } from "wouter";
-import { dmDisplayName } from "@morticord/client-core";
+import { dmDisplayName } from "@mortium/client-core";
 import { Avatar } from "./Avatar.js";
 import { useRealtime } from "../lib/useRealtime.js";
 import { memberUser } from "../lib/members.js";

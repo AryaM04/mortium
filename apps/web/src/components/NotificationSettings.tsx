@@ -2,7 +2,7 @@
 // for desktop notifications (asked only from this button) and the ring
 // sound of incoming calls (a synced setting).
 import { useState } from "react";
-import { playRingSoundOf } from "@morticord/client-core";
+import { playRingSoundOf } from "@mortium/client-core";
 import { settingsStore, useSettings } from "../lib/settings.js";
 import {
   notificationPermission,

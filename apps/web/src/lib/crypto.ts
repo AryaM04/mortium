@@ -5,11 +5,11 @@
 // without SharedWorker, and the desktop apps, run the crypto layer in the
 // page: then only one tab holds the Web Lock, and a different tab shows a
 // banner and waits for the lock. See docs/concepts/olm-megolm.md section 13.
-import type { BackupStatus, VerificationView } from "@morticord/client-core/crypto";
-import type { CryptoClient, CryptoWorkerClient } from "@morticord/client-core/crypto-client";
-import { ApiError, postEvent } from "@morticord/client-core";
+import type { BackupStatus, VerificationView } from "@mortium/client-core/crypto";
+import type { CryptoClient, CryptoWorkerClient } from "@mortium/client-core/crypto-client";
+import { ApiError, postEvent } from "@mortium/client-core";
 import { currentPlatform } from "./platform.js";
-import { encodeBase64Url } from "@morticord/shared";
+import { encodeBase64Url } from "@mortium/shared";
 import { createStore } from "zustand/vanilla";
 import { messageCodec, setCryptoHandle } from "./messages.js";
 import { gatewaySend, realtimeStore, subscribeDispatch } from "./realtime.js";
@@ -147,7 +147,7 @@ function canUseWorker(): boolean {
 }
 
 async function startInWorker(current: number, userId: string, deviceId: string): Promise<void> {
-  const { connectCryptoWorker, createHttpCryptoTransport } = await import("@morticord/client-core/crypto-client");
+  const { connectCryptoWorker, createHttpCryptoTransport } = await import("@mortium/client-core/crypto-client");
   if (current !== run) {
     return;
   }
@@ -192,7 +192,7 @@ function startInPage(current: number, userId: string, deviceId: string): void {
     if (current !== run) {
       return;
     }
-    const crypto = await import("@morticord/client-core/crypto");
+    const crypto = await import("@mortium/client-core/crypto");
     const started = await crypto.startCrypto({
       userId,
       deviceId,

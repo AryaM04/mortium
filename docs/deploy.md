@@ -28,8 +28,8 @@ To run the stack behind a Cloudflare Tunnel, see step 13.
 
 ## 3. Get the code and make the settings file
 
-1. Get the code: `git clone <repository URL> morticord`.
-2. Go into the folder: `cd morticord`.
+1. Get the code: `git clone <repository URL> mortium`.
+2. Go into the folder: `cd mortium`.
 3. Make the `.env` file with random secrets: `node scripts/generate-secrets.mjs`.
    If Node.js is not installed, use Docker instead:
    `docker run --rm -v "$PWD":/work -w /work node:24-alpine node scripts/generate-secrets.mjs`.
@@ -133,12 +133,12 @@ a large update (see step 9).
 main branch of GitHub and CI passed on it. Cron starts it every 2 minutes.
 The script needs `git`, `curl` and `flock`. Ubuntu and Debian have them.
 
-1. Set `DEPLOY_REPO` in `.env`, for example `DEPLOY_REPO=owner/morticord`.
+1. Set `DEPLOY_REPO` in `.env`, for example `DEPLOY_REPO=owner/mortium`.
 2. Open the cron table: `crontab -e`.
 3. Add this line, with the full path of the stack folder:
 
    ```
-   */2 * * * * /home/<user>/morticord/scripts/auto-deploy.sh
+   */2 * * * * /home/<user>/mortium/scripts/auto-deploy.sh
    ```
 
 The script writes one line for each deploy to `.deploy/deploy.log`, and
@@ -160,10 +160,10 @@ The desktop apps open the server from a different origin. Add the origins to
 `CORS_ALLOWED_ORIGINS` in `.env`, separated by commas:
 
 ```
-CORS_ALLOWED_ORIGINS=app://morticord,http://tauri.localhost,tauri://localhost
+CORS_ALLOWED_ORIGINS=app://mortium,http://tauri.localhost,tauri://localhost
 ```
 
-- `app://morticord`: the Linux app (Electron).
+- `app://mortium`: the Linux app (Electron).
 - `http://tauri.localhost`: the Windows app (Tauri).
 - `tauri://localhost`: the macOS app (Tauri).
 
@@ -378,7 +378,7 @@ The example below uses these values. Change them for your server:
 
 | Item | Value |
 | --- | --- |
-| Web address | `morticord.example.com` (through the tunnel) |
+| Web address | `mortium.example.com` (through the tunnel) |
 | TURN name | `turn.example.com` (DNS only) |
 | TURN port | 3479 (a different service uses 3478) |
 | Relay ports | 40000-40099 |
@@ -391,7 +391,7 @@ Do steps 1 to 3 first. Then set these values in `.env`:
 ```
 PROXY_MODE=cloudflare-tunnel
 HTTP_BIND=127.0.0.1:8480
-DOMAIN=morticord.example.com
+DOMAIN=mortium.example.com
 TURN_PORT=3479
 TURN_PUBLIC_HOST=turn.example.com
 TURN_TLS_ENABLED=false
@@ -418,19 +418,19 @@ host.
 
 ### Tunnel public hostname
 
-Add one public hostname to the tunnel. It sends `morticord.example.com` to
+Add one public hostname to the tunnel. It sends `mortium.example.com` to
 `http://localhost:8480`.
 
 - Tunnel managed in the Cloudflare dashboard: open Zero Trust, then
   Networks, then Tunnels. Select the tunnel and open "Public Hostname".
-  Add a hostname: subdomain `morticord`, domain `example.com`, type
+  Add a hostname: subdomain `mortium`, domain `example.com`, type
   `HTTP`, URL `localhost:8480`. Cloudflare makes the DNS record.
 - Tunnel with a local `config.yml`: add this rule above the last rule (the
   rule without a hostname):
 
   ```
   ingress:
-    - hostname: morticord.example.com
+    - hostname: mortium.example.com
       service: http://localhost:8480
     # ... other rules ...
     - service: http_status:404
@@ -439,7 +439,7 @@ Add one public hostname to the tunnel. It sends `morticord.example.com` to
   Then make the DNS record and start cloudflared again:
 
   ```
-  cloudflared tunnel route dns <TUNNEL_NAME> morticord.example.com
+  cloudflared tunnel route dns <TUNNEL_NAME> mortium.example.com
   sudo systemctl restart cloudflared
   ```
 
@@ -457,7 +457,7 @@ and change `TURN_EXTERNAL_IP`.
 ### Router and firewall
 
 Forward these ports to the LAN address of the server. Do not forward 80
-and 443 for Morticord: the tunnel needs no open port.
+and 443 for Mortium: the tunnel needs no open port.
 
 | Port | Protocol | Use |
 | --- | --- | --- |
@@ -474,11 +474,11 @@ sudo ufw allow 40000:40099/udp
 ### Check list
 
 1. Health: `curl http://127.0.0.1:8480/api/v1/health` on the host, and
-   `curl https://morticord.example.com/api/v1/health` from a different
+   `curl https://mortium.example.com/api/v1/health` from a different
    network. Both must give `{"status":"ok"}`.
-2. Web app: open `https://morticord.example.com`. Register and sign in.
+2. Web app: open `https://mortium.example.com`. Register and sign in.
 3. WebSocket: do the WebSocket check of step 12 with
-   `DOMAIN=morticord.example.com`. The status must be 101. The gateway
+   `DOMAIN=mortium.example.com`. The status must be 101. The gateway
    sends a heartbeat each 30 seconds, so the Cloudflare idle limit (100
    seconds) does not close the connection.
 4. Client address: run `docker compose logs --tail 20 api`. The

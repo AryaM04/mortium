@@ -1,5 +1,5 @@
 {
-  "name": "@morticord/e2e",
+  "name": "@mortium/e2e",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,8 +10,8 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
-    "@morticord/server": "workspace:*",
-    "@morticord/shared": "workspace:*",
+    "@mortium/server": "workspace:*",
+    "@mortium/shared": "workspace:*",
     "@playwright/test": "^1.49.0",
     "@types/node": "^22.10.1",
     "postgres": "^3.4.5",

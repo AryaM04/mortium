@@ -8,8 +8,8 @@ import {
   blockUser,
   removeRelationship,
   sendFriendRequest,
-} from "@morticord/client-core";
-import { usernameSchema, type RelationshipJson, type User } from "@morticord/shared";
+} from "@mortium/client-core";
+import { usernameSchema, type RelationshipJson, type User } from "@mortium/shared";
 import { Avatar } from "./Avatar.js";
 import { session } from "../lib/session.js";
 import { realtimeStore } from "../lib/realtime.js";

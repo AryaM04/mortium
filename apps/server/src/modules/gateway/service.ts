@@ -22,7 +22,7 @@ import {
   type PresenceEntry,
   type PresenceStatus,
   type VisiblePresenceStatus,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { DbClient } from "../../db/client.js";
 import { channelRecipients, channels, friendships, guildMembers } from "../../db/schema.js";
 import { channelPermissions, loadMemberContext } from "../guilds/member-context.js";

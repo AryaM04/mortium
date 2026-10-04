@@ -92,7 +92,7 @@ mod tests {
 
     #[test]
     fn refuses_a_value_that_is_too_large() {
-        let result = set("com.morticord.test", "large", &"x".repeat(MAX_VALUE_UNITS + 1));
+        let result = set("com.mortium.test", "large", &"x".repeat(MAX_VALUE_UNITS + 1));
         assert!(result.is_err());
     }
 }

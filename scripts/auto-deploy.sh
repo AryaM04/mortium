@@ -4,7 +4,7 @@
 # When the stack runs the newest commit, the script stops at once. It sends
 # no request to the GitHub API until a new commit is on main.
 #
-# The script reads DEPLOY_REPO (such as "owner/morticord") from .env. It
+# The script reads DEPLOY_REPO (such as "owner/mortium") from .env. It
 # writes one line to .deploy/deploy.log for each deploy and each failure,
 # and the build output of the last deploy to .deploy/last-deploy.log.
 set -eu

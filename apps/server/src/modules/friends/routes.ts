@@ -4,7 +4,7 @@ import {
   MAX_FRIEND_REQUESTS_PER_MINUTE,
   relationshipActionRequestSchema,
   sendFriendRequestSchema,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { AppDeps } from "../../app.js";
 import { AppError } from "../../errors.js";
 import { createEventRateLimiter } from "../messages/service.js";

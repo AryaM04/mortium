@@ -1,7 +1,7 @@
 // Guild logic and database access. Routes stay thin and call these functions.
 import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
-import { hasPermission, Permission } from "@morticord/shared";
-import { DispatchEvent } from "@morticord/shared";
+import { hasPermission, Permission } from "@mortium/shared";
+import { DispatchEvent } from "@mortium/shared";
 import type { AppConfig } from "../../config.js";
 import type { DbClient } from "../../db/client.js";
 import { channels, guildMembers, guilds, memberRoles, roles, users } from "../../db/schema.js";

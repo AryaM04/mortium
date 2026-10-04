@@ -14,7 +14,7 @@ import {
   type ChannelMembersResponse,
   type EventCodec,
   type EventRelType,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import { isUniqueViolation, type DbClient } from "../../db/client.js";
 import {
   channelRecipients,

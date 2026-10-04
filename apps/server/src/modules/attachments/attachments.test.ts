@@ -9,7 +9,7 @@ import { setFlagsFromString } from "node:v8";
 import { runInNewContext } from "node:vm";
 import type { FastifyInstance } from "fastify";
 import { eq } from "drizzle-orm";
-import { Permission } from "@morticord/shared";
+import { Permission } from "@mortium/shared";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { buildApp } from "../../app.js";
 import { attachments, permissionOverwrites } from "../../db/schema.js";

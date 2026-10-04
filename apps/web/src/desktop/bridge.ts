@@ -2,7 +2,7 @@
 // (Linux). `startDesktop` sets it once at start. The desktop files use
 // `commands` and never import a shell API directly, so one set of files
 // serves both shells.
-import type { DesktopBridge, DesktopEventName, DesktopEvents } from "@morticord/shared";
+import type { DesktopBridge, DesktopEventName, DesktopEvents } from "@mortium/shared";
 
 /** The services of the desktop shell. Set by `setDesktopBridge` before any use. */
 export let commands: DesktopBridge;

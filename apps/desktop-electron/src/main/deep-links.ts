@@ -1,5 +1,5 @@
-// Deep links, such as "morticord://invite/abc" or
-// "morticord://auth/callback#code=x". On Linux, the desktop file of the
+// Deep links, such as "mortium://invite/abc" or
+// "mortium://auth/callback#code=x". On Linux, the desktop file of the
 // app starts it with the link as an argument. A second start gives its
 // arguments to the running app (the single instance lock). A link can
 // arrive before the web app listens, so links wait in a buffer until the

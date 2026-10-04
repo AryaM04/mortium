@@ -26,7 +26,7 @@ export class AppTray {
     private readonly actions: TrayActions,
   ) {
     this.tray = new Tray(nativeImage.createFromPath(iconPath));
-    this.tray.setToolTip("Morticord");
+    this.tray.setToolTip("Mortium");
     this.tray.on("click", () => actions.show());
     this.update();
   }

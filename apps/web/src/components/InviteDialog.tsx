@@ -1,11 +1,11 @@
 // The "Invite people" dialog: pick an expiry and a use limit, create the
 // invite, and copy its link.
 import { useEffect, useRef, useState } from "react";
-import { INVITE_MAX_AGE_SECONDS, type CreateInviteRequest } from "@morticord/shared";
+import { INVITE_MAX_AGE_SECONDS, type CreateInviteRequest } from "@mortium/shared";
 import { webPageUrl } from "../lib/server-url.js";
 
 type InviteMaxAgeSeconds = CreateInviteRequest["maxAgeSeconds"];
-import { createInvite } from "@morticord/client-core";
+import { createInvite } from "@mortium/client-core";
 import { session } from "../lib/session.js";
 import { describeError } from "../lib/errors.js";
 

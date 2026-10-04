@@ -2,7 +2,7 @@
 // other recipients get CALL_RING. The ring stops when someone else joins,
 // when the caller leaves, or after a timeout. There is one timer for each
 // ringing call, and every path that ends a ring clears it.
-import { DispatchEvent } from "@morticord/shared";
+import { DispatchEvent } from "@mortium/shared";
 import type { GatewayService } from "../gateway/service.js";
 
 /** How long a call rings before it stops. Default 30 s. */

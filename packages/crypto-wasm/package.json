@@ -1,5 +1,5 @@
 {
-  "name": "@morticord/crypto-wasm",
+  "name": "@mortium/crypto-wasm",
   "private": true,
   "version": "0.0.0",
   "type": "module",

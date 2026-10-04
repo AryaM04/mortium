@@ -1,8 +1,8 @@
 // The download page for the desktop app. It works when the user is signed out.
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { getLatestDesktop } from "@morticord/client-core";
-import type { DesktopAsset, DesktopLatestResponse, DesktopPlatform } from "@morticord/shared";
+import { getLatestDesktop } from "@mortium/client-core";
+import type { DesktopAsset, DesktopLatestResponse, DesktopPlatform } from "@mortium/shared";
 import { describeError } from "../lib/errors.js";
 import { session } from "../lib/session.js";
 
@@ -43,7 +43,7 @@ const NOTES: Record<DesktopPlatform, string> = {
   windows:
     'Windows SmartScreen can show a warning, because the app is not signed. Select "More info", then select "Run anyway".',
   macos: 'The first time, do not double-click the app. Right-click the app, then select "Open".',
-  linux: "To start the AppImage, first make it executable. Run: chmod +x morticord-*.AppImage",
+  linux: "To start the AppImage, first make it executable. Run: chmod +x mortium-*.AppImage",
 };
 
 export default function DownloadPage() {
@@ -74,7 +74,7 @@ export default function DownloadPage() {
         className="my-auto w-full max-w-lg rounded-lg border p-6"
         style={{ borderColor: "var(--color-border)", backgroundColor: "var(--color-bg-sidebar)" }}
       >
-        <h1 className="mb-4 text-lg font-semibold">Download Morticord</h1>
+        <h1 className="mb-4 text-lg font-semibold">Download Mortium</h1>
         {error && (
           <p role="alert" className="mb-4 text-sm" style={{ color: "var(--color-danger-text)" }}>
             {error}

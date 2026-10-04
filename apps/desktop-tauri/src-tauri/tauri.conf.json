@@ -1,19 +1,19 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Morticord",
-  "version": "0.1.0",
-  "identifier": "com.morticord.desktop",
+  "productName": "Mortium",
+  "version": "0.2.0",
+  "identifier": "com.mortium.desktop",
   "build": {
     "devUrl": "http://localhost:5173",
     "frontendDist": "../../web/dist",
-    "beforeDevCommand": "pnpm --filter @morticord/web dev",
-    "beforeBuildCommand": "pnpm --filter @morticord/web build"
+    "beforeDevCommand": "pnpm --filter @mortium/web dev",
+    "beforeBuildCommand": "pnpm --filter @mortium/web build"
   },
   "app": {
     "windows": [
       {
         "label": "main",
-        "title": "Morticord",
+        "title": "Mortium",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
@@ -58,14 +58,14 @@
     "deep-link": {
       "desktop": {
         "schemes": [
-          "morticord"
+          "mortium"
         ]
       }
     },
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ1RTQ2Qjg1NTgwMDZGQjIKUldTeWJ3QlloV3ZrMWJvdlZsQlpORG9jRXVqbGtPYy8xKyszNi8wcmpyckk5TDdnTzVZMSsya2UK",
       "endpoints": [
-        "https://github.com/AryaM04/morticord/releases/latest/download/latest.json"
+        "https://github.com/AryaM04/mortium/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"

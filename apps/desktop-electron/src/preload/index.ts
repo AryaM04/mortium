@@ -4,7 +4,7 @@
 // gives no general IPC access. The main process checks each argument
 // again (src/main/ipc.ts).
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
-import type { DesktopBridge, DesktopEventName } from "@morticord/shared";
+import type { DesktopBridge, DesktopEventName } from "@mortium/shared";
 import { callChannel, EVENTS, eventChannel, type CallName, type CallResult } from "../shared/channels.js";
 
 async function call<T>(name: CallName, ...args: unknown[]): Promise<T> {

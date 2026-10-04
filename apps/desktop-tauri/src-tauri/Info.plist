@@ -9,8 +9,8 @@
 <plist version="1.0">
 <dict>
   <key>NSCameraUsageDescription</key>
-  <string>Morticord needs the camera for video calls that you start.</string>
+  <string>Mortium needs the camera for video calls that you start.</string>
   <key>NSMicrophoneUsageDescription</key>
-  <string>Morticord needs the microphone for voice calls that you start.</string>
+  <string>Mortium needs the microphone for voice calls that you start.</string>
 </dict>
 </plist>

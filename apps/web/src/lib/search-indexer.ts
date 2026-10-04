@@ -3,7 +3,7 @@
 // device, and it asks the crypto layer for searches. Only the crypto layer
 // writes the index, so two tabs never write it at the same time. Loaded
 // with a dynamic import. See docs/concepts/search.md.
-import type { IndexQuery, IndexResult, SearchChange } from "@morticord/client-core/search";
+import type { IndexQuery, IndexResult, SearchChange } from "@mortium/client-core/search";
 import { cryptoReady } from "./messages.js";
 import { clearSearchQueue } from "./search-queue.js";
 import { session } from "./session.js";

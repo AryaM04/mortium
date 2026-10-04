@@ -6,7 +6,7 @@ import {
   MAX_GROUP_DM_MEMBERS,
   type DmChannelJson,
   type VoiceStateUpdatePayload,
-} from "@morticord/shared";
+} from "@mortium/shared";
 import type { DbClient } from "../../db/client.js";
 import { channelRecipients, channels, friendships, users } from "../../db/schema.js";
 import { AppError } from "../../errors.js";

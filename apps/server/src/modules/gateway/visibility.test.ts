@@ -6,7 +6,7 @@
 import type { FastifyInstance } from "fastify";
 import WebSocket from "ws";
 import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
-import { encodeBase64Url, encodePlainPayload, GatewayOpcode, Permission, type GatewayEnvelope } from "@morticord/shared";
+import { encodeBase64Url, encodePlainPayload, GatewayOpcode, Permission, type GatewayEnvelope } from "@mortium/shared";
 import { buildApp } from "../../app.js";
 import { createFakeMailer } from "../../mailer.js";
 import { createTestDb, describeWithDb, type TestDb } from "../../../test/db.js";

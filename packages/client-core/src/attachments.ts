@@ -1,7 +1,7 @@
 // Encrypted attachments: the file crypto (AES-256-GCM with WebCrypto), the
 // integrity check, a small LRU cache of decrypted files, and the pure rules
 // for thumbnails and inline images. See docs/concepts/attachments.md.
-import { decodeBase64Url, encodeBase64Url, MAX_THUMBNAIL_SIZE } from "@morticord/shared";
+import { decodeBase64Url, encodeBase64Url, MAX_THUMBNAIL_SIZE } from "@mortium/shared";
 import type { ApiClient } from "./api.js";
 
 /** The secrets of one encrypted file, as they go in the message payload. */

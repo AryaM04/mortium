@@ -4,8 +4,8 @@
 // JPEG, GIF and WebP show as images, and a download uses the `download`
 // attribute.
 import { useEffect, useRef, useState } from "react";
-import { formatFileSize, isInlineImage, type FileSecrets } from "@morticord/client-core";
-import type { Attachment } from "@morticord/shared";
+import { formatFileSize, isInlineImage, type FileSecrets } from "@mortium/client-core";
+import type { Attachment } from "@mortium/shared";
 
 const loadFiles = () => import("../lib/attachment-files.js");
 

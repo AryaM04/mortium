@@ -3,8 +3,8 @@
 // the web). This file asks for the permission only from a button in the
 // user settings, never on page load.
 import { navigate } from "wouter/use-browser-location";
-import { dmDisplayName, notificationLevelOf, shouldNotify } from "@morticord/client-core";
-import type { EventJson } from "@morticord/shared";
+import { dmDisplayName, notificationLevelOf, shouldNotify } from "@mortium/client-core";
+import type { EventJson } from "@mortium/shared";
 import { realtimeStore, subscribeDispatch } from "./realtime.js";
 import { messageCodec } from "./messages.js";
 import { settingsStore } from "./settings.js";

@@ -8,7 +8,7 @@ import path from "node:path";
 import { Transform, type Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
-import { Permission } from "@morticord/shared";
+import { Permission } from "@mortium/shared";
 import type { FastifyBaseLogger } from "fastify";
 import type { DbClient } from "../../db/client.js";
 import { attachments } from "../../db/schema.js";

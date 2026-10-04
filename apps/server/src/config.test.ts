@@ -4,21 +4,21 @@ import { loadConfig } from "./config.js";
 
 const validEnv = {
   POSTGRES_HOST: "localhost",
-  POSTGRES_DB: "morticord",
-  POSTGRES_USER: "morticord",
+  POSTGRES_DB: "mortium",
+  POSTGRES_USER: "mortium",
   POSTGRES_PASSWORD: "secret",
   JWT_SECRET: "jwt-secret-value-that-is-at-least-32-chars",
   TURN_SECRET: "turn-secret-value",
   TURN_DOMAIN: "localhost",
   SMTP_HOST: "localhost",
-  SMTP_FROM: "Morticord <no-reply@example.com>",
+  SMTP_FROM: "Mortium <no-reply@example.com>",
 };
 
 describe("loadConfig", () => {
   it("builds a database URL from the Postgres parts", () => {
     const config = loadConfig(validEnv);
     expect(config.databaseUrl).toBe(
-      "postgres://morticord:secret@localhost:5432/morticord",
+      "postgres://mortium:secret@localhost:5432/mortium",
     );
   });
 
@@ -51,19 +51,19 @@ describe("loadConfig", () => {
   it("allows no other origins and uses the default desktop scheme when they are not set", () => {
     const config = loadConfig(validEnv);
     expect(config.corsAllowedOrigins).toEqual([]);
-    expect(config.desktopUrlScheme).toBe("morticord");
+    expect(config.desktopUrlScheme).toBe("mortium");
   });
 
   it("reads a comma list of origins, with a custom scheme", () => {
     const config = loadConfig({
       ...validEnv,
       CORS_ALLOWED_ORIGINS:
-        " http://tauri.localhost, tauri://localhost ,app://morticord, https://chat.example.com:443/,",
+        " http://tauri.localhost, tauri://localhost ,app://mortium, https://chat.example.com:443/,",
     });
     expect(config.corsAllowedOrigins).toEqual([
       "http://tauri.localhost",
       "tauri://localhost",
-      "app://morticord",
+      "app://mortium",
       "https://chat.example.com",
     ]);
   });

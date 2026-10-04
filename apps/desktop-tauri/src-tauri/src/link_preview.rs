@@ -161,7 +161,7 @@ fn client() -> Result<reqwest::Client, &'static str> {
         // A proxy would make its own DNS lookup, past the checks here.
         .no_proxy()
         .dns_resolver(Arc::new(CheckedResolver))
-        .user_agent("MorticordLinkPreview/1.0")
+        .user_agent("MortiumLinkPreview/1.0")
         .build()
         .map_err(|_| NO_PREVIEW)
 }

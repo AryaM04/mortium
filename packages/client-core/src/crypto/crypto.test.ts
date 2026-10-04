@@ -3,8 +3,8 @@
 // queue, wedged session recovery, forged envelopes, master key changes and
 // the one-time key top-up.
 import { beforeAll, describe, expect, it } from "vitest";
-import { deviceKeysSignedText, encodeBase64Url, masterKeySignedText, oneTimeKeySignedText } from "@morticord/shared";
-import { Account, SigningKey, verify } from "@morticord/crypto-wasm";
+import { deviceKeysSignedText, encodeBase64Url, masterKeySignedText, oneTimeKeySignedText } from "@mortium/shared";
+import { Account, SigningKey, verify } from "@mortium/crypto-wasm";
 import { cryptoStoreName, openCryptoStore } from "./store.js";
 import { FakeServer, initWasmForTests, newClient, type TestClient } from "./test/fake-server.js";
 

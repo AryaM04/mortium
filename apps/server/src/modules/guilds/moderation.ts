@@ -2,7 +2,7 @@
 // transfer. Every action on a target member enforces the hierarchy rules
 // in docs/concepts/permissions.md; nobody can act on the guild owner.
 import { and, eq, gte, isNull } from "drizzle-orm";
-import { DispatchEvent, hasPermission, Permission } from "@morticord/shared";
+import { DispatchEvent, hasPermission, Permission } from "@mortium/shared";
 import type { DbClient } from "../../db/client.js";
 import { bans, channels, events, guildMembers, guilds } from "../../db/schema.js";
 import { AppError } from "../../errors.js";

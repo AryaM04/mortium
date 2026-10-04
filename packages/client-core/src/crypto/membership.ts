@@ -10,7 +10,7 @@ import {
   Permission,
   type ChannelMembersResponse,
   type RoleInput,
-} from "@morticord/shared";
+} from "@mortium/shared";
 
 /** The users who may read one channel now. The list includes this user when it may read the channel. */
 export interface Eligibility {

@@ -1,7 +1,7 @@
 // The gateway TYPING op: a client says it is typing in a channel, and the
 // server tells the channel's other viewers, throttled to once per 3s.
 import { eq } from "drizzle-orm";
-import { hasPermission, Permission, DispatchEvent } from "@morticord/shared";
+import { hasPermission, Permission, DispatchEvent } from "@mortium/shared";
 import type { DbClient } from "../../db/client.js";
 import { channels } from "../../db/schema.js";
 import { isMessagingBlocked, isPrivateChannelType, isRecipient } from "../dms/access.js";

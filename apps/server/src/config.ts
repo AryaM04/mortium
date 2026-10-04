@@ -33,7 +33,7 @@ const envSchema = z.object({
 
   // Other origins that can call the API and open the gateway, as a comma
   // list. The desktop app uses "http://tauri.localhost" on Windows,
-  // "tauri://localhost" on macOS and "app://morticord" on Linux.
+  // "tauri://localhost" on macOS and "app://mortium" on Linux.
   // Empty: only the web app origin.
   CORS_ALLOWED_ORIGINS: z.string().optional(),
 
@@ -42,7 +42,7 @@ const envSchema = z.object({
   DESKTOP_URL_SCHEME: z
     .string()
     .regex(/^[a-z][a-z0-9+.-]*$/, "DESKTOP_URL_SCHEME must be a lowercase URL scheme.")
-    .default("morticord"),
+    .default("mortium"),
 
   // Directory for files the server keeps on disk, such as avatars.
   DATA_DIR: z.string().min(1).default("./data"),
@@ -101,7 +101,7 @@ const envSchema = z.object({
 
   // The GitHub repository ("owner/name") whose latest release the desktop
   // download page shows. Empty: the route is off.
-  RELEASES_REPO: z.string().default("AryaM04/morticord"),
+  RELEASES_REPO: z.string().default("AryaM04/mortium"),
 
   // Write the server log to this file instead of standard output. Empty or
   // unset: standard output.

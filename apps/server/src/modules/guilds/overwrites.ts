@@ -3,7 +3,7 @@
 // may only set allow/deny bits it holds itself in that channel (unless
 // admin or owner). See docs/concepts/permissions.md.
 import { and, eq } from "drizzle-orm";
-import { DispatchEvent, Permission, type PutOverwriteRequest } from "@morticord/shared";
+import { DispatchEvent, Permission, type PutOverwriteRequest } from "@mortium/shared";
 import type { DbClient } from "../../db/client.js";
 import { channels, permissionOverwrites } from "../../db/schema.js";
 import { AppError } from "../../errors.js";

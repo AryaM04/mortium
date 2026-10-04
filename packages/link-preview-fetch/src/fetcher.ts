@@ -17,7 +17,7 @@ import { lookup as dnsLookup } from "node:dns/promises";
 import http, { type IncomingMessage } from "node:http";
 import https from "node:https";
 import type { LookupFunction } from "node:net";
-import { decodeHtml, LINK_PREVIEW_IMAGE_TYPES, readHtmlMeta } from "@morticord/shared";
+import { decodeHtml, LINK_PREVIEW_IMAGE_TYPES, readHtmlMeta } from "@mortium/shared";
 import { checkUrl, isBlockedAddress, LinkPreviewError } from "./address-check.js";
 
 export const LINK_PREVIEW_TIMEOUT_MS = 3000;
@@ -112,7 +112,7 @@ export function createLinkPreviewFetcher(options: LinkPreviewFetcherOptions = {}
           signal,
           headers: {
             accept,
-            "user-agent": "MorticordLinkPreview/1.0",
+            "user-agent": "MortiumLinkPreview/1.0",
             "accept-encoding": "identity",
           },
         },

@@ -3,7 +3,7 @@
 // advisory lock on the pair, so two requests at the same time cannot make
 // a half pair. See docs/concepts/dms-and-friends.md.
 import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
-import { DispatchEvent, type RelationshipJson, type RelationshipStatus } from "@morticord/shared";
+import { DispatchEvent, type RelationshipJson, type RelationshipStatus } from "@mortium/shared";
 import type { DbClient } from "../../db/client.js";
 import { friendships, users } from "../../db/schema.js";
 import { AppError } from "../../errors.js";
