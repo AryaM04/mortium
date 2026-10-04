@@ -57,6 +57,8 @@ export class DeviceManager {
     }
     await this.ensureMasterKey();
     await this.topUp(counts ?? (await transport.uploadKeys({})));
+    // Read the own device list again, so the trust state of this device is correct at once.
+    await this.deps.deviceList.refresh([userId]);
   }
 
   /** Handle the counts from READY. */
@@ -206,8 +208,13 @@ export class DeviceManager {
         return false;
       }
       await store.commit({ values: { [MASTER_KEY_VALUE]: master.pickle(pickleKey) } });
+      // Sign this device, and vouch for the master key from this device. The device that vouched before can be gone.
       const text = deviceKeysSignedText(userId, deviceId, account.curve25519, account.ed25519);
-      await transport.uploadKeys({ masterSignature: master.sign(text) });
+      await transport.putMasterKey({
+        publicKey,
+        deviceSignature: account.sign(masterKeySignedText(userId, publicKey)),
+        masterSignature: master.sign(text),
+      });
       await deviceList.trustOwnMasterKey(userId, publicKey);
       await deviceList.refresh([userId]);
       return true;
@@ -249,6 +256,8 @@ export class DeviceManager {
    * Make the master key when the user has none: this device then holds the
    * private key and signs itself. When the user already has a master key
    * from a different device, this device stays unsigned in this pass.
+   * When this device holds the master key and the device that vouches for
+   * it on the server is gone, this device vouches for it again.
    */
   private async ensureMasterKey(): Promise<void> {
     const { wasm, store, transport, account, deviceList, pickleKey, userId, deviceId } = this.deps;
@@ -267,12 +276,13 @@ export class DeviceManager {
         return;
       }
       const publicKey = master.public_key;
-      const ownDevice = own?.devices.find((device) => device.deviceId === deviceId);
-      if (serverKey === publicKey && ownDevice?.masterSignature) {
-        await deviceList.trustOwnMasterKey(userId, publicKey);
+      if (serverKey !== null && serverKey !== publicKey) {
         return;
       }
-      if (serverKey !== null && serverKey !== publicKey) {
+      const ownDevice = own?.devices.find((device) => device.deviceId === deviceId);
+      const voucherListed = own?.devices.some((device) => device.deviceId === own.masterKey?.deviceId) ?? false;
+      if (serverKey === publicKey && ownDevice?.masterSignature && voucherListed) {
+        await deviceList.trustOwnMasterKey(userId, publicKey);
         return;
       }
       const deviceText = deviceKeysSignedText(userId, deviceId, account.curve25519, account.ed25519);

@@ -56,6 +56,20 @@ export class DeviceList {
     });
   }
 
+  /**
+   * Handle a new READY: the device lists can have changed while this device
+   * was offline, so the next use of each tracked user fetches again.
+   */
+  markAllOutdated(): Promise<void> {
+    return this.deps.queue.run(REFRESH_QUEUE, async () => {
+      for (const user of await this.deps.store.getUsers()) {
+        if (user.tracked && !user.outdated) {
+          await this.deps.store.putUser({ ...user, outdated: true });
+        }
+      }
+    });
+  }
+
   /** Fetch every tracked user that is outdated. */
   async refreshOutdated(): Promise<void> {
     const users = await this.deps.store.getUsers();
@@ -192,17 +206,20 @@ export class DeviceList {
    * private key calls this: the device that made the key, a device that got
    * it from the key backup, or a device after a master key reset.
    */
-  async trustOwnMasterKey(userId: string, publicKey: string): Promise<void> {
-    const user = (await this.deps.store.getUser(userId)) ?? newUser(userId);
-    await this.deps.store.putUser({
-      ...user,
-      tracked: true,
-      outdated: true,
-      masterKey: publicKey,
-      changedMasterKey: null,
-      verifiedMasterKey: publicKey,
+  trustOwnMasterKey(userId: string, publicKey: string): Promise<void> {
+    // In the refresh queue, so a fetch at the same time cannot write the old key back.
+    return this.deps.queue.run(REFRESH_QUEUE, async () => {
+      const user = (await this.deps.store.getUser(userId)) ?? newUser(userId);
+      await this.deps.store.putUser({
+        ...user,
+        tracked: true,
+        outdated: true,
+        masterKey: publicKey,
+        changedMasterKey: null,
+        verifiedMasterKey: publicKey,
+      });
+      this.deps.onUserChanged?.(userId);
     });
-    this.deps.onUserChanged?.(userId);
   }
 
   private verify(publicKey: string, text: string, signature: string): boolean {
@@ -224,12 +241,25 @@ export class DeviceList {
       return !old || (old.curve25519 === device.curve25519 && old.ed25519 === device.ed25519);
     });
 
-    // A master key counts only when a device of the user with a valid signature vouches for it.
+    // A master key counts only when a listed device of the user vouches for it: the
+    // device signed the key, or the key signed the device. The second case keeps the
+    // key when the device that made it was removed.
     let serverMaster: string | null = null;
     if (queried?.masterKey) {
       const { publicKey, deviceId, deviceSignature } = queried.masterKey;
       const voucher = checked.find((device) => device.deviceId === deviceId);
-      if (voucher && this.verify(voucher.ed25519, masterKeySignedText(userId, publicKey), deviceSignature)) {
+      const vouched =
+        (voucher !== undefined && this.verify(voucher.ed25519, masterKeySignedText(userId, publicKey), deviceSignature)) ||
+        checked.some(
+          (device) =>
+            device.masterSignature !== null &&
+            this.verify(
+              publicKey,
+              deviceKeysSignedText(userId, device.deviceId, device.curve25519, device.ed25519),
+              device.masterSignature,
+            ),
+        );
+      if (vouched) {
         serverMaster = publicKey;
       }
     }

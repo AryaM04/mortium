@@ -5,13 +5,13 @@
 // without SharedWorker, and the desktop apps, run the crypto layer in the
 // page: then only one tab holds the Web Lock, and a different tab shows a
 // banner and waits for the lock. See docs/concepts/olm-megolm.md section 13.
-import type { BackupStatus, VerificationView } from "@mortium/client-core/crypto";
+import type { BackupStatus, CryptoHandle, VerificationView } from "@mortium/client-core/crypto";
 import type { CryptoClient, CryptoWorkerClient } from "@mortium/client-core/crypto-client";
 import { ApiError, postEvent } from "@mortium/client-core";
 import { currentPlatform } from "./platform.js";
 import { encodeBase64Url } from "@mortium/shared";
 import { createStore } from "zustand/vanilla";
-import { messageCodec, setCryptoHandle } from "./messages.js";
+import { failCryptoWaiters, messageCodec, setCryptoHandle } from "./messages.js";
 import { gatewaySend, realtimeStore, subscribeDispatch } from "./realtime.js";
 import { session } from "./session.js";
 
@@ -110,6 +110,11 @@ function watchPresence(client: CryptoWorkerClient): () => void {
 }
 
 const MAX_RECEIVED = 100;
+/** The page keeps at most this many dispatches while the crypto layer starts, as the worker does. */
+const MAX_BUFFERED_DISPATCHES = 1000;
+/** The wait before the first new start after a failed start. It doubles up to the maximum. */
+const START_RETRY_FIRST_MS = 2000;
+const START_RETRY_MAX_MS = 60_000;
 
 /** True while a different context of this device runs the crypto layer, and this tab waits for it. */
 export const cryptoTabStore = createStore<{ otherTab: boolean }>(() => ({ otherTab: false }));
@@ -118,6 +123,8 @@ let handle: CryptoClient | null = null;
 let run = 0;
 /** Stops the crypto layer of this tab, or the connection to the worker. */
 let teardown: (() => void) | null = null;
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+let startFailures = 0;
 const received: Array<{ fromUserId: string; fromDeviceId: string; text: string }> = [];
 
 /** Give the started crypto layer to the rest of the app. Returns a function that takes it back. */
@@ -168,10 +175,16 @@ async function startInWorker(current: number, userId: string, deviceId: string):
       }
       // "waiting": an old build of this app, or a tab without the worker, holds the device lock.
       cryptoTabStore.setState({ otherTab: state === "waiting" });
-      if (state === "ready" && handle !== client) {
-        detach = attach(client);
+      if (state === "ready") {
+        startFailures = 0;
+        if (detach) {
+          // A new worker after a lost one: the events that waited for it decode now.
+          setCryptoHandle(client);
+        } else {
+          detach = attach(client);
+        }
       } else if (state === "failed") {
-        console.warn("[crypto] The crypto layer could not start.");
+        startFailed(current, userId, deviceId, new Error("The crypto layer could not start."));
       }
     },
   });
@@ -188,12 +201,24 @@ async function startInWorker(current: number, userId: string, deviceId: string):
 
 function startInPage(current: number, userId: string, deviceId: string): void {
   const lockName = `crypto:${userId}:${deviceId}`;
+  // Keep the dispatches that arrive while the crypto layer starts, as the
+  // worker does. Without them, TO_DEVICE, DEVICE_LIST_UPDATE and READY are lost.
+  let started: CryptoHandle | null = null;
+  const buffered: Array<{ t: string; d: unknown }> = [];
+  const unsubscribe = subscribeDispatch((event) => {
+    if (started) {
+      started.handleDispatch(event);
+    } else if (buffered.length < MAX_BUFFERED_DISPATCHES) {
+      buffered.push(event);
+    }
+  });
+  teardown = unsubscribe;
   const body = async () => {
     if (current !== run) {
       return;
     }
     const crypto = await import("@mortium/client-core/crypto");
-    const started = await crypto.startCrypto({
+    const layer = await crypto.startCrypto({
       userId,
       deviceId,
       secureStore: currentPlatform().secureStore,
@@ -202,18 +227,22 @@ function startInPage(current: number, userId: string, deviceId: string): void {
       isOnline: (userId) => realtimeStore.getState().presences[userId] !== "offline",
     });
     if (current !== run) {
-      started.stop();
+      layer.stop();
       return;
     }
-    const unsubscribe = subscribeDispatch((event) => started.handleDispatch(event));
-    const detach = attach(started);
+    startFailures = 0;
+    started = layer;
+    for (const event of buffered.splice(0)) {
+      layer.handleDispatch(event);
+    }
+    const detach = attach(layer);
     // Hold the lock until sign-out.
     await new Promise<void>((resolve) => {
       teardown = resolve;
     });
     unsubscribe();
     detach();
-    started.stop();
+    layer.stop();
   };
   // Only one context of a device can run the crypto layer (it owns the Olm
   // and Megolm state). When another tab holds the lock, show a banner and
@@ -234,8 +263,38 @@ function startInPage(current: number, userId: string, deviceId: string): void {
       });
     })
     .catch((error: unknown) => {
-      console.warn("[crypto] The crypto layer could not start.", error);
+      startFailed(current, userId, deviceId, error instanceof Error ? error : new Error(String(error)));
     });
+}
+
+/** The start failed: fail the calls that wait, and start again later. Each failure doubles the wait. */
+function startFailed(current: number, userId: string, deviceId: string, error: Error): void {
+  if (current !== run || retryTimer) {
+    return;
+  }
+  const delay = Math.min(START_RETRY_FIRST_MS * 2 ** startFailures, START_RETRY_MAX_MS);
+  startFailures += 1;
+  console.warn(`[crypto] The crypto layer could not start. The app tries again in ${delay} ms.`, error);
+  failCryptoWaiters(error);
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    if (current !== run) {
+      return;
+    }
+    teardown?.();
+    teardown = null;
+    launch(current, userId, deviceId);
+  }, delay);
+}
+
+function launch(current: number, userId: string, deviceId: string): void {
+  if (canUseWorker()) {
+    startInWorker(current, userId, deviceId).catch((error: unknown) => {
+      startFailed(current, userId, deviceId, error instanceof Error ? error : new Error(String(error)));
+    });
+  } else {
+    startInPage(current, userId, deviceId);
+  }
 }
 
 function start(userId: string, deviceId: string): void {
@@ -243,17 +302,16 @@ function start(userId: string, deviceId: string): void {
   if (typeof navigator === "undefined" || !navigator.locks) {
     return;
   }
-  if (canUseWorker()) {
-    startInWorker(current, userId, deviceId).catch((error: unknown) => {
-      console.warn("[crypto] The crypto layer could not start.", error);
-    });
-  } else {
-    startInPage(current, userId, deviceId);
-  }
+  launch(current, userId, deviceId);
 }
 
 function stop(): void {
   run += 1;
+  if (retryTimer) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+  startFailures = 0;
   cryptoTabStore.setState({ otherTab: false });
   handle = null;
   setCryptoHandle(null);

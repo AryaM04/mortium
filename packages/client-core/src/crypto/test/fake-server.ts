@@ -111,8 +111,9 @@ export class FakeServer {
     return {
       uploadKeys: async (body: UploadKeysRequest) => {
         const device = this.device(userId, deviceId);
-        if (body.deviceKeys) {
-          device.keys ??= body.deviceKeys;
+        if (body.deviceKeys && !device.keys) {
+          device.keys = body.deviceKeys;
+          this.broadcast("DEVICE_LIST_UPDATE", { userId });
         }
         for (const [keyId, value] of Object.entries(body.oneTimeKeys ?? {})) {
           device.oneTimeKeys.set(keyId, value);
@@ -138,6 +139,7 @@ export class FakeServer {
         }
         this.masters.set(userId, { publicKey: body.publicKey, deviceId, deviceSignature: body.deviceSignature });
         this.device(userId, deviceId).masterSignature = body.masterSignature;
+        this.broadcast("DEVICE_LIST_UPDATE", { userId });
       },
       uploadSignature: async ({ deviceId: target, signature }) => {
         const device = this.devices.get(key(userId, target));

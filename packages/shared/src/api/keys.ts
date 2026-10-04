@@ -142,9 +142,9 @@ export const toDeviceDispatchPayloadSchema = z.object({
 export type ToDeviceDispatchPayload = z.infer<typeof toDeviceDispatchPayloadSchema>;
 
 /**
- * Sent by the client: every message up to `upToId` is processed, so the
- * server can delete it. With `resync`, the server also sends again every
- * message after `upToId`.
+ * Sent by the client: every message up to `upToId` that the client got is
+ * processed, so the server can delete it. With `resync`, the server also
+ * sends again every queued message.
  */
 export const toDeviceAckPayloadSchema = z.object({
   upToId: idSchema,

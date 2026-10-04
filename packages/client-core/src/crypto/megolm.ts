@@ -15,7 +15,7 @@ import {
 import type { AccountHolder } from "./account.js";
 import type { DeviceList } from "./device-list.js";
 import type { ChannelMembership, MembershipScope } from "./membership.js";
-import type { DecryptedToDevice, OlmMachine } from "./olm-machine.js";
+import { isTemporaryError, type DecryptedToDevice, type OlmMachine } from "./olm-machine.js";
 import type { KeyedQueue } from "./queue.js";
 import type { CryptoStore, DeviceRecord, InboundRecord, OutboundRecord } from "./store.js";
 import type { Wasm } from "./wasm.js";
@@ -443,7 +443,7 @@ export class MegolmMachine {
     }
   }
 
-  /** Handle one decrypted to-device envelope. It never throws. */
+  /** Handle one decrypted to-device envelope. It throws only a temporary error, so the caller can try again. */
   async handleToDevice(event: DecryptedToDevice): Promise<void> {
     try {
       if (event.type === SESSION_TYPE) {
@@ -454,6 +454,9 @@ export class MegolmMachine {
         this.track(this.answerRequest(event));
       }
     } catch (error) {
+      if (isTemporaryError(error)) {
+        throw error;
+      }
       this.log(`A Megolm to-device message could not be processed: ${String(error)}`);
     }
   }

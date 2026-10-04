@@ -12,6 +12,7 @@ import {
   type ToDeviceDispatchPayload,
   type ToDeviceMessage,
 } from "@mortium/shared";
+import { ApiError } from "../api.js";
 import type { AccountHolder } from "./account.js";
 import type { DeviceList } from "./device-list.js";
 import { checkBinding, newEnvelopeId, parseEnvelope, type ToDeviceEnvelope } from "./envelope.js";
@@ -30,6 +31,9 @@ const MAX_PLAINTEXT_BYTES = 63 * 1024;
 const LAST_PROCESSED_VALUE = "lastProcessedId";
 const DUMMY_TYPE = "dummy";
 const SEEN_IDS_VALUE = "seenIds";
+const PROCESSED_IDS_VALUE = "processedIds";
+/** The queue ids of the last processed messages that this device keeps, to find copies. */
+const MAX_PROCESSED_IDS = 1000;
 
 /** One to-device envelope that decrypted and passed every binding check. */
 export interface DecryptedToDevice {
@@ -42,6 +46,14 @@ export interface DecryptedToDevice {
 }
 
 export type ToDeviceHandler = (event: DecryptedToDevice) => void | Promise<void>;
+
+/** True for an error that can go away on a later try: no network, a rate limit, a server fault or a storage error. */
+export function isTemporaryError(error: unknown): boolean {
+  if (error instanceof ApiError) {
+    return error.status === 0 || error.status === 429 || error.status >= 500;
+  }
+  return typeof DOMException !== "undefined" && error instanceof DOMException;
+}
 
 export interface OlmMachineDeps {
   wasm: Wasm;
@@ -77,6 +89,9 @@ export class OlmMachine {
   private readonly lastRecovery = new Map<string, number>();
   private readonly background = new Set<Promise<void>>();
   private lastProcessedId: bigint | null = null;
+  private processedIds: string[] = [];
+  /** A decrypted message whose handlers stopped on a temporary error. The next try runs only the handlers that did not finish. */
+  private pending: { queueId: string; event: DecryptedToDevice | null; done: Set<ToDeviceHandler> } | null = null;
   private seenIds: string[] = [];
   private lastTime = 0;
 
@@ -90,7 +105,7 @@ export class OlmMachine {
     };
   }
 
-  /** The queue id of the last TO_DEVICE message that this device processed, or "0". */
+  /** The highest queue id of a TO_DEVICE message that this device processed, or "0". */
   async lastProcessed(): Promise<string> {
     await this.loadState();
     return (this.lastProcessedId ?? 0n).toString();
@@ -139,36 +154,56 @@ export class OlmMachine {
     return this.send(await this.ensureSessions(devices, false, failed), type, content, failed, live);
   }
 
-  /** Handle one TO_DEVICE dispatch. It never throws: a message that fails is dropped. */
+  /**
+   * Handle one TO_DEVICE dispatch. A message that fails for good is dropped.
+   * On a temporary error it throws and does not move the queue position, so
+   * the caller can try again. The queue position moves only after the
+   * handlers finished. A copy of a processed message is ignored.
+   */
   async handleToDevice(event: ToDeviceDispatchPayload): Promise<void> {
     await this.loadState();
-    const queueId = BigInt(event.id);
-    if (this.lastProcessedId !== null && queueId <= this.lastProcessedId) {
+    if (this.processedIds.includes(event.id)) {
       return;
     }
-    let decrypted: DecryptedToDevice | null = null;
-    let committed = false;
-    try {
-      const result = await this.decrypt(event);
-      decrypted = result.event;
-      committed = result.committed;
-    } catch (error) {
-      this.log(`A to-device message could not be processed: ${String(error)}`);
+    let pending = this.pending?.queueId === event.id ? this.pending : null;
+    if (!pending) {
+      let decrypted: DecryptedToDevice | null = null;
+      try {
+        decrypted = await this.decrypt(event);
+      } catch (error) {
+        if (isTemporaryError(error)) {
+          throw error;
+        }
+        this.log(`A to-device message could not be processed: ${String(error)}`);
+      }
+      pending = { queueId: event.id, event: decrypted, done: new Set() };
+      this.pending = pending;
     }
-    if (!committed) {
-      await this.deps.store.commit({ values: { [LAST_PROCESSED_VALUE]: event.id } });
-    }
-    this.lastProcessedId = queueId;
     // A dummy only moves the peer to a new session. It has no content for handlers.
-    if (decrypted && decrypted.type !== DUMMY_TYPE) {
+    if (pending.event && pending.event.type !== DUMMY_TYPE) {
       for (const handler of this.handlers) {
+        if (pending.done.has(handler)) {
+          continue;
+        }
         try {
-          await handler(decrypted);
+          await handler(pending.event);
         } catch (error) {
+          if (isTemporaryError(error)) {
+            throw error;
+          }
           this.log(`A to-device handler failed: ${String(error)}`);
         }
+        pending.done.add(handler);
       }
     }
+    const last = BigInt(event.id) > this.lastProcessedId! ? BigInt(event.id) : this.lastProcessedId!;
+    const processedIds = [...this.processedIds, event.id].slice(-MAX_PROCESSED_IDS);
+    await this.deps.store.commit({
+      values: { [LAST_PROCESSED_VALUE]: last.toString(), [PROCESSED_IDS_VALUE]: processedIds },
+    });
+    this.lastProcessedId = last;
+    this.processedIds = processedIds;
+    this.pending = null;
   }
 
   // ---- sessions -----------------------------------------------------------
@@ -187,6 +222,7 @@ export class OlmMachine {
       return;
     }
     const stored = await this.deps.store.getValue<string>(LAST_PROCESSED_VALUE);
+    this.processedIds = (await this.deps.store.getValue<string[]>(PROCESSED_IDS_VALUE)) ?? [];
     this.lastProcessedId = BigInt(stored ?? "0");
     this.seenIds = (await this.deps.store.getValue<string[]>(SEEN_IDS_VALUE)) ?? [];
   }
@@ -342,20 +378,20 @@ export class OlmMachine {
 
   // ---- receive --------------------------------------------------------------
 
-  private async decrypt(event: ToDeviceDispatchPayload): Promise<{ event: DecryptedToDevice | null; committed: boolean }> {
+  private async decrypt(event: ToDeviceDispatchPayload): Promise<DecryptedToDevice | null> {
     if (event.type !== OLM_MESSAGE_TYPE) {
-      return { event: null, committed: false };
+      return null;
     }
     const sender = await this.deps.deviceList.getDevice(event.senderUserId, event.senderDeviceId);
     if (!sender) {
       this.log(`A to-device message came from an unknown device ${event.senderDeviceId}.`);
-      return { event: null, committed: false };
+      return null;
     }
     const bytes = decodeBase64Url(event.ciphertext);
     const messageType = bytes[0];
     const body = bytes.subarray(1);
     if ((messageType !== 0 && messageType !== 1) || body.length === 0) {
-      return { event: null, committed: false };
+      return null;
     }
 
     const { wasm, pickleKey, account } = this.deps;
@@ -415,12 +451,12 @@ export class OlmMachine {
     if (outcome === null) {
       this.log(`No session could decrypt a message from device ${sender.deviceId}. The session is wedged.`);
       this.recover(sender);
-      return { event: null, committed: false };
+      return null;
     }
-    return { event: outcome.event, committed: true };
+    return outcome.event;
   }
 
-  /** Check the envelope and save the Olm state, the seen id and the queue position in one commit. */
+  /** Check the envelope and save the Olm state and the seen id in one commit. */
   private async finish(
     event: ToDeviceDispatchPayload,
     sender: DeviceRecord,
@@ -442,7 +478,7 @@ export class OlmMachine {
       }
     }
 
-    const values: Record<string, unknown> = { ...extraValues, [LAST_PROCESSED_VALUE]: event.id };
+    const values: Record<string, unknown> = { ...extraValues };
     const accepted = envelope !== null && problem === null;
     const seenIds = accepted ? [...this.seenIds, envelope.id].slice(-MAX_SEEN_IDS) : this.seenIds;
     if (accepted) {

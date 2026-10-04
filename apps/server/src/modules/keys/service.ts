@@ -208,13 +208,23 @@ export async function putMasterKey(
       .values({ userId, masterKey: input.publicKey, deviceId, deviceSignature: input.deviceSignature })
       .onConflictDoNothing()
       .returning({ userId: crossSigningKeys.userId });
+    let vouched = false;
     if (inserted.length === 0) {
       const [existing] = await tx.select().from(crossSigningKeys).where(eq(crossSigningKeys.userId, userId));
       if (existing?.masterKey !== input.publicKey) {
         throw new AppError(409, "MASTER_KEY_EXISTS", "This user already has a different master key.");
       }
+      // The master signature proves that this device holds the master key. Thus this
+      // device can vouch for the key in place of a device that is possibly gone.
+      if (existing.deviceId !== deviceId || existing.deviceSignature !== input.deviceSignature) {
+        await tx
+          .update(crossSigningKeys)
+          .set({ deviceId, deviceSignature: input.deviceSignature })
+          .where(eq(crossSigningKeys.userId, userId));
+        vouched = true;
+      }
     }
-    if (inserted.length === 0 && device.masterSignature === input.masterSignature) {
+    if (inserted.length === 0 && !vouched && device.masterSignature === input.masterSignature) {
       return false;
     }
     await tx.update(devices).set({ masterSignature: input.masterSignature }).where(eq(devices.id, deviceId));

@@ -319,8 +319,8 @@ export function createCryptoHost(options: CryptoHostOptions): CryptoHost {
     if (ackTab === tab) {
       ackTab = tabs.values().next().value ?? null;
       // The gateway session of the new tab has its own window of unacknowledged
-      // messages. A resync ack through it restarts the delivery after the last
-      // processed id, so no message is lost.
+      // messages. A resync ack through it sends every queued message again,
+      // so no message is lost.
       if (ackTab) {
         run?.handle?.resyncToDevice();
       }
