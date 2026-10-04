@@ -392,6 +392,8 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
    * its track is stopped, never used.
    */
   let micGeneration = 0;
+  /** Goes up on each join and each teardown. A `join()` stops after an `await` when this value changed. */
+  let callGeneration = 0;
   let inputDeviceId: string | undefined;
   let outputDeviceId: string | undefined;
   let cameraStream: MediaStream | null = null;
@@ -1170,6 +1172,12 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
   function onPeerVoiceState(update: VoiceStateJson): void {
     if (update.userId === selfKey.userId && update.deviceId === selfKey.deviceId) {
       if (update.channelId === null) {
+        // A rejoin from this device makes the server remove the old voice
+        // state of this device. That leave has the call id of the old join.
+        // It is not for the current call, so ignore it.
+        if (update.callId !== undefined && update.callId !== signalTransport?.callId) {
+          return;
+        }
         // The server removed our own voice state (a VOICE_LEAVE echo, a
         // move to another device, or a kick): clean up the same way
         // `leave()` does, and let the caller's UI react.
@@ -1220,6 +1228,12 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
 
   async function teardown(shouldSendLeave: boolean): Promise<void> {
     micGeneration += 1;
+    callGeneration += 1;
+    // Let a join that waits for its echo continue now. It sees the new generation and stops.
+    if (joinConfirmed) {
+      joinConfirmed();
+      joinConfirmed = null;
+    }
     const wasActive = currentChannelId !== null || peers.size > 0 || localStream !== null;
     if (!wasActive) {
       return;
@@ -1310,6 +1324,7 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
     currentGuildId = guildId;
     currentChannelId = channelId;
     const generation = ++micGeneration;
+    const call = ++callGeneration;
     const requestedDeviceId = inputDeviceId;
 
     let stream: MediaStream;
@@ -1371,16 +1386,23 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
     await new Promise<void>((resolve) => {
       joinConfirmed = resolve;
       setTimeoutFn(() => {
-        if (joinConfirmed) {
+        if (joinConfirmed === resolve) {
           joinConfirmed = null;
-          resolve();
         }
+        resolve();
       }, JOIN_CONFIRM_TIMEOUT_MS);
     });
+    // A leave (or a newer join) started during the wait. This join must not make peer connections.
+    if (call !== callGeneration) {
+      return;
+    }
 
     const initialPeers = deps.getInitialPeers(channelId);
     for (const peerKey of initialPeers) {
       const runtime = await ensurePeer(peerKey);
+      if (call !== callGeneration) {
+        return;
+      }
       // We are the newcomer: we offer to every peer already here.
       await negotiate(runtime);
       // Observed on Chromium: adding the same local track as a sender to
@@ -1391,6 +1413,9 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
       // newcomer's own catch-up loop (one peer at a time, already), not
       // ordinary calls with two people, so the added join time is small.
       await new Promise<void>((resolve) => setTimeoutFn(resolve, NEWCOMER_TRACK_SHARE_DELAY_MS));
+      if (call !== callGeneration) {
+        return;
+      }
     }
 
     ensureSpeakingTimer();

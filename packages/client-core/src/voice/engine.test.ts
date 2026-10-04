@@ -250,6 +250,7 @@ class FakeAudioContext {
 }
 
 class FakeSignalTransport implements SignalTransport {
+  callId?: string;
   sent: Array<{ target: PeerKey; payload: SignalPayload }> = [];
   private readonly handlers = new Set<(from: PeerKey, payload: SignalPayload) => void>();
   closed = false;
@@ -704,6 +705,25 @@ describe("onPeerVoiceState", () => {
     await Promise.resolve();
 
     expect(deps.sendVoiceLeave).not.toHaveBeenCalled(); // local cleanup only, no extra VOICE_LEAVE
+  });
+
+  it("ignores a leave for an old call of this device, and keeps the current call", async () => {
+    const { deps, transport, audioContexts } = makeDeps();
+    transport.callId = "call-new";
+    const engine = createVoiceEngine(deps);
+    await joinAndConfirm(engine, deps, "guild-1", "channel-1");
+
+    // A rejoin makes the server send a leave for the old voice state of this device.
+    engine.onPeerVoiceState({ ...selfJoinUpdate(deps, "guild-1", "channel-1"), channelId: null, callId: "call-old" });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(engine.channelId).toBe("channel-1");
+    expect(transport.closed).toBe(false);
+    expect(audioContexts[0]!.closed).toBe(false);
+
+    // A leave for the current call still ends it.
+    engine.onPeerVoiceState({ ...selfJoinUpdate(deps, "guild-1", "channel-1"), channelId: null, callId: "call-new" });
+    await vi.waitFor(() => expect(engine.channelId).toBeNull());
   });
 });
 

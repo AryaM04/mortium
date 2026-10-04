@@ -3,6 +3,7 @@
 // in docs/concepts/permissions.md; nobody can act on the guild owner.
 import { and, eq, gte, isNull } from "drizzle-orm";
 import { DispatchEvent, hasPermission, Permission } from "@mortium/shared";
+import type { FastifyBaseLogger } from "fastify";
 import type { DbClient } from "../../db/client.js";
 import { bans, channels, events, guildMembers, guilds } from "../../db/schema.js";
 import { AppError } from "../../errors.js";
@@ -18,6 +19,7 @@ export interface ModerationDeps {
   db: DbClient;
   gateway?: GatewayService;
   voice?: VoiceService;
+  log?: FastifyBaseLogger;
 }
 
 async function removeMember(db: DbClient, guildId: bigint, targetUserId: bigint): Promise<void> {
@@ -36,7 +38,9 @@ function afterMemberRemoved(deps: ModerationDeps, guildId: bigint, targetUserId:
   gateway.toUser(targetUserId, DispatchEvent.GUILD_DELETE, { id: guildId.toString() });
   gateway.removeUserFromGuild(guildId, targetUserId);
   if (voice) {
-    void revalidateGuildVoice({ db, gateway, voice }, guildId);
+    revalidateGuildVoice({ db, gateway, voice }, guildId).catch((error: unknown) => {
+      deps.log?.error(error, "The server could not remove the voice state of a member who left.");
+    });
   }
 }
 

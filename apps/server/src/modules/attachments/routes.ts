@@ -4,18 +4,12 @@ import type { Readable } from "node:stream";
 import type { FastifyInstance } from "fastify";
 import type { AppDeps } from "../../app.js";
 import { AppError } from "../../errors.js";
+import { parseId } from "../../id.js";
 import { checkRate } from "../keys/routes.js";
 import { createEventRateLimiter } from "../messages/service.js";
 import { claimAttachment, openAttachment, uploadAttachment } from "./service.js";
 
 const UPLOADS_PER_MINUTE = 60;
-
-function parseId(text: string): bigint {
-  if (!/^[0-9]+$/.test(text)) {
-    throw new AppError(404, "NOT_FOUND", "This does not exist.");
-  }
-  return BigInt(text);
-}
 
 export async function registerAttachmentRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
   const limiter = createEventRateLimiter(UPLOADS_PER_MINUTE, 60_000);

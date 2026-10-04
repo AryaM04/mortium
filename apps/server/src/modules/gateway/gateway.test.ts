@@ -348,6 +348,46 @@ describeWithDb("gateway", () => {
     expect(resumed).toBeTruthy();
   });
 
+  it("keeps a resumed session live when the old socket closes later", async () => {
+    const { session, ready } = await identify();
+    const sessionId = (ready.d as { sessionId: string }).sessionId;
+    const oldClosed = onClose(session.ws);
+
+    const resumeWs = await connectRaw();
+    openSockets.push(resumeWs);
+    await nextMessage(resumeWs, (env) => env.op === GatewayOpcode.HELLO);
+    resumeWs.send(
+      JSON.stringify({ op: GatewayOpcode.RESUME, d: { accessToken: session.accessToken, sessionId, lastSequence: 0 } }),
+    );
+    await nextMessage(resumeWs, (env) => env.t === "RESUMED");
+
+    if (session.ws.readyState === WebSocket.OPEN) {
+      session.ws.close();
+    }
+    await oldClosed;
+    // Give the server time to run the close handler of the old socket.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(gateway.hasLiveSession(sessionId)).toBe(true);
+    const guildCreate = nextMessage(resumeWs, (env) => env.t === "GUILD_CREATE");
+    await createGuild(session.accessToken);
+    expect((await guildCreate).t).toBe("GUILD_CREATE");
+  });
+
+  it("rejects a TYPING op with an id out of range and continues to run", async () => {
+    const { session } = await identify();
+    const closed = onClose(session.ws);
+    session.ws.send(JSON.stringify({ op: GatewayOpcode.TYPING, d: { channelId: "99999999999999999999" } }));
+    expect((await closed).code).toBe(GatewayCloseCode.DECODE_ERROR);
+
+    // The server still accepts new connections.
+    const { session: other } = await identify();
+    openSockets.push(other.ws);
+    other.ws.send(JSON.stringify({ op: GatewayOpcode.HEARTBEAT, d: { s: null } }));
+    const ack = await nextMessage(other.ws, (env) => env.op === GatewayOpcode.HEARTBEAT_ACK);
+    expect(ack.op).toBe(GatewayOpcode.HEARTBEAT_ACK);
+  });
+
   it("sends INVALID_SESSION when the resume buffer has expired", async () => {
     const shortGateway = new GatewayService({ resumeBufferTtlMs: 50 });
     const shortAppConfig = await buildApp({

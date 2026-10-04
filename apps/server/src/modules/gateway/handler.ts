@@ -152,6 +152,40 @@ export function registerGatewayRoute(
       socket.send(JSON.stringify({ op, d, ...extra }));
     }
 
+    /**
+     * Detach the session from this socket. This runs one time for each socket.
+     * It does nothing when a RESUME moved the session to another socket.
+     */
+    function detachSession(code: number): void {
+      const sessionId = state.sessionId;
+      state.sessionId = null;
+      if (!sessionId || !gateway.disconnectSession(sessionId, socket)) {
+        return;
+      }
+      delivery?.stop(sessionId);
+      const info = gateway.getSession(sessionId);
+      if (!info) {
+        return;
+      }
+      gateway.notifyConnectionCountChanged(info.userId);
+
+      // The device was signed out, removed, or its password was reset:
+      // its voice state must go at once, with no grace period. Any
+      // other disconnect (a network drop, a heartbeat timeout, a
+      // normal client close) gets the usual grace, so a short drop
+      // does not knock the user out of the call.
+      if (code === GatewayCloseCode.DEVICE_REVOKED) {
+        const removed = voice.removeImmediate(info.userId, info.deviceId);
+        if (removed) {
+          announceVoiceLeave(removed);
+        }
+      } else {
+        voice.scheduleGrace(info.userId, info.deviceId, sessionId, (removedState) => {
+          announceVoiceLeave(removedState);
+        });
+      }
+    }
+
     function closeConnection(code: number, reason: string): void {
       if (state.closed) {
         return;
@@ -163,14 +197,7 @@ export function registerGatewayRoute(
       if (state.heartbeatTimer) {
         clearTimeout(state.heartbeatTimer);
       }
-      if (state.sessionId) {
-        delivery?.stop(state.sessionId);
-        gateway.disconnectSession(state.sessionId);
-        const info = gateway.getSession(state.sessionId);
-        if (info) {
-          gateway.notifyConnectionCountChanged(info.userId);
-        }
-      }
+      detachSession(code);
       socket.close(code, reason);
     }
 
@@ -208,6 +235,10 @@ export function registerGatewayRoute(
         closeConnection(GatewayCloseCode.AUTH_FAILED, "The access token is not valid or has expired.");
         return;
       }
+      // The socket can close while the token check runs. Then no session must start.
+      if (state.closed || state.sessionId) {
+        return;
+      }
       if (claims.deviceId !== parsed.data.deviceId) {
         closeConnection(GatewayCloseCode.AUTH_FAILED, "The device id does not match the access token.");
         return;
@@ -217,20 +248,28 @@ export function registerGatewayRoute(
         clearTimeout(state.identifyTimer);
         state.identifyTimer = null;
       }
+      // Start the heartbeat timeout before READY, so a slow READY cannot keep a dead connection.
+      scheduleHeartbeatTimeout();
 
       const session = gateway.createSession(socket, claims.userId, claims.deviceId);
       state.sessionId = session.id;
       gateway.notifyConnectionCountChanged(claims.userId);
+      voice.claimForSession(claims.userId, claims.deviceId, session.id, (id) => gateway.hasLiveSession(id));
 
       const ready = await buildReadyPayload(db, gateway, voice, claims.userId, claims.deviceId, session.id);
-      send(GatewayOpcode.DISPATCH, ready, { t: "READY" });
-      if (!state.closed) {
-        delivery?.start(session.id, claims.deviceId);
+      // A close during the build already detached the session.
+      if (state.closed) {
+        return;
       }
-      scheduleHeartbeatTimeout();
+      send(GatewayOpcode.DISPATCH, ready, { t: "READY" });
+      delivery?.start(session.id, claims.deviceId);
     }
 
     function handleResume(payload: unknown): void {
+      if (state.sessionId) {
+        closeConnection(GatewayCloseCode.ALREADY_AUTHENTICATED, "This connection already has a session.");
+        return;
+      }
       const parsed = resumePayloadSchema.safeParse(payload);
       if (!parsed.success) {
         closeConnection(GatewayCloseCode.DECODE_ERROR, "The RESUME payload is not valid.");
@@ -238,6 +277,10 @@ export function registerGatewayRoute(
       }
       verifyAccessToken(config.jwtSecret, parsed.data.accessToken)
         .then((claims) => {
+          // The socket can close while the token check runs. Then the session must stay detached.
+          if (state.closed || state.sessionId) {
+            return;
+          }
           const result = gateway.resumeSession(
             parsed.data.sessionId,
             claims.userId,
@@ -255,14 +298,12 @@ export function registerGatewayRoute(
           }
           state.sessionId = parsed.data.sessionId;
           gateway.notifyConnectionCountChanged(claims.userId);
-          voice.cancelGrace(claims.userId, claims.deviceId);
+          voice.cancelGrace(claims.userId, claims.deviceId, parsed.data.sessionId);
           for (const entry of result.replay) {
             send(GatewayOpcode.DISPATCH, entry.d, { t: entry.t, s: entry.seq });
           }
           send(GatewayOpcode.DISPATCH, {}, { t: "RESUMED" });
-          if (!state.closed) {
-            delivery?.start(parsed.data.sessionId, claims.deviceId);
-          }
+          delivery?.start(parsed.data.sessionId, claims.deviceId);
           scheduleHeartbeatTimeout();
         })
         .catch(() => {
@@ -292,7 +333,9 @@ export function registerGatewayRoute(
       }
       const info = gateway.getSession(state.sessionId);
       if (info) {
-        void handleTyping(db, gateway, info.userId, BigInt(parsed.data.channelId));
+        handleTyping(db, gateway, info.userId, BigInt(parsed.data.channelId)).catch((error: unknown) => {
+          app.log.error(error, "The server could not send a typing event.");
+        });
       }
     }
 
@@ -342,7 +385,7 @@ export function registerGatewayRoute(
       if (!info) {
         return;
       }
-      handleVoiceJoin(voiceOpsDeps, info.userId, info.deviceId, parsed.data).catch(sendVoiceError);
+      handleVoiceJoin(voiceOpsDeps, info.userId, info.deviceId, info.id, parsed.data).catch(sendVoiceError);
     }
 
     function handleVoiceLeaveOp(): void {
@@ -450,7 +493,10 @@ export function registerGatewayRoute(
 
       switch (envelope.op) {
         case GatewayOpcode.IDENTIFY:
-          void handleIdentify(envelope.d);
+          handleIdentify(envelope.d).catch((error: unknown) => {
+            app.log.error(error, "The server could not complete an IDENTIFY.");
+            closeConnection(GatewayCloseCode.UNKNOWN_ERROR, "The server could not start the session.");
+          });
           break;
         case GatewayOpcode.RESUME:
           handleResume(envelope.d);
@@ -492,30 +538,7 @@ export function registerGatewayRoute(
       if (state.heartbeatTimer) {
         clearTimeout(state.heartbeatTimer);
       }
-      if (state.sessionId) {
-        delivery?.stop(state.sessionId);
-        const info = gateway.getSession(state.sessionId);
-        gateway.disconnectSession(state.sessionId);
-        if (info) {
-          gateway.notifyConnectionCountChanged(info.userId);
-
-          // The device was signed out, removed, or its password was reset:
-          // its voice state must go at once, with no grace period. Any
-          // other disconnect (a network drop, a heartbeat timeout, a
-          // normal client close) gets the usual grace, so a short drop
-          // does not knock the user out of the call.
-          if (code === GatewayCloseCode.DEVICE_REVOKED) {
-            const removed = voice.removeImmediate(info.userId, info.deviceId);
-            if (removed) {
-              announceVoiceLeave(removed);
-            }
-          } else {
-            voice.scheduleGrace(info.userId, info.deviceId, (removedState) => {
-              announceVoiceLeave(removedState);
-            });
-          }
-        }
-      }
+      detachSession(code);
     });
 
     socket.on("error", () => {

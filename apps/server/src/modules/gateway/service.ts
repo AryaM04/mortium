@@ -132,6 +132,11 @@ export class GatewayService {
       clearTimeout(session.expiryTimer);
       session.expiryTimer = null;
     }
+    // The old socket can stay open until it times out. Close it now, so that
+    // its close cannot detach the session from the new socket later.
+    if (session.ws && session.ws !== ws) {
+      session.ws.close(1000, "The session resumed on another connection.");
+    }
     session.ws = ws;
     this.addUserSession(userId, sessionId);
 
@@ -143,11 +148,13 @@ export class GatewayService {
    * Detach a session's socket. The session (and its resume buffer) stays
    * around for `resumeBufferTtlMs` in case the client resumes; after that
    * it is dropped for good and the memory is freed.
+   * Returns false and does nothing when `ws` is not the current socket of
+   * the session, for example an old socket that closes after a RESUME.
    */
-  disconnectSession(sessionId: string): void {
+  disconnectSession(sessionId: string, ws: GatewaySocket): boolean {
     const session = this.sessions.get(sessionId);
-    if (!session) {
-      return;
+    if (!session || session.ws !== ws) {
+      return false;
     }
     session.ws = null;
     // The session stays in `userSessions`, so a dispatch made while this
@@ -164,6 +171,7 @@ export class GatewayService {
     }, this.resumeBufferTtlMs);
     // A timer must never keep the process alive by itself in tests.
     session.expiryTimer.unref?.();
+    return true;
   }
 
   /** Look up who owns a session, for the caller's own bookkeeping (heartbeat, rate limit, etc). */
