@@ -64,7 +64,7 @@ on 2026-10-01. The review read the code. It did not run the app.
 
 ### GW-01: One TYPING message with a very large channel id stops the server
 
-- Severity: Critical. Confidence: Confirmed, checked. Status: Open.
+- Severity: Critical. Confidence: Confirmed, checked. Status: Fixed in v0.2.1.
 - Symptom: A signed-in user sends `TYPING` with `channelId: "99999999999999999999"`. The Node process stops for all users.
 - Cause:
   - `idSchema` accepts any number of digits (`packages/shared/src/api/common.ts:5`).
@@ -75,7 +75,7 @@ on 2026-10-01. The review read the code. It did not run the app.
 
 ### SES-01: A network error at start signs the user out, and all local keys are lost
 
-- Severity: High. Confidence: Confirmed. Status: Open. **User-reported (2, 3).**
+- Severity: High. Confidence: Confirmed. Status: Fixed in v0.2.1. **User-reported (2, 3).**
 - Symptom: The app opens while the server is down, restarts or cannot be reached. The user is signed out. After the next sign-in, the user has a new device, and old messages cannot be read. Auto-deploy restarts the server on each commit, so this occurs often.
 - Cause:
   - `session.init()` calls `clearSession()` on any `fetchMe` error, also on `NETWORK_ERROR` and 5xx (`packages/client-core/src/session.ts:119-125`). The cross-tab "signed-in" handler does the same (`session.ts:101-105`).
@@ -86,35 +86,35 @@ on 2026-10-01. The review read the code. It did not run the app.
 
 ### SES-02: A refresh response that is lost signs the device out and retires its keys
 
-- Severity: High. Confidence: Confirmed. Status: Open. **User-reported (2).**
+- Severity: High. Confidence: Confirmed. Status: Fixed in v0.2.1. **User-reported (2).**
 - Symptom: After a network drop, a server restart or a refresh in two tabs at the same time, the user is signed out and the device keys are gone.
 - Cause: The server rotates the refresh token. If the client does not get the reply and sends the old token again, the server sees `TOKEN_REUSED`. It revokes the device and calls `retireDeviceKeys` (`auth/service.ts:202-217`, `262-274`). The revoke and the insert of the new token are not in one transaction.
 - Fix: Accept the previous token again for a short time (about 10 s), and return the same new token. Put the rotation in one transaction.
 
 ### SES-03: Other tabs do not start real-time updates or encryption after a sign-in in one tab
 
-- Severity: Medium. Confidence: Confirmed. Status: Open.
+- Severity: Medium. Confidence: Confirmed. Status: Fixed in v0.2.1.
 - Symptom: The other open tabs show the chats, but messages do not decrypt and nothing updates until a reload.
 - Cause: The broadcast handler calls `fetchMe()`, which sets only `status` and `user` (`session.ts:92`, `105`). `deviceId` stays null. `crypto.ts:268` and `realtime.ts:86` need `deviceId`.
 - Fix: In the "signed-in" handler, read the tokens and set `deviceId` with the status.
 
 ### GW-02: An old socket that closes after RESUME disconnects the resumed session
 
-- Severity: High. Confidence: Confirmed. Status: Open. **User-reported (4).**
+- Severity: High. Confidence: Confirmed. Status: Fixed in v0.2.1. **User-reported (4).**
 - Symptom: After a network change, the client resumes on a new socket. When the old socket times out (up to 45 s), the server detaches the session. The user shows offline, events stop, to-device delivery stops, and the user is removed from voice 15 s later.
 - Cause: `resumeSession` (`gateway/service.ts:135`) changes `session.ws` but does not close the old socket. The close handler of the old socket (`handler.ts:166-168`, `487-519`) still has the same session id. It calls `delivery.stop`, `disconnectSession` and `voice.scheduleGrace`.
 - Fix: Close the old socket in `resumeSession`. In `disconnectSession`, `stop` and `scheduleGrace`, do nothing when `session.ws` is not the socket that closed.
 
 ### GW-03: A client that disconnects during IDENTIFY or RESUME leaves a session that never ends
 
-- Severity: Medium. Confidence: Confirmed. Status: Open.
+- Severity: Medium. Confidence: Confirmed. Status: Fixed in v0.2.1.
 - Symptom: The user shows online for all time. The server keeps the session and a buffer of 500 events in memory.
 - Cause: `handleIdentify` (`handler.ts:221-222`) and `handleResume` (`handler.ts:256`) do not check `state.closed` after `await verifyAccessToken`. The close handler already ran with no session id, so nothing removes the session.
 - Fix: After each `await`, if the socket is closed, do not create or attach the session.
 
 ### GW-04: An error while the server builds READY stops the server
 
-- Severity: Medium. Confidence: Likely. Status: Open.
+- Severity: Medium. Confidence: Likely. Status: Fixed in v0.2.1.
 - Symptom: A database error during READY gives an unhandled rejection (see `GW-01`). If the process continues, the connection has no heartbeat timeout and stays "online".
 - Cause: `void handleIdentify(...)` (`handler.ts:453`) has no `.catch`. The heartbeat timeout starts only after READY (`handler.ts:230`).
 - Fix: Catch errors in `handleIdentify` and close the socket. Start the heartbeat timeout before READY.
@@ -139,7 +139,7 @@ on 2026-10-01. The review read the code. It did not run the app.
 
 ### CRY-01: Once the first device of an account is removed, no device of that account is trusted
 
-- Severity: Critical. Confidence: Confirmed, checked. Status: Open. **User-reported (1, 3).**
+- Severity: Critical. Confidence: Confirmed, checked. Status: Fixed in v0.2.1. **User-reported (1, 3).**
 - Symptom: A user signs out of the device that made the account. After that, other users and new own devices see every device of the account as not verified. They send it no keys and refuse its key requests. SAS verification on a new device shows "The keys did not match", but the other device shows "verified". Messages cannot be read.
 - Cause:
   - The server returns `masterKey.deviceId`, the device that made the master key, as the device that vouches for it (`apps/server/src/modules/keys/service.ts:326`).
@@ -152,7 +152,7 @@ on 2026-10-01. The review read the code. It did not run the app.
 
 ### CRY-02: A new account shows "Verify this device" right after sign-up
 
-- Severity: High. Confidence: Confirmed. Status: Open. **User-reported (1).**
+- Severity: High. Confidence: Confirmed. Status: Fixed in v0.2.1. **User-reported (1).**
 - Symptom: The first device of a new account holds the master key and signed itself. But the banner "Verify this device to read old messages" shows, and the security dialog says "Not verified". On the desktop app, the state stays false.
 - Cause:
   - `ensureMasterKey` uploads the key and signs the device (`device-manager.ts:253-297`). It reads the server with `transport.queryKeys`, not with `deviceList.refresh`.
@@ -163,7 +163,7 @@ on 2026-10-01. The review read the code. It did not run the app.
 
 ### CRY-03: Device list changes that occur while a device is offline are never fetched
 
-- Severity: High. Confidence: Confirmed. Status: Open. **User-reported (3).**
+- Severity: High. Confidence: Confirmed. Status: Fixed in v0.2.1. **User-reported (3).**
 - Symptom: A contact's new or newly verified device gets no keys and cannot read messages. Its key requests are refused as "not verified". Messages stay "waiting".
 - Cause:
   - The server sends `DEVICE_LIST_UPDATE` only to live sessions. The resume buffer keeps events for 60 s (`gateway/service.ts:30-35`, `520`).
@@ -174,21 +174,21 @@ on 2026-10-01. The review read the code. It did not run the app.
 
 ### CRY-04: To-device messages can be lost when two devices send at the same time
 
-- Severity: High. Confidence: Confirmed, checked. Status: Open. **User-reported (2, 3).**
+- Severity: High. Confidence: Confirmed, checked. Status: Fixed in v0.2.1. **User-reported (2, 3).**
 - Symptom: Some room keys never arrive. This occurs when two devices send to the same device at the same time, which is usual in group chats.
 - Cause: Each row id comes from `nextId()` in the transaction of its request (`to-device/service.ts:82`). A row with a higher id can commit first. The delivery reads only `id > lastSentId` (`to-device/service.ts:213`), so a row with a lower id that commits later is never sent. The next ack deletes it (`id <= upToId`, `to-device/service.ts:157-159`). The client also drops lower ids (`crypto/index.ts:455`, `olm-machine.ts:146`).
 - Fix: Use a database sequence that follows the commit order. Alternatively, deliver every row that was not sent and not acked, and let the client accept lower ids.
 
 ### CRY-05: The desktop app drops events while encryption starts, and loses to-device messages
 
-- Severity: High. Confidence: Confirmed (the effect depends on timing). Status: Open. **User-reported (3).**
+- Severity: High. Confidence: Confirmed (the effect depends on timing). Status: Fixed in v0.2.1. **User-reported (3).**
 - Symptom: In the Tauri and Electron apps, keys that were sent while the app was closed sometimes never arrive.
 - Cause: In-page encryption subscribes to gateway events only after `startCrypto` resolves (`apps/web/src/lib/crypto.ts:196-208`). `startCrypto` already sent the resync ack (`crypto/index.ts:486`). `TO_DEVICE`, `DEVICE_LIST_UPDATE` and `READY` events in that gap are dropped. A later message with a higher id is acked, and the server deletes the dropped rows. The SharedWorker path keeps these events in a buffer (`host.ts:66-67`). The in-page path does not.
 - Fix: Subscribe and keep events in a buffer before `startCrypto`, as the worker host does.
 
 ### CRY-06: The queue position moves before the key is stored, and a temporary error drops the message
 
-- Severity: High. Confidence: Confirmed. Status: Open. **User-reported (2).**
+- Severity: High. Confidence: Confirmed. Status: Fixed in v0.2.1. **User-reported (2).**
 - Symptom: Room keys or history forwards are lost when the tab closes during processing, or when the network fails at that time.
 - Cause:
   - `OlmMachine.handleToDevice` saves `lastProcessedId` with the Olm session (`olm-machine.ts:158-161`, `445-452`). Only then do the handlers store the Megolm session (`olm-machine.ts:163-171`).
@@ -205,7 +205,7 @@ on 2026-10-01. The review read the code. It did not run the app.
 
 ### CRY-08: When encryption does not start, the app does not try again, and pages wait for all time
 
-- Severity: High. Confidence: Confirmed. Status: Open. **User-reported (3).**
+- Severity: High. Confidence: Confirmed. Status: Fixed in v0.2.1. **User-reported (3).**
 - Symptom: After a network error at start, every message shows "This message cannot be read." until a reload. In a second tab, or on a plain-http address with no `navigator.locks`, channels never load and sends stay "sending".
 - Cause:
   - `startCrypto` uses the network in `setup()` (`crypto/index.ts:288`, `device-manager.ts:48-60`). In the worker, an error sets the state to "failed" (`host.ts:250-257`). The tab only logs it (`crypto.ts:173-175`).
@@ -216,7 +216,7 @@ on 2026-10-01. The review read the code. It did not run the app.
 
 ### CRY-09: A sign-out of the only device without a key backup loses the master key for good
 
-- Severity: High. Confidence: Confirmed (this follows the current design). Status: Open. **User-reported (1, 2).**
+- Severity: High. Confidence: Confirmed (this follows the current design). Status: Fixed in v0.2.1. **User-reported (1, 2).**
 - Symptom: After a sign-in, every new message shows "cannot be read yet". Key requests are refused because "its owner did not verify it".
 - Cause: Keys go only to devices that the master key signed (`megolm.ts:214`). Only a device that holds the master private key can sign another device (`device-manager.ts:170-190`). The master private key is only in the store of the device that made it, or in the key backup, which is optional. "Reset identity" removes the signatures from all own devices, and each contact must accept the change by hand (`device-list.ts:122`).
 - Fix: Before a sign-out, require the key backup when this device holds the master key. Ask a new device to verify or restore at once.
@@ -249,7 +249,7 @@ on 2026-10-01. The review read the code. It did not run the app.
 
 ### CRY-13: One error stops all later to-device processing until a reload
 
-- Severity: Medium. Confidence: Confirmed. Status: Open. **User-reported (2).**
+- Severity: Medium. Confidence: Confirmed. Status: Fixed in v0.2.1. **User-reported (2).**
 - Symptom: No more keys arrive until a reload.
 - Cause: `drain()` has no `try/finally` (`crypto/index.ts:422-435`). If `olm.handleToDevice` rejects, for example on an IndexedDB error, `draining` is never reset. Each later `drain()` returns the rejected promise.
 - Fix: Use `try/finally` to reset `draining`. Log the error and continue.
@@ -297,7 +297,7 @@ What occurs now when the user reloads the page in a voice channel:
 
 ### VC-01: A rejoin from the same device stops the new call and leaves a ghost
 
-- Severity: Critical. Confidence: Confirmed, checked. Status: Open. **User-reported (4).**
+- Severity: Critical. Confidence: Confirmed, checked. Status: Fixed in v0.2.1. **User-reported (4).**
 - Symptom: A rejoin after a reload fails at once. The same occurs when the user changes voice channel, clicks the current channel again, or starts or answers a DM call while in a guild call. The panel goes idle, others see the user in the channel, and a rejoin is not possible until a reload and a 15 s wait.
 - Cause:
   - `handleVoiceJoin` sends `broadcastVoiceLeave(previous)` also to the user who joins (`apps/server/src/modules/voice/gateway-ops.ts:123-125`). The previous state has the same user and device.
@@ -308,7 +308,7 @@ What occurs now when the user reloads the page in a voice channel:
 
 ### VC-02: The voice grace timer belongs to the device, not to the session
 
-- Severity: High. Confidence: Confirmed. Status: Open. **User-reported (4).**
+- Severity: High. Confidence: Confirmed. Status: Fixed in v0.2.1. **User-reported (4).**
 - Symptom: The user closes or reloads another tab of the same browser. The tab in the call is removed from voice 15 s later. A reconnect that ends with IDENTIFY also removes the user after 15 s.
 - Cause: Each socket close calls `scheduleGrace(userId, deviceId)` (`handler.ts:513`). `VoiceState` has no session id. `handleIdentify` never calls `cancelGrace` (`handler.ts:194-231`). `scheduleGrace` replaces the timer without clearing the old one (`voice/service.ts:240-250`), so the old timer still fires.
 - Fix: Store the session id in `VoiceState`. Start the grace only when the session that closes owns the state. Clear an old timer in `scheduleGrace`. Cancel the grace on IDENTIFY.
@@ -322,7 +322,7 @@ What occurs now when the user reloads the page in a voice channel:
 
 ### VC-04: The page sends no leave when it closes or reloads
 
-- Severity: Medium. Confidence: Confirmed, checked. Status: Open. **User-reported (4).**
+- Severity: Medium. Confidence: Confirmed, checked. Status: Fixed in v0.2.1. **User-reported (4).**
 - Symptom: After a reload, the user and the others see the user in the call for 15 s (up to about 60 s). Other users see "Connection lost". The screen share slot stays taken.
 - Cause: The app has no `pagehide` or `beforeunload` handler. A socket close always uses the grace path (`handler.ts:512-516`).
 - Fix: On `pagehide`, send `VOICE_LEAVE` when a call is active. The socket is still open at that time.
@@ -452,7 +452,7 @@ What occurs now when the user reloads the page in a voice channel:
 
 ### UI-01: "You are no longer in this conversation" shows when the user leaves a DM
 
-- Severity: High. Confidence: Confirmed, checked. Status: Open. **User-reported (5).**
+- Severity: High. Confidence: Confirmed, checked. Status: Fixed in v0.2.1. **User-reported (5).**
 - Symptom: The user opens a DM, then clicks "Friends", the Home icon or the "×" of the open DM. The notice shows, and the app adds a second history entry.
 - Cause:
   - `AppShell.tsx:110-111` uses the same `HomeView` for `/app/@me` and `/app/@me/:id`. React keeps the component and its `wasLoadedRef`.
@@ -470,7 +470,7 @@ What occurs now when the user reloads the page in a voice channel:
 
 ### UI-03: The draft follows the user to another channel, and an edit can post as a new message
 
-- Severity: Medium. Confidence: Confirmed. Status: Open.
+- Severity: Medium. Confidence: Confirmed. Status: Fixed in v0.2.1.
 - Symptom: Text typed in channel A shows in channel B. When the user starts an edit and changes channel, Enter posts the old text as a new message in the other channel.
 - Cause: `Composer` has no `key` (`ChatPane.tsx:180`). The channel change effect resets only mentions and uploads, not the text (`Composer.tsx:228-235`). `ChatPane.tsx:53-55` clears the edit target, but the text stays (`Composer.tsx:212-217`).
 - Fix: Use `key={channelId}` on `Composer`, or keep one draft for each channel.
@@ -551,7 +551,7 @@ What occurs now when the user reloads the page in a voice channel:
 
 ### SRV-03: A very large id in a REST route gives a 500 error
 
-- Severity: Medium. Confidence: Confirmed. Status: Open.
+- Severity: Medium. Confidence: Confirmed. Status: Fixed in v0.2.1.
 - Symptom: `GET /guilds/99999999999999999999`, a large `before` value, or a large id in a body gives `500 INTERNAL_ERROR`. The correct reply is 400 or 404.
 - Cause: Each `parseId` (for example `guilds/routes.ts:82`) checks only for digits. Postgres refuses the value.
 - Fix: Use one shared `parseId` with a range check (see `GW-01`).
