@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { createEventRequestSchema, listEventsQuerySchema, updateReadStateRequestSchema } from "@mortium/shared";
 import type { AppDeps } from "../../app.js";
 import { AppError } from "../../errors.js";
+import { parseId } from "../../id.js";
 import {
   createEvent,
   createEventRateLimiter,
@@ -12,13 +13,6 @@ import {
   updateReadState,
 } from "./service.js";
 import { toEventJson } from "./serialize.js";
-
-function parseId(text: string): bigint {
-  if (!/^[0-9]+$/.test(text)) {
-    throw new AppError(404, "NOT_FOUND", "This does not exist.");
-  }
-  return BigInt(text);
-}
 
 export async function registerMessageRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
   const rateLimiter = createEventRateLimiter();

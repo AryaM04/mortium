@@ -41,11 +41,14 @@ export interface VoiceState {
   joinedAt: string;
   /** The random id that the client chose for this join, or undefined. */
   callId?: string;
+  /** The gateway session that owns this state. Only a close of this session starts the grace timer. */
+  sessionId: string;
 }
 
 export interface JoinInput {
   userId: bigint;
   deviceId: string;
+  sessionId: string;
   guildId: bigint | null;
   channelId: bigint;
   selfMute: boolean;
@@ -170,6 +173,7 @@ export class VoiceService {
       serverDeaf: false,
       joinedAt: new Date().toISOString(),
       callId: input.callId,
+      sessionId: input.sessionId,
     };
     this.addInternal(state);
     return { state, previous };
@@ -230,13 +234,15 @@ export class VoiceService {
    * Start the grace timer for a peer whose socket just disconnected. If
    * the peer is still this exact (user, device) when the timer fires, its
    * state is removed and `onExpire` runs with the removed state. Does
-   * nothing if the state already changed (a move, a leave, or a rejoin).
+   * nothing if the state already changed (a move, a leave, or a rejoin),
+   * or if another session of the same device owns the state.
    */
-  scheduleGrace(userId: bigint, deviceId: string, onExpire: (state: VoiceState) => void): void {
+  scheduleGrace(userId: bigint, deviceId: string, sessionId: string, onExpire: (state: VoiceState) => void): void {
     const state = this.userPeer.get(userId.toString());
-    if (!state || state.deviceId !== deviceId) {
+    if (!state || state.deviceId !== deviceId || state.sessionId !== sessionId) {
       return;
     }
+    this.clearGrace(state);
     const key = this.peerKey(userId, deviceId);
     const timer = setTimeout(() => {
       this.graceTimers.delete(key);
@@ -250,14 +256,27 @@ export class VoiceService {
     this.graceTimers.set(key, timer);
   }
 
-  /** Cancel a pending grace timer, e.g. because the session resumed in time. */
-  cancelGrace(userId: bigint, deviceId: string): void {
-    const key = this.peerKey(userId, deviceId);
-    const timer = this.graceTimers.get(key);
-    if (timer) {
-      clearTimeout(timer);
-      this.graceTimers.delete(key);
+  /** Cancel a pending grace timer, e.g. because the session that owns the state resumed in time. */
+  cancelGrace(userId: bigint, deviceId: string, sessionId: string): void {
+    const state = this.userPeer.get(userId.toString());
+    if (state && state.deviceId === deviceId && state.sessionId === sessionId) {
+      this.clearGrace(state);
     }
+  }
+
+  /**
+   * Give the voice state of a device to a new session of that device, and
+   * cancel its grace timer. Call this after IDENTIFY. Does nothing when the
+   * session that owns the state is still live (`isLive` returns true),
+   * for example another tab of the same browser.
+   */
+  claimForSession(userId: bigint, deviceId: string, sessionId: string, isLive: (sessionId: string) => boolean): void {
+    const state = this.userPeer.get(userId.toString());
+    if (!state || state.deviceId !== deviceId || isLive(state.sessionId)) {
+      return;
+    }
+    this.clearGrace(state);
+    state.sessionId = sessionId;
   }
 
   /** Remove a device's voice state at once, with no grace period, e.g. on logout or device revoke. */

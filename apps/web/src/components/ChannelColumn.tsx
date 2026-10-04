@@ -147,7 +147,9 @@ function ChannelRow({
 
   function onSelect(): void {
     navigate(href);
-    if (isVoice) {
+    // Do not join again when this tab is already in this channel, or connects to it now.
+    const voice = voiceStore.getState();
+    if (isVoice && !(voice.status !== "idle" && voice.channelId === channel.id)) {
       void joinVoiceChannel(guildId, channel.id);
     }
   }

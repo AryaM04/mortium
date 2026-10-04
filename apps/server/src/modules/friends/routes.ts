@@ -6,7 +6,7 @@ import {
   sendFriendRequestSchema,
 } from "@mortium/shared";
 import type { AppDeps } from "../../app.js";
-import { AppError } from "../../errors.js";
+import { parseId } from "../../id.js";
 import { createEventRateLimiter } from "../messages/service.js";
 import {
   acceptFriendRequest,
@@ -16,11 +16,8 @@ import {
   sendFriendRequest,
 } from "./service.js";
 
-function parseId(text: string): bigint {
-  if (!/^[0-9]+$/.test(text)) {
-    throw new AppError(404, "USER_NOT_FOUND", "This user does not exist.");
-  }
-  return BigInt(text);
+function parseUserId(text: string): bigint {
+  return parseId(text, "This user does not exist.", "USER_NOT_FOUND");
 }
 
 export async function registerFriendRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
@@ -50,7 +47,7 @@ export async function registerFriendRoutes(app: FastifyInstance, deps: AppDeps):
   });
 
   app.put("/users/@me/relationships/:userId", { preHandler: app.authenticate }, async (request, reply) => {
-    const otherId = parseId((request.params as { userId: string }).userId);
+    const otherId = parseUserId((request.params as { userId: string }).userId);
     const input = relationshipActionRequestSchema.parse(request.body);
     const { userId } = request.auth!;
     const relationship =
@@ -61,7 +58,7 @@ export async function registerFriendRoutes(app: FastifyInstance, deps: AppDeps):
   });
 
   app.delete("/users/@me/relationships/:userId", { preHandler: app.authenticate }, async (request, reply) => {
-    const otherId = parseId((request.params as { userId: string }).userId);
+    const otherId = parseUserId((request.params as { userId: string }).userId);
     await removeRelationship(friendsDeps, request.auth!.userId, otherId);
     return reply.status(204).send();
   });

@@ -104,6 +104,7 @@ export async function handleVoiceJoin(
   deps: VoiceOpsDeps,
   userId: bigint,
   deviceId: string,
+  sessionId: string,
   payload: VoiceJoinPayload,
 ): Promise<void> {
   const channelId = BigInt(payload.channelId);
@@ -112,6 +113,7 @@ export async function handleVoiceJoin(
   const { state, previous } = deps.voice.join({
     userId,
     deviceId,
+    sessionId,
     guildId: target.guildId,
     channelId,
     selfMute: payload.selfMute,

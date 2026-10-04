@@ -4,15 +4,8 @@
 import type { FastifyInstance } from "fastify";
 import { createDmRequestSchema } from "@mortium/shared";
 import type { AppDeps } from "../../app.js";
-import { AppError } from "../../errors.js";
+import { parseId } from "../../id.js";
 import { addRecipient, createDm, listDmChannels, removeRecipient } from "./service.js";
-
-function parseId(text: string): bigint {
-  if (!/^[0-9]+$/.test(text)) {
-    throw new AppError(404, "NOT_FOUND", "This does not exist.");
-  }
-  return BigInt(text);
-}
 
 export async function registerDmRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
   const dmsDeps = { db: deps.db, gateway: deps.gateway, voice: deps.voice, ringer: deps.ringer };

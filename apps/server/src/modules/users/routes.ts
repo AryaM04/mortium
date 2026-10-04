@@ -5,6 +5,7 @@ import { updateMeRequestSchema } from "@mortium/shared";
 import type { AppDeps } from "../../app.js";
 import { users } from "../../db/schema.js";
 import { AppError } from "../../errors.js";
+import { parseId } from "../../id.js";
 import { deleteDevice, listDevices } from "../auth/service.js";
 import { toUserJson } from "./serialize.js";
 import { detectImageContentType, readAvatarFile } from "./avatar.js";
@@ -59,10 +60,7 @@ export async function registerUserRoutes(app: FastifyInstance, deps: AppDeps): P
 
   app.get("/avatars/:userId/:avatarKey", async (request, reply) => {
     const { userId: userIdText, avatarKey } = request.params as { userId: string; avatarKey: string };
-    if (!/^[0-9]+$/.test(userIdText)) {
-      throw new AppError(404, "NOT_FOUND", "This avatar does not exist.");
-    }
-    const userId = BigInt(userIdText);
+    const userId = parseId(userIdText, "This avatar does not exist.");
 
     const rows = await deps.db.select({ avatarKey: users.avatarKey }).from(users).where(eq(users.id, userId)).limit(1);
     if (!rows[0] || rows[0].avatarKey !== avatarKey) {

@@ -262,8 +262,14 @@ async function loadEngine(): Promise<VoiceEngine> {
           // server removed us from voice (a kick, or a move to another
           // device). Reset the status panel straight from the dispatch,
           // rather than poll the engine's own state, since its teardown
-          // runs asynchronously.
-          if (update.channelId === null && update.userId === selfUserId && update.deviceId === selfDeviceId) {
+          // runs asynchronously. A leave with the call id of an older join
+          // is for an old voice state of this device, so the engine ignores it.
+          if (
+            update.channelId === null &&
+            update.userId === selfUserId &&
+            update.deviceId === selfDeviceId &&
+            (update.callId === undefined || update.callId === callId)
+          ) {
             voiceStore.setState({
               status: "idle",
               guildId: null,
@@ -479,6 +485,19 @@ if (typeof navigator !== "undefined" && navigator.mediaDevices) {
 
 session.store.subscribe((state) => {
   if (state.status === "signedOut") {
+    void leaveVoice();
+  }
+});
+
+// The socket is still open on pagehide. Send the leave now, so that the
+// others do not see this device in the call until the grace timer ends.
+window.addEventListener("pagehide", (event) => {
+  if (voiceStore.getState().status === "idle") {
+    return;
+  }
+  gatewaySend(GatewayOpcode.VOICE_LEAVE, {});
+  if (event.persisted) {
+    // The page can come back from the browser cache. Then it must not show the old call.
     void leaveVoice();
   }
 });

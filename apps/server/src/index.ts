@@ -20,6 +20,11 @@ async function main() {
   const mailer = createSmtpMailer(config);
   const app = await buildApp({ config, db, mailer });
 
+  // One failed background task must not stop the server for all users. Log the error and continue.
+  process.on("unhandledRejection", (reason) => {
+    app.log.error(reason, "A promise rejected and no code handled the error.");
+  });
+
   await app.listen({ port: config.apiPort, host: "0.0.0.0" });
   app.log.info(`Server is ready. It listens on port ${config.apiPort}.`);
 

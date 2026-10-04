@@ -17,6 +17,8 @@ export type SignalPayload =
   | { kind: "media"; streams: { camera?: string; screen?: string } };
 
 export interface SignalTransport {
+  /** The random id of the join that this transport belongs to, when it has one. */
+  readonly callId?: string;
   send(target: PeerKey, payload: SignalPayload): void;
   /** Register a handler for an incoming signal. Returns a function that removes the handler. */
   onSignal(handler: (from: PeerKey, payload: SignalPayload) => void): () => void;
@@ -134,6 +136,7 @@ export function createOlmSignalTransport(deps: OlmSignalTransportDeps): SignalTr
   });
 
   return {
+    callId: deps.callId,
     send(target, payload) {
       const state = deps.peerState(target.userId);
       if (!state?.callId || state.deviceId !== target.deviceId) {

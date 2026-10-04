@@ -24,6 +24,7 @@ import {
 import type { AppDeps } from "../../app.js";
 import { guilds } from "../../db/schema.js";
 import { AppError } from "../../errors.js";
+import { parseId } from "../../id.js";
 import { checkRate } from "../keys/routes.js";
 import { createEventRateLimiter } from "../messages/service.js";
 import { detectImageContentType } from "../users/avatar.js";
@@ -79,13 +80,6 @@ const ICON_BODY_LIMIT_BYTES = 1024 * 1024; // 1 MiB
 const INVITE_LOOKUPS_PER_MINUTE = 30;
 const INVITES_CREATED_PER_MINUTE = 30;
 
-function parseId(text: string): bigint {
-  if (!/^[0-9]+$/.test(text)) {
-    throw new AppError(404, "NOT_FOUND", "This does not exist.");
-  }
-  return BigInt(text);
-}
-
 export async function registerGuildRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
   const guildsDeps = { db: deps.db, config: deps.config, gateway: deps.gateway, voice: deps.voice };
   const inviteLookupLimiter = createEventRateLimiter(INVITE_LOOKUPS_PER_MINUTE, 60_000);
@@ -138,10 +132,7 @@ export async function registerGuildRoutes(app: FastifyInstance, deps: AppDeps): 
 
   app.get("/icons/:guildId/:iconKey", async (request, reply) => {
     const { guildId: guildIdText, iconKey } = request.params as { guildId: string; iconKey: string };
-    if (!/^[0-9]+$/.test(guildIdText)) {
-      throw new AppError(404, "NOT_FOUND", "This icon does not exist.");
-    }
-    const guildId = BigInt(guildIdText);
+    const guildId = parseId(guildIdText, "This icon does not exist.");
 
     const rows = await deps.db.select({ iconKey: guilds.iconKey }).from(guilds).where(eq(guilds.id, guildId)).limit(1);
     if (!rows[0] || rows[0].iconKey !== iconKey) {
@@ -379,7 +370,7 @@ export async function registerGuildRoutes(app: FastifyInstance, deps: AppDeps): 
 
   // ---- moderation ---------------------------------------------------------
 
-  const moderationDeps = { db: deps.db, gateway: deps.gateway, voice: deps.voice };
+  const moderationDeps = { db: deps.db, gateway: deps.gateway, voice: deps.voice, log: app.log };
 
   app.delete("/guilds/:id/members/:userId", { preHandler: app.authenticate }, async (request, reply) => {
     const { id, userId: targetUserId } = request.params as { id: string; userId: string };
