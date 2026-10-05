@@ -46,9 +46,11 @@ function markChannelRead(channelId: string | undefined): void {
 
 export function ShortcutHandler({ guildId, channelId }: { guildId: string | undefined; channelId: string | undefined }) {
   const [overlay, setOverlay] = useState<"switcher" | "help" | null>(null);
-  // Each open gets a new key. A dialog closes at once, but its close event
-  // comes later. A shortcut in that gap must open a new dialog.
+  // Each open gets a new number. A dialog closes at once, but its close event
+  // comes later. A shortcut in that gap opens a new dialog, and the late close
+  // event of the old dialog must not close the new one.
   const [openCount, setOpenCount] = useState(0);
+  const openCountRef = useRef(0);
   // The listener reads the route from a ref, so it does not need a new listener on each route change.
   const routeRef = useRef({ guildId, channelId });
   routeRef.current = { guildId, channelId };
@@ -60,11 +62,11 @@ export function ShortcutHandler({ guildId, channelId }: { guildId: string | unde
       switch (id) {
         case "quick-switcher":
           setOverlay("switcher");
-          setOpenCount((count) => count + 1);
+          setOpenCount(++openCountRef.current);
           break;
         case "show-help":
           setOverlay("help");
-          setOpenCount((count) => count + 1);
+          setOpenCount(++openCountRef.current);
           break;
         case "toggle-mute":
           toggleMute();
@@ -101,7 +103,10 @@ export function ShortcutHandler({ guildId, channelId }: { guildId: string | unde
   }, []);
 
   if (!overlay) return null;
-  const close = () => setOverlay(null);
+  const opened = openCount;
+  const close = () => {
+    if (openCountRef.current === opened) setOverlay(null);
+  };
   return (
     <Suspense fallback={null}>
       {overlay === "switcher" ? (
