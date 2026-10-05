@@ -18,6 +18,7 @@ import {
   userSettingsUpdatePayloadSchema,
   toDeviceDispatchPayloadSchema,
   deviceListUpdatePayloadSchema,
+  userSchema,
   guildSchema,
   guildViewSchema,
   channelSchema,
@@ -129,6 +130,7 @@ const DISPATCH_SCHEMAS: Record<string, z.ZodType> = {
   USER_SETTINGS_UPDATE: userSettingsUpdatePayloadSchema,
   TO_DEVICE: toDeviceDispatchPayloadSchema,
   DEVICE_LIST_UPDATE: deviceListUpdatePayloadSchema,
+  USER_UPDATE: userSchema,
 };
 
 function defaultCreateSocket(url: string): WebSocketLike {

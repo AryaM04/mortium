@@ -12,7 +12,7 @@ import {
 } from "@mortium/shared";
 import type { AccountHolder } from "./account.js";
 import type { DeviceList } from "./device-list.js";
-import type { CryptoStore } from "./store.js";
+import { CryptoStoreError, type CryptoStore } from "./store.js";
 import type { CryptoTransport } from "./transport.js";
 import type { Wasm } from "./wasm.js";
 
@@ -50,9 +50,16 @@ export class DeviceManager {
     let counts: UploadKeysResponse | null = null;
     if (!(await store.getValue<boolean>(DEVICE_KEYS_UPLOADED_VALUE))) {
       const text = deviceKeysSignedText(userId, deviceId, account.curve25519, account.ed25519);
-      counts = await transport.uploadKeys({
-        deviceKeys: { curve25519: account.curve25519, ed25519: account.ed25519, signature: account.sign(text) },
-      });
+      try {
+        counts = await transport.uploadKeys({
+          deviceKeys: { curve25519: account.curve25519, ed25519: account.ed25519, signature: account.sign(text) },
+        });
+      } catch (error) {
+        if ((error as { code?: string }).code === "DEVICE_KEYS_EXIST") {
+          throw new CryptoStoreError("The local encryption data of this device is lost.");
+        }
+        throw error;
+      }
       await store.commit({ values: { [DEVICE_KEYS_UPLOADED_VALUE]: true } });
     }
     await this.ensureMasterKey();
@@ -140,12 +147,23 @@ export class DeviceManager {
     });
   }
 
-  /** True when this device holds the master private key. */
+  /** True when this device holds the current master private key. */
   async hasMasterKey(): Promise<boolean> {
-    return Boolean(await this.deps.store.getValue<string | null>(MASTER_KEY_VALUE));
+    return Boolean(await this.withMasterKey(() => true));
   }
 
-  /** Run `task` with the master key of this device, or return null when this device does not hold it. */
+  /**
+   * True when the server shows a different master key for this user than
+   * `publicKey`, and a device of the user vouches for it. Then a different
+   * device reset the identity, and `publicKey` is an old key.
+   */
+  private async isOldMasterKey(publicKey: string): Promise<boolean> {
+    const user = await this.deps.deviceList.getUser(this.deps.userId);
+    const current = user?.changedMasterKey ?? user?.masterKey ?? null;
+    return current !== null && current !== publicKey;
+  }
+
+  /** Run `task` with the master key of this device, or return null when this device does not hold the current key. */
   private async withMasterKey<T>(task: (master: SigningKey) => Promise<T> | T): Promise<T | null> {
     const pickle = await this.deps.store.getValue<string | null>(MASTER_KEY_VALUE);
     if (!pickle) {
@@ -153,6 +171,9 @@ export class DeviceManager {
     }
     const master = this.deps.wasm.SigningKey.from_pickle(pickle, this.deps.pickleKey);
     try {
+      if (await this.isOldMasterKey(master.public_key)) {
+        return null;
+      }
       return await task(master);
     } finally {
       master.free();
@@ -277,6 +298,11 @@ export class DeviceManager {
       }
       const publicKey = master.public_key;
       if (serverKey !== null && serverKey !== publicKey) {
+        // Delete the key only when the device list accepts the new key, so a server alone cannot remove it.
+        await deviceList.refresh([userId]);
+        if (await this.isOldMasterKey(publicKey)) {
+          await store.commit({ values: { [MASTER_KEY_VALUE]: null } });
+        }
         return;
       }
       const ownDevice = own?.devices.find((device) => device.deviceId === deviceId);

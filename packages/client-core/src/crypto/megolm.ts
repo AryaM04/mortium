@@ -486,13 +486,17 @@ export class MegolmMachine {
 
   /**
    * Import a session from the key backup. It gets the same checks as a
-   * forward. `backupVersion` marks it as in that backup already. It never
-   * throws. Returns true when the session was valid.
+   * forward. `backupVersion` marks it as in that backup already. It throws
+   * only a temporary error, so the caller can try again. Returns true when
+   * the session was valid.
    */
   async importBackedUpSession(content: Record<string, unknown>, backupVersion: number): Promise<boolean> {
     try {
       return await this.importExported(content, "the key backup", backupVersion);
     } catch (error) {
+      if (isTemporaryError(error)) {
+        throw error;
+      }
       this.log(`A session from the key backup could not be imported: ${String(error)}`);
       return false;
     }
@@ -512,7 +516,13 @@ export class MegolmMachine {
     if (!content) {
       return false;
     }
-    const original = await this.deps.deviceList.getDevice(content.senderUserId!, content.senderDeviceId!);
+    // A restore reads the cached device list. It does not fetch a user again for each removed device.
+    const original =
+      backupVersion === undefined
+        ? await this.deps.deviceList.getDevice(content.senderUserId!, content.senderDeviceId!)
+        : (await this.deps.deviceList.getDevices(content.senderUserId!)).find(
+            (device) => device.deviceId === content.senderDeviceId,
+          );
     // When the sender device is known, its verified key must be the key in the forward.
     if (original && original.ed25519 !== content.senderEd25519) {
       this.log(`A Megolm key from ${source} names a wrong key for device ${content.senderDeviceId}.`);
@@ -941,6 +951,12 @@ export class MegolmMachine {
     const now = this.now();
     if (now - (this.forwarded.get(key) ?? -Infinity) < FORWARD_INTERVAL_MS) {
       return;
+    }
+    // Remove the old entries, so the map does not grow for all time.
+    for (const [entry, at] of this.forwarded) {
+      if (now - at >= FORWARD_INTERVAL_MS) {
+        this.forwarded.delete(entry);
+      }
     }
     this.forwarded.set(key, now);
     // Check again at the moment of the send: the user may have lost access since.

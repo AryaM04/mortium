@@ -116,8 +116,19 @@ const MAX_BUFFERED_DISPATCHES = 1000;
 const START_RETRY_FIRST_MS = 2000;
 const START_RETRY_MAX_MS = 60_000;
 
-/** True while a different context of this device runs the crypto layer, and this tab waits for it. */
-export const cryptoTabStore = createStore<{ otherTab: boolean }>(() => ({ otherTab: false }));
+/** The state of the crypto layer of this tab, for the banners. */
+export interface CryptoTabState {
+  /** True while a different context of this device runs the crypto layer, and this tab waits for it. */
+  otherTab: boolean;
+  /** Why the crypto layer could not start, or null. */
+  failure: string | null;
+  /** True when the local crypto data is lost. A new try cannot help: the user must sign out. */
+  lost: boolean;
+}
+
+const IDLE_TAB: CryptoTabState = { otherTab: false, failure: null, lost: false };
+
+export const cryptoTabStore = createStore<CryptoTabState>(() => IDLE_TAB);
 
 let handle: CryptoClient | null = null;
 let run = 0;
@@ -169,7 +180,7 @@ async function startInWorker(current: number, userId: string, deviceId: string):
       }).port,
     transport: createHttpCryptoTransport(session.apiClient, gatewaySend),
     locks: navigator.locks,
-    onState: (state) => {
+    onState: (state, error) => {
       if (current !== run) {
         return;
       }
@@ -177,6 +188,7 @@ async function startInWorker(current: number, userId: string, deviceId: string):
       cryptoTabStore.setState({ otherTab: state === "waiting" });
       if (state === "ready") {
         startFailures = 0;
+        cryptoTabStore.setState({ failure: null });
         if (detach) {
           // A new worker after a lost one: the events that waited for it decode now.
           setCryptoHandle(client);
@@ -184,7 +196,7 @@ async function startInWorker(current: number, userId: string, deviceId: string):
           detach = attach(client);
         }
       } else if (state === "failed") {
-        startFailed(current, userId, deviceId, new Error("The crypto layer could not start."));
+        startFailed(current, userId, deviceId, error ?? new Error("The crypto layer could not start."));
       }
     },
   });
@@ -231,6 +243,7 @@ function startInPage(current: number, userId: string, deviceId: string): void {
       return;
     }
     startFailures = 0;
+    cryptoTabStore.setState({ failure: null });
     started = layer;
     for (const event of buffered.splice(0)) {
       layer.handleDispatch(event);
@@ -267,15 +280,26 @@ function startInPage(current: number, userId: string, deviceId: string): void {
     });
 }
 
-/** The start failed: fail the calls that wait, and start again later. Each failure doubles the wait. */
+/**
+ * The start failed: fail the calls that wait, show the reason, and start
+ * again later. Each failure doubles the wait. When the local crypto data is
+ * lost, a new try cannot help, so the app does not try again.
+ */
 function startFailed(current: number, userId: string, deviceId: string, error: Error): void {
   if (current !== run || retryTimer) {
+    return;
+  }
+  failCryptoWaiters(error);
+  // The error can come from the worker, so compare the name and not the class.
+  if (error.name === "CryptoStoreError") {
+    console.warn("[crypto] The local encryption data of this device is lost.", error);
+    cryptoTabStore.setState({ failure: error.message, lost: true });
     return;
   }
   const delay = Math.min(START_RETRY_FIRST_MS * 2 ** startFailures, START_RETRY_MAX_MS);
   startFailures += 1;
   console.warn(`[crypto] The crypto layer could not start. The app tries again in ${delay} ms.`, error);
-  failCryptoWaiters(error);
+  cryptoTabStore.setState({ failure: error.message });
   retryTimer = setTimeout(() => {
     retryTimer = null;
     if (current !== run) {
@@ -297,11 +321,43 @@ function launch(current: number, userId: string, deviceId: string): void {
   }
 }
 
+/** Ask the browser to keep the local data, so it does not delete the encryption keys when the disk is full. */
+function keepStorage(): void {
+  const storage = navigator.storage as StorageManager | undefined;
+  if (!storage?.persist) {
+    return;
+  }
+  void storage
+    .persisted()
+    .then((persisted) => (persisted ? true : storage.persist()))
+    .catch(() => undefined);
+}
+
+/**
+ * Delete the local crypto data of a device that signed out: the crypto
+ * store, the search index and the pickle key. The device lock waits until
+ * no tab or worker runs the crypto layer of the device, and no context can
+ * start it during the delete.
+ */
+function forgetDevice(userId: string, deviceId: string): void {
+  void navigator.locks
+    .request(`crypto:${userId}:${deviceId}`, async () => {
+      const { deleteDeviceData } = await import("@mortium/client-core/crypto-client");
+      await deleteDeviceData(currentPlatform().secureStore, userId, deviceId);
+    })
+    .catch((error: unknown) => console.warn("[crypto] The local encryption data could not be deleted.", error));
+}
+
+/** The user and the device of the crypto layer of this tab, or null. */
+let runningDevice: { userId: string; deviceId: string } | null = null;
+
 function start(userId: string, deviceId: string): void {
   const current = ++run;
   if (typeof navigator === "undefined" || !navigator.locks) {
     return;
   }
+  runningDevice = { userId, deviceId };
+  keepStorage();
   launch(current, userId, deviceId);
 }
 
@@ -312,7 +368,7 @@ function stop(): void {
     retryTimer = null;
   }
   startFailures = 0;
-  cryptoTabStore.setState({ otherTab: false });
+  cryptoTabStore.setState(IDLE_TAB);
   handle = null;
   setCryptoHandle(null);
   securityStore.setState(EMPTY_SECURITY);
@@ -327,6 +383,11 @@ session.store.subscribe((state) => {
     start(state.user.id, state.deviceId);
   } else if (state.status === "signedOut" && previousStatus !== "signedOut") {
     stop();
+    // A sign-out ends the device for good: the next sign-in makes a new device.
+    if (runningDevice) {
+      forgetDevice(runningDevice.userId, runningDevice.deviceId);
+      runningDevice = null;
+    }
   }
   previousStatus = state.status;
 });

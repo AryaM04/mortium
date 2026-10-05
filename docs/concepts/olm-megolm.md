@@ -451,6 +451,28 @@ key is random. It is kept through `platform.secureStore`:
 - Tauri and Electron (M7): the OS key store (Keychain, Credential
   Manager, libsecret) keeps the value.
 
+Lost local data (CRY-10):
+
+- The client makes a new pickle key only when the crypto store has no
+  account. A new key cannot open the old account, and it would write over
+  the old key.
+- These errors are `CryptoStoreError`: the pickle key is missing or cannot
+  be read while the store has an account, the pickle key does not open the
+  account, or the server refuses the device keys with 409
+  `DEVICE_KEYS_EXIST` (the store is lost, but the server device has keys).
+  A new try cannot help, so the app does not try again. It shows the
+  reason and a "Sign out" button. The next sign-in makes a new device.
+- The web app asks for persistent storage (`navigator.storage.persist()`)
+  at each sign-in, so the browser does not delete the keys when the disk
+  is full.
+
+Sign-out (CRY-16): each sign-out ends the device for good. The server
+retires the device (`POST /auth/logout`). The tab then deletes the crypto
+store, the search index (`search:<userId>:<deviceId>`) and the pickle key.
+It does this inside the device lock `crypto:<userId>:<deviceId>`, so the
+delete waits until no tab or worker runs the crypto layer of the device,
+and no context starts it during the delete.
+
 ## 8. Megolm (pass 2 and pass 3)
 
 Pass 2 builds this section. The code is `packages/client-core/src/crypto/megolm.ts`
@@ -746,6 +768,12 @@ key that the devices upload.
 - A new or better key starts an upload after 2 seconds.
 - `BACKUP_NOT_FOUND` means that a different device made a new version or
   deleted the backup: the client gets the version again.
+- After a different error, the client tries again after 2 seconds. The
+  wait doubles after each failure, up to 5 minutes (CRY-15).
+- The client puts the master key in the backup only when it is the
+  current master key of the user. After a different device reset the
+  identity, the old key stays out of the backup and signs nothing. The
+  next start deletes it (CRY-14).
 
 ### Restore
 
@@ -761,6 +789,13 @@ key that the devices upload.
    `megolm.forward` (section 8). It is saved with `backupVersion`, so it
    is not uploaded again. Each new key re-decodes the events that wait
    for it. The UI shows the number of keys.
+
+For each page of sessions, the client fetches the devices of all senders
+in one `/keys/query`. It does not fetch a user again for a sender device
+that is not in the device list. After a temporary error (no network, 429
+or 5xx), each step waits and tries again: 2 seconds first, doubled each
+time, up to 60 seconds and 6 tries. Thus the rate limit does not count a
+session as failed (CRY-07).
 
 ## 10. Verification (pass 4)
 
@@ -816,11 +851,20 @@ Each message has `txnId` (16 random bytes, base64url).
 - A different user: the client marks the master key of that user as
   verified (a badge in the member menu). It is stronger than trust on
   first use. A verified new key after an identity change is accepted.
+  A key trusted on first use shows "Not verified with emojis". It is not
+  an error. The member menu reads the state again after each change.
+- The client writes the verified key in the device list queue, so a
+  device list fetch at the same time cannot write the old state back
+  (CRY-12). An accepted identity change does the same.
 
 ### Rules
 
 - "They do not match" sends `cancel` with `mismatch`. Nothing is signed.
 - A bad MAC or a bad commitment cancels the verification.
+- An error while the client sends or checks the MAC (for example a
+  network error) sends `cancel` with `error`: "An error stopped the
+  verification. Start it again." A new try of the same MAC is not
+  possible (CRY-11).
 - A verification stops after 10 minutes (`timeout`).
 - One verification at a time for each pair of devices. A request from a
   device with a verification in progress gets `cancel` with `busy`.
@@ -993,7 +1037,9 @@ tab tries again after 2 seconds, then after a longer time each time, up
 to 60 seconds. Each failure fails the calls that wait for the layer, so
 a send does not wait for all time. An event that could not decode
 because the layer was missing shows as "waiting". It decodes again when
-the layer is ready.
+the layer is ready. The tab shows the banner "Encryption failed" with the
+reason until a start succeeds. After a `CryptoStoreError` (section 7) the
+tab does not try again.
 
 The desktop apps also use this fallback. Their webviews (WebView2,
 WKWebView, Electron) have `SharedWorker`. But the OS key store, which

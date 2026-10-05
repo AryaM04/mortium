@@ -20,7 +20,7 @@ import {
   type LocalSearchIndex,
   type SearchChange,
 } from "../search/local-index.js";
-import { AccountHolder } from "./account.js";
+import { ACCOUNT_VALUE, AccountHolder } from "./account.js";
 import { DeviceList } from "./device-list.js";
 import { DeviceManager } from "./device-manager.js";
 import { KeyBackup, type BackupStatus, type BackupTimings, type RestoreProgress, type RestoreResult } from "./key-backup.js";
@@ -29,14 +29,21 @@ import { ChannelMembership, membershipScope } from "./membership.js";
 import { OlmMachine, isTemporaryError, type EncryptResult, type ToDeviceHandler } from "./olm-machine.js";
 import { KeyedQueue } from "./queue.js";
 import { SettingsKeys } from "./settings-key.js";
-import { cryptoStoreName, openCryptoStore, type CryptoStore } from "./store.js";
+import {
+  CryptoStoreError,
+  cryptoStoreName,
+  openCryptoStore,
+  pickleKeyName,
+  searchIndexName,
+  type CryptoStore,
+} from "./store.js";
 import type { CryptoTransport } from "./transport.js";
 import { VerificationMachine, type VerificationView } from "./verification.js";
-import { loadWasm } from "./wasm.js";
+import { loadWasm, type Wasm } from "./wasm.js";
 
 export { createHttpCryptoTransport, type CryptoTransport } from "./transport.js";
 export type { DecryptedToDevice, EncryptResult, ToDeviceHandler } from "./olm-machine.js";
-export type { DeviceRecord, UserRecord } from "./store.js";
+export { CryptoStoreError, type DeviceRecord, type UserRecord } from "./store.js";
 export { WAITING_TEXT, type MegolmTimings } from "./megolm.js";
 export { SettingsKeyMissingError } from "./settings-key.js";
 export { WrongRecoveryKeyError, type BackupStatus, type RestoreProgress, type RestoreResult } from "./key-backup.js";
@@ -219,12 +226,24 @@ async function deriveLocalIndexKeys(pickleKey: Uint8Array): Promise<LocalIndexKe
   return { encryptionKey, tokenKey };
 }
 
-/** Get the pickle key of this device, or make one. It is kept only in the platform secure store. */
-async function loadPickleKey(secureStore: SecureStore, userId: string, deviceId: string): Promise<Uint8Array> {
-  const name = `crypto-pickle-key:${userId}:${deviceId}`;
-  const stored = await secureStore.get(name);
+/**
+ * Get the pickle key of this device, or make one. It is kept only in the
+ * platform secure store. A new key is made only for an empty crypto store:
+ * a new key cannot open an account that is in the store.
+ */
+async function loadPickleKey(secureStore: SecureStore, store: CryptoStore, userId: string, deviceId: string): Promise<Uint8Array> {
+  const name = pickleKeyName(userId, deviceId);
+  let stored: string | null;
+  try {
+    stored = await secureStore.get(name);
+  } catch (error) {
+    throw new CryptoStoreError(`The key of the local encryption data cannot be read: ${String(error)}`);
+  }
   if (stored) {
     return decodeBase64Url(stored);
+  }
+  if (await store.getValue(ACCOUNT_VALUE)) {
+    throw new CryptoStoreError("The key of the local encryption data of this device is lost.");
   }
   const key = crypto.getRandomValues(new Uint8Array(32));
   await secureStore.set(name, encodeBase64Url(key));
@@ -238,11 +257,21 @@ async function loadPickleKey(secureStore: SecureStore, userId: string, deviceId:
  * Lock `crypto:<userId>:<deviceId>`).
  */
 export async function startCrypto(options: StartCryptoOptions): Promise<CryptoHandle> {
+  const wasm = await loadWasm();
+  const store = await openCryptoStore(cryptoStoreName(options.userId, options.deviceId), options.indexedDb);
+  try {
+    return await startWithStore(options, wasm, store);
+  } catch (error) {
+    // A new try opens the store again. An open connection also stops a delete of the store.
+    store.close();
+    throw error;
+  }
+}
+
+async function startWithStore(options: StartCryptoOptions, wasm: Wasm, store: CryptoStore): Promise<CryptoHandle> {
   const { userId, deviceId, transport } = options;
   const log = options.log ?? (() => {});
-  const wasm = await loadWasm();
-  const pickleKey = await loadPickleKey(options.secureStore, userId, deviceId);
-  const store: CryptoStore = await openCryptoStore(cryptoStoreName(userId, deviceId), options.indexedDb);
+  const pickleKey = await loadPickleKey(options.secureStore, store, userId, deviceId);
   const queue = new KeyedQueue();
   const account = await AccountHolder.load(wasm, store, pickleKey, queue);
 
@@ -598,7 +627,7 @@ export async function startCrypto(options: StartCryptoOptions): Promise<CryptoHa
   let searchIndex: Promise<LocalSearchIndex> | null = null;
   const openSearch = () =>
     (searchIndex ??= localIndexKeys().then((keys) =>
-      openLocalSearchIndex({ name: `search:${userId}:${deviceId}`, keys, indexedDb: options.indexedDb }),
+      openLocalSearchIndex({ name: searchIndexName(userId, deviceId), keys, indexedDb: options.indexedDb }),
     ));
   return {
     userId,

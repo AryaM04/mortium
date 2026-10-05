@@ -324,7 +324,7 @@ export class FakeServer {
       indexedDb: client.indexedDb,
       isOnline: (userId) => !this.offline.has(userId),
       megolmTimings: { requestDelaysMs: [0, 20, 40], backupForwardDelayMs: [30, 60], membershipDebounceMs: 5 },
-      backupTimings: { batchDelayMs: 0, debounceMs: 5 },
+      backupTimings: { batchDelayMs: 0, debounceMs: 5, retryDelayMs: 5 },
       ...extra,
     });
     handle.onToDevice((event) => {

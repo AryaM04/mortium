@@ -172,18 +172,24 @@ export class DeviceList {
 
   /** The user accepted the new master key of `userId`. Devices are checked again against it. */
   async acceptMasterKeyChange(userId: string): Promise<void> {
-    const user = await this.deps.store.getUser(userId);
-    if (!user?.changedMasterKey) {
-      return;
-    }
-    await this.deps.store.putUser({
-      ...user,
-      masterKey: user.changedMasterKey,
-      changedMasterKey: null,
-      verifiedMasterKey: null,
-      outdated: true,
+    // In the refresh queue, so a fetch at the same time cannot write the old key back.
+    const changed = await this.deps.queue.run(REFRESH_QUEUE, async () => {
+      const user = await this.deps.store.getUser(userId);
+      if (!user?.changedMasterKey) {
+        return false;
+      }
+      await this.deps.store.putUser({
+        ...user,
+        masterKey: user.changedMasterKey,
+        changedMasterKey: null,
+        verifiedMasterKey: null,
+        outdated: true,
+      });
+      return true;
     });
-    await this.refresh([userId]);
+    if (changed) {
+      await this.refresh([userId]);
+    }
   }
 
   /**
@@ -192,13 +198,19 @@ export class DeviceList {
    * Returns false when the key is neither the trusted key nor the new key.
    */
   async markMasterKeyVerified(userId: string, publicKey: string): Promise<boolean> {
-    const user = await this.deps.store.getUser(userId);
-    if (!user || (user.masterKey !== publicKey && user.changedMasterKey !== publicKey)) {
-      return false;
+    // In the refresh queue, so a fetch at the same time cannot write the old values back.
+    const marked = await this.deps.queue.run(REFRESH_QUEUE, async () => {
+      const user = await this.deps.store.getUser(userId);
+      if (!user || (user.masterKey !== publicKey && user.changedMasterKey !== publicKey)) {
+        return false;
+      }
+      await this.deps.store.putUser({ ...user, masterKey: publicKey, changedMasterKey: null, verifiedMasterKey: publicKey, outdated: true });
+      return true;
+    });
+    if (marked) {
+      await this.refresh([userId]);
     }
-    await this.deps.store.putUser({ ...user, masterKey: publicKey, changedMasterKey: null, verifiedMasterKey: publicKey, outdated: true });
-    await this.refresh([userId]);
-    return true;
+    return marked;
   }
 
   /**

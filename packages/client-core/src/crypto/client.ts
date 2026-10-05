@@ -21,6 +21,7 @@ import type { VerificationView } from "./verification.js";
 
 export { createHttpCryptoTransport, type CryptoTransport } from "./transport.js";
 export type { CryptoClient, LockManagerLike, WorkerState } from "./rpc.js";
+export { deleteDeviceData } from "./store.js";
 
 export interface CryptoWorkerOptions {
   userId: string;
@@ -30,8 +31,8 @@ export interface CryptoWorkerOptions {
   /** The network calls that the worker asks this tab to make. */
   transport: CryptoTransport;
   locks: LockManagerLike;
-  /** The state of the crypto layer in the worker. */
-  onState(state: WorkerState["state"]): void;
+  /** The state of the crypto layer in the worker. `error` is set for the state "failed". */
+  onState(state: WorkerState["state"], error?: Error): void;
 }
 
 export interface CryptoWorkerClient extends CryptoClient {
@@ -167,7 +168,7 @@ export function connectCryptoWorker(options: CryptoWorkerOptions): CryptoWorkerC
           deliver({ type: "security" });
           deliver({ type: "verification", verifications });
         }
-        options.onState(message.state);
+        options.onState(message.state, message.state === "failed" ? fromRpcError(message.error) : undefined);
         break;
       case "result": {
         const entry = pending.get(message.id);

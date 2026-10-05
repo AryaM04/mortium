@@ -40,11 +40,22 @@ export interface VoiceContext {
   serverDeaf: boolean;
 }
 
-/** The identity state of a user (docs/concepts/olm-megolm.md section 10), and a button that starts a SAS verification. */
+/**
+ * The identity state of a user (docs/concepts/olm-megolm.md section 10), and
+ * a button that starts a SAS verification. A key trusted on first use is
+ * not an error, so it shows a neutral text.
+ */
 function IdentityRow({ userId }: { userId: string }) {
   const [trust, setTrust] = useState<{ verified: boolean; changed: boolean } | null>(null);
   useEffect(() => {
-    void currentCrypto()?.security.userTrust(userId).then(setTrust);
+    const crypto = currentCrypto();
+    if (!crypto) {
+      return;
+    }
+    const read = () => void crypto.security.userTrust(userId).then(setTrust).catch(() => undefined);
+    read();
+    // A verification or an identity change updates the row at once.
+    return crypto.security.onChange(read);
   }, [userId]);
   if (!trust) {
     return null;
@@ -52,7 +63,7 @@ function IdentityRow({ userId }: { userId: string }) {
   return (
     <div className="flex items-center justify-between px-2 py-1 text-sm">
       <span style={{ color: trust.verified ? "#3ba55d" : trust.changed ? "var(--color-danger-text)" : "var(--color-text-muted)" }}>
-        {trust.changed ? "Identity changed" : trust.verified ? "Identity verified" : "Identity not verified"}
+        {trust.changed ? "Identity changed" : trust.verified ? "Identity verified" : "Not verified with emojis"}
       </span>
       {!trust.verified && (
         <button type="button" className="underline" onClick={() => void currentCrypto()?.verification.requestUser(userId).catch(() => undefined)}>
