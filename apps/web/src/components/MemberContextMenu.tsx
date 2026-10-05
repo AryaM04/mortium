@@ -50,12 +50,12 @@ function IdentityRow({ userId }: { userId: string }) {
     return null;
   }
   return (
-    <div className="flex items-center justify-between px-2 py-1 text-sm">
-      <span style={{ color: trust.verified ? "#3ba55d" : trust.changed ? "var(--color-danger-text)" : "var(--color-text-muted)" }}>
+    <div className="flex items-center justify-between px-2.5 py-1.5 text-sm">
+      <span className={trust.verified ? "text-success-text" : trust.changed ? "text-danger-text" : "text-muted"}>
         {trust.changed ? "Identity changed" : trust.verified ? "Identity verified" : "Identity not verified"}
       </span>
       {!trust.verified && (
-        <button type="button" className="underline" onClick={() => void currentCrypto()?.verification.requestUser(userId).catch(() => undefined)}>
+        <button type="button" className="link" onClick={() => void currentCrypto()?.verification.requestUser(userId).catch(() => undefined)}>
           Verify
         </button>
       )}
@@ -155,10 +155,9 @@ export function MemberContextMenu({
       ref={menuRef}
       role="menu"
       aria-label={`${displayName(member)} options`}
-      className="absolute z-30 w-64 rounded border p-3 shadow-lg"
-      style={{ backgroundColor: "var(--color-bg-main)", borderColor: "var(--color-border)" }}
+      className="menu absolute inset-x-0 z-30 p-1.5"
     >
-      <div className="mb-2 flex items-center gap-2">
+      <div className="mb-1.5 flex items-center gap-2.5 rounded-lg bg-sidebar p-2.5">
         {member.user?.avatarKey ? (
           <img
             src={serverUrl(`/api/v1/avatars/${member.userId}/${member.user.avatarKey}`)}
@@ -167,8 +166,7 @@ export function MemberContextMenu({
           />
         ) : (
           <div
-            className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold"
-            style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-avatar text-sm font-semibold text-avatar-text"
             aria-hidden="true"
           >
             {displayName(member)[0]?.toUpperCase() ?? "?"}
@@ -193,18 +191,18 @@ export function MemberContextMenu({
       </div>
 
       {error && (
-        <p role="alert" className="mb-2 text-xs" style={{ color: "var(--color-danger-text)" }}>
+        <p role="alert" className="mb-2 px-2.5 text-xs text-danger-text">
           {error}
         </p>
       )}
 
       {notice && (
-        <p role="status" className="mb-2 text-xs" style={{ color: "#3ba55d" }}>
+        <p role="status" className="mb-2 px-2.5 text-xs text-success-text">
           {notice}
         </p>
       )}
 
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-0.5">
         {!isSelf && (
           <button
             type="button"
@@ -215,7 +213,7 @@ export function MemberContextMenu({
                 onClose();
               })
             }
-            className="rounded px-2 py-1 text-left text-sm"
+            className="menu-item"
           >
             Message
           </button>
@@ -231,13 +229,13 @@ export function MemberContextMenu({
                 setNotice(result.status === "accepted" ? "You are now friends." : "You sent a friend request.");
               })
             }
-            className="rounded px-2 py-1 text-left text-sm"
+            className="menu-item"
           >
             Add friend
           </button>
         )}
         {!isSelf && relationship && relationship.status !== "blocked" && (
-          <span className="px-2 py-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
+          <span className="px-2.5 py-1 text-xs text-muted">
             {relationship.status === "accepted" ? "Friend" : "Friend request pending"}
           </span>
         )}
@@ -246,23 +244,18 @@ export function MemberContextMenu({
           <button
             type="button"
             onClick={() => setEditingNickname(true)}
-            className="rounded px-2 py-1 text-left text-sm"
+            className="menu-item"
           >
             Change nickname
           </button>
         )}
         {editingNickname && (
-          <div className="flex gap-1">
+          <div className="flex gap-1 px-1">
             <input
               aria-label="Nickname"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
-              className="flex-1 rounded border px-2 py-1 text-sm"
-              style={{
-                backgroundColor: "var(--color-bg-sidebar)",
-                borderColor: "var(--color-border)",
-                color: "var(--color-text-primary)",
-              }}
+              className="field min-w-0 flex-1 px-2 py-1"
             />
             <button
               type="button"
@@ -279,8 +272,7 @@ export function MemberContextMenu({
                   setEditingNickname(false);
                 })
               }
-              className="rounded px-2 py-1 text-sm"
-              style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+              className="btn btn-primary px-2.5 py-1"
             >
               Save
             </button>
@@ -291,16 +283,13 @@ export function MemberContextMenu({
           <button
             type="button"
             onClick={() => setManagingRoles(true)}
-            className="rounded px-2 py-1 text-left text-sm"
+            className="menu-item"
           >
             Manage roles
           </button>
         )}
         {managingRoles && (
-          <div
-            className="flex flex-col gap-1 rounded border p-2"
-            style={{ borderColor: "var(--color-border)" }}
-          >
+          <div className="flex flex-col gap-1.5 rounded-lg border border-line p-2">
             {manageableRoles.map((role) => {
               const held = member.roles.includes(role.id);
               return (
@@ -331,7 +320,7 @@ export function MemberContextMenu({
             <button
               type="button"
               onClick={() => setManagingRoles(false)}
-              className="text-left text-xs underline"
+              className="text-left text-xs link"
             >
               Done
             </button>
@@ -351,7 +340,7 @@ export function MemberContextMenu({
                     }),
                   )
                 }
-                className="rounded px-2 py-1 text-left text-sm"
+                className="menu-item"
               >
                 {voice.serverMute ? "Server unmute" : "Server mute"}
               </button>
@@ -367,7 +356,7 @@ export function MemberContextMenu({
                     }),
                   )
                 }
-                className="rounded px-2 py-1 text-left text-sm"
+                className="menu-item"
               >
                 {voice.serverDeaf ? "Server undeafen" : "Server deafen"}
               </button>
@@ -387,12 +376,7 @@ export function MemberContextMenu({
                       );
                     }
                   }}
-                  className="rounded border px-2 py-1 text-sm"
-                  style={{
-                    backgroundColor: "var(--color-bg-sidebar)",
-                    borderColor: "var(--color-border)",
-                    color: "var(--color-text-primary)",
-                  }}
+                  className="field px-2 py-1"
                 >
                   <option value="" disabled>
                     Choose a channel
@@ -416,8 +400,7 @@ export function MemberContextMenu({
                     }),
                   )
                 }
-                className="rounded px-2 py-1 text-left text-sm"
-                style={{ color: "var(--color-danger-text)" }}
+                className="menu-item text-danger-text hover:bg-danger-soft"
               >
                 Disconnect from voice
               </button>
@@ -441,8 +424,7 @@ export function MemberContextMenu({
                 onClose();
               })
             }
-            className="rounded px-2 py-1 text-left text-sm"
-            style={{ color: "var(--color-danger-text)" }}
+            className="menu-item text-danger-text hover:bg-danger-soft"
           >
             Kick
           </button>
@@ -452,34 +434,25 @@ export function MemberContextMenu({
           <button
             type="button"
             onClick={() => setConfirmingBan(true)}
-            className="rounded px-2 py-1 text-left text-sm"
-            style={{ color: "var(--color-danger-text)" }}
+            className="menu-item text-danger-text hover:bg-danger-soft"
           >
             Ban
           </button>
         )}
         {confirmingBan && (
-          <div
-            className="flex flex-col gap-1 rounded border p-2"
-            style={{ borderColor: "var(--color-border)" }}
-          >
+          <div className="flex flex-col gap-1.5 rounded-lg border border-line p-2">
             <input
               aria-label="Ban reason (optional)"
               placeholder="Reason (optional)"
               value={banReason}
               onChange={(e) => setBanReason(e.target.value)}
-              className="rounded border px-2 py-1 text-sm"
-              style={{
-                backgroundColor: "var(--color-bg-sidebar)",
-                borderColor: "var(--color-border)",
-                color: "var(--color-text-primary)",
-              }}
+              className="field px-2 py-1"
             />
             <div className="flex justify-end gap-1">
               <button
                 type="button"
                 onClick={() => setConfirmingBan(false)}
-                className="rounded px-2 py-1 text-xs"
+                className="btn btn-ghost px-2 py-1 text-xs"
               >
                 Cancel
               </button>
@@ -501,8 +474,7 @@ export function MemberContextMenu({
                     onClose();
                   })
                 }
-                className="rounded px-2 py-1 text-xs font-medium"
-                style={{ backgroundColor: "var(--color-danger)", color: "white" }}
+                className="btn btn-danger px-2 py-1 text-xs"
               >
                 Ban
               </button>

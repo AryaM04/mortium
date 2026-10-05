@@ -71,7 +71,7 @@ export function VoiceChannelParticipants({
                 initialsOf(name)
               )}
             </div>
-            <span className="truncate text-xs" style={{ color: "var(--color-text-muted)" }}>
+            <span className="truncate text-xs text-muted">
               {name}
             </span>
             {state.selfMute && (
@@ -95,8 +95,7 @@ export function VoiceChannelParticipants({
                   const rect = event.currentTarget.getBoundingClientRect();
                   openAt(state.userId, rect.left, rect.bottom);
                 }}
-                className="ml-auto rounded px-1 text-xs"
-                style={{ color: "var(--color-text-muted)" }}
+                className="ml-auto rounded px-1 text-xs text-muted"
               >
                 &#8942;
               </button>

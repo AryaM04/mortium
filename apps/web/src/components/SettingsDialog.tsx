@@ -115,8 +115,7 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      className="w-full max-w-sm rounded-lg border p-6"
-      style={{ borderColor: "var(--color-border)", backgroundColor: "var(--color-bg-sidebar)", color: "var(--color-text-primary)" }}
+      className="w-full max-w-sm p-6"
       aria-label="Account settings"
     >
       <h2 className="mb-4 text-lg font-semibold">Account settings</h2>
@@ -124,7 +123,7 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
       <div className="mb-4 flex items-center gap-3">
         <Avatar user={user} size={56} />
         <div className="flex flex-col gap-1">
-          <label className="cursor-pointer text-sm underline">
+          <label className="cursor-pointer text-sm link">
             Change avatar
             <input
               type="file"
@@ -134,14 +133,14 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
             />
           </label>
           {user.avatarKey && (
-            <button type="button" onClick={handleRemoveAvatar} className="text-left text-sm underline">
+            <button type="button" onClick={handleRemoveAvatar} className="text-left text-sm link">
               Remove avatar
             </button>
           )}
         </div>
       </div>
       {avatarError && (
-        <p role="alert" className="mb-4 text-sm" style={{ color: "var(--color-danger-text)" }}>
+        <p role="alert" className="mb-4 text-sm text-danger-text">
           {avatarError}
         </p>
       )}
@@ -160,7 +159,7 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
 
       <ChangePassword />
 
-      <button type="button" onClick={() => setSecurityOpen(true)} className="mb-4 text-sm underline">
+      <button type="button" onClick={() => setSecurityOpen(true)} className="mb-4 text-sm link">
         Security: devices and secure backup
       </button>
       {securityOpen && (
@@ -183,23 +182,22 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
           onChange={(e) => setStatusText(e.target.value)}
         />
         {formError && (
-          <p role="alert" className="mb-4 text-sm" style={{ color: "var(--color-danger-text)" }}>
+          <p role="alert" className="mb-4 text-sm text-danger-text">
             {formError}
           </p>
         )}
         <div className="flex justify-between gap-2">
-          <button type="button" onClick={handleSignOut} className="rounded px-3 py-2 text-sm" style={{ color: "var(--color-danger-text)" }}>
+          <button type="button" onClick={handleSignOut} className="btn btn-danger-ghost">
             Sign out
           </button>
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="rounded px-3 py-2 text-sm">
+            <button type="button" onClick={onClose} className="btn btn-ghost">
               Cancel
             </button>
             <button
               type="submit"
               disabled={pending}
-              className="rounded px-3 py-2 text-sm font-medium"
-              style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+              className="btn btn-primary"
             >
               {pending ? "Saving..." : "Save"}
             </button>

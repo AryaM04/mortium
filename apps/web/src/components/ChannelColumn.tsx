@@ -26,6 +26,7 @@ import { GuildSettingsDialog } from "./GuildSettingsDialog.js";
 import { ChannelSettingsDialog } from "./ChannelSettingsDialog.js";
 import { CreateChannelDialog } from "./CreateChannelDialog.js";
 import { NotificationLevelMenu } from "./NotificationLevelMenu.js";
+import { ChevronDownIcon, HashIcon, PlusIcon, SettingsIcon, SpeakerIcon } from "./icons.js";
 
 function GuildMenu({
   items,
@@ -69,8 +70,9 @@ function GuildMenu({
     }
   }
 
+  // The menu opens under the full header (the nearest positioned parent).
   return (
-    <div className="relative">
+    <>
       <button
         ref={buttonRef}
         type="button"
@@ -81,17 +83,18 @@ function GuildMenu({
           setOpen((o) => !o);
           setActiveIndex(0);
         }}
-        className="w-full truncate px-1 py-1 text-left font-semibold"
+        className="icon-btn h-7 w-7"
       >
-        {items.length > 0 ? "▾" : ""}
+        {items.length > 0 && (
+          <ChevronDownIcon className={`transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
+        )}
       </button>
       {open && (
         <div
           role="menu"
           aria-label="Server menu"
           onKeyDown={onKeyDown}
-          className="absolute left-0 top-full z-10 w-52 rounded border py-1 shadow-lg"
-          style={{ backgroundColor: "var(--color-bg-main)", borderColor: "var(--color-border)" }}
+          className="menu absolute left-2 right-2 top-full z-10 mt-1"
         >
           {visibleItems.map((item, index) => (
             <button
@@ -105,15 +108,14 @@ function GuildMenu({
                 setOpen(false);
                 item.onSelect();
               }}
-              className="block w-full px-3 py-2 text-left text-sm"
-              style={{ color: item.danger ? "var(--color-danger-text)" : "var(--color-text-primary)" }}
+              className={`menu-item ${item.danger ? "text-danger-text hover:bg-danger-soft" : "text-primary"}`}
             >
               {item.label}
             </button>
           ))}
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -165,25 +167,26 @@ function ChannelRow({
           e.preventDefault();
           onDropOn(channel.id);
         }}
-        className="group flex items-center gap-1 rounded px-2 py-1"
-        style={{ backgroundColor: active ? "var(--color-bg-main)" : "transparent" }}
+        data-active={active}
+        className="nav-row group flex h-8 items-center gap-1 rounded-lg pl-2 pr-1"
       >
         <button
           type="button"
           onClick={onSelect}
-          className="flex-1 truncate text-left text-sm"
-          style={{
-            color: bright ? "var(--color-text-primary)" : "var(--color-text-muted)",
-            fontWeight: unread ? 600 : 400,
-          }}
+          className={`flex min-w-0 flex-1 items-center gap-1.5 text-left text-sm ${bright ? "text-primary" : ""}`}
+          style={{ fontWeight: unread ? 600 : 400 }}
         >
-          {isVoice ? "\u{1F50A}" : "#"} {channel.name}
+          {isVoice ? (
+            <SpeakerIcon className={active ? "shrink-0 text-accent-text" : "shrink-0 text-muted"} />
+          ) : (
+            <HashIcon className={active ? "shrink-0 text-accent-text" : "shrink-0 text-muted"} />
+          )}
+          {/* Keep the channel type in the accessible name, as before the icons. */}
+          <span className="sr-only">{isVoice ? "\u{1F50A}" : "#"} </span>
+          <span className="truncate">{channel.name}</span>
         </button>
         {mentionCount > 0 && (
-          <span
-            className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none"
-            style={{ backgroundColor: "var(--color-danger)", color: "white" }}
-          >
+          <span className="badge">
             <span aria-hidden="true">{formatBadgeCount(mentionCount)}</span>
             <span className="sr-only">
               {mentionCount} {mentionCount === 1 ? "mention" : "mentions"}
@@ -194,10 +197,9 @@ function ChannelRow({
           type="button"
           aria-label={`${channel.name} settings`}
           onClick={onOpenSettings}
-          className="hidden px-1 text-sm group-hover:block"
-          style={{ color: "var(--color-text-muted)" }}
+          className="icon-btn hidden h-6 w-6 group-hover:inline-flex"
         >
-          &#8942;
+          <SettingsIcon size={14} />
         </button>
       </div>
       {isVoice && (
@@ -368,8 +370,9 @@ export function ChannelColumn({ guildId, activeChannelId }: { guildId: string; a
     .filter((c): c is ChannelJson => !!c && c.type === "category");
 
   return (
-    <aside aria-label="Channels" className="flex w-60 flex-col" style={{ backgroundColor: "var(--color-bg-sidebar)" }}>
-      <div ref={headerRef} className="border-b px-3 py-3" style={{ borderColor: "var(--color-border)" }}>
+    <aside aria-label="Channels" className="panel flex w-60 shrink-0 flex-col">
+      <div ref={headerRef} className="relative flex h-12 shrink-0 items-center gap-2 border-b border-line pl-4 pr-2">
+        <div className="min-w-0 flex-1 truncate font-semibold">{guild.name}</div>
         <GuildMenu
           items={[
             {
@@ -396,19 +399,18 @@ export function ChannelColumn({ guildId, activeChannelId }: { guildId: string; a
             },
           ]}
         />
-        <div className="truncate font-semibold">{guild.name}</div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2">
         {uncategorizedIds.map(renderChannel)}
 
         {categoryChannels.map((category) => {
           const isCollapsed = collapsed.has(category.id);
           const children = childrenOf(category.id);
           return (
-            <div key={category.id} className="mt-3">
+            <div key={category.id} className="mt-3 first:mt-1">
               <div
-                className="group flex items-center gap-1 px-1"
+                className="group flex h-6 items-center gap-1 pl-1 pr-1"
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
                   e.preventDefault();
@@ -421,24 +423,26 @@ export function ChannelColumn({ guildId, activeChannelId }: { guildId: string; a
                   type="button"
                   onClick={() => toggleCollapsed(category.id)}
                   aria-expanded={!isCollapsed}
-                  className="flex-1 truncate text-left text-xs font-semibold uppercase"
-                  style={{ color: "var(--color-text-muted)" }}
+                  className="eyebrow flex min-w-0 flex-1 items-center gap-1 text-left hover:text-secondary"
                 >
-                  {isCollapsed ? "▸" : "▾"} {category.name}
+                  <ChevronDownIcon
+                    size={12}
+                    className={`shrink-0 transition-transform duration-150 ${isCollapsed ? "-rotate-90" : ""}`}
+                  />
+                  <span className="truncate">{category.name}</span>
                 </button>
                 {canManageChannels && (
                   <button
                     type="button"
                     aria-label={`Create a channel in ${category.name}`}
                     onClick={() => setCreateDialog({ kind: "channel", parentId: category.id })}
-                    className="hidden px-1 text-sm group-hover:block"
-                    style={{ color: "var(--color-text-muted)" }}
+                    className="icon-btn hidden h-6 w-6 group-hover:inline-flex"
                   >
-                    +
+                    <PlusIcon size={14} />
                   </button>
                 )}
               </div>
-              {!isCollapsed && <div className="mt-1">{children.map(renderChannel)}</div>}
+              {!isCollapsed && <div className="mt-0.5 flex flex-col gap-0.5">{children.map(renderChannel)}</div>}
             </div>
           );
         })}

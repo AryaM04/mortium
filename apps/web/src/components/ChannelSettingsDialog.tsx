@@ -104,21 +104,13 @@ export function ChannelSettingsDialog({
       // No "flex" (or other display-changing) class here: see the note
       // in GuildSettingsDialog.tsx. The flex layout lives on the wrapper
       // div just inside instead.
-      className="w-full max-w-2xl rounded-lg border p-0"
-      style={{
-        borderColor: "var(--color-border)",
-        backgroundColor: "var(--color-bg-sidebar)",
-        color: "var(--color-text-primary)",
-        height: showPermissionsTab ? "min(32rem, 80vh)" : undefined,
-      }}
+      className="w-full max-w-2xl overflow-hidden p-0"
+      style={{ height: showPermissionsTab ? "min(32rem, 80vh)" : undefined }}
       aria-label="Channel settings"
     >
       <div className="flex h-full min-h-0">
         {showPermissionsTab && (
-          <nav
-            className="flex w-36 flex-shrink-0 flex-col gap-0.5 border-r p-3"
-            style={{ borderColor: "var(--color-border)" }}
-          >
+          <nav className="flex w-40 flex-shrink-0 flex-col gap-0.5 border-r border-line bg-sidebar p-3">
             {(
               [
                 { id: "general", label: "General" },
@@ -130,8 +122,7 @@ export function ChannelSettingsDialog({
                 type="button"
                 onClick={() => setTab(t.id)}
                 aria-current={tab === t.id ? "page" : undefined}
-                className="rounded px-2 py-1.5 text-left text-sm"
-                style={{ backgroundColor: tab === t.id ? "var(--color-bg-main)" : "transparent" }}
+                className="nav-row rounded-lg px-2.5 py-1.5 text-left text-sm"
               >
                 {t.label}
               </button>
@@ -156,12 +147,7 @@ export function ChannelSettingsDialog({
                   id="channel-settings-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="mb-4 w-full rounded border px-3 py-2 text-sm"
-                  style={{
-                    backgroundColor: "var(--color-bg-main)",
-                    borderColor: "var(--color-border)",
-                    color: "var(--color-text-primary)",
-                  }}
+                  className="field mb-4 w-full px-3 py-2 text-sm"
                 />
 
                 {channel.type === "text" && (
@@ -176,12 +162,7 @@ export function ChannelSettingsDialog({
                       id="channel-settings-topic"
                       value={topic}
                       onChange={(e) => setTopic(e.target.value)}
-                      className="mb-4 w-full rounded border px-3 py-2 text-sm"
-                      style={{
-                        backgroundColor: "var(--color-bg-main)",
-                        borderColor: "var(--color-border)",
-                        color: "var(--color-text-primary)",
-                      }}
+                      className="field mb-4 w-full px-3 py-2 text-sm"
                     />
                   </>
                 )}
@@ -190,23 +171,21 @@ export function ChannelSettingsDialog({
                   <button
                     type="button"
                     onClick={() => onMove("up")}
-                    className="rounded border px-3 py-2 text-sm"
-                    style={{ borderColor: "var(--color-border)" }}
+                    className="rounded border px-3 py-2 text-sm border-line"
                   >
                     Move up
                   </button>
                   <button
                     type="button"
                     onClick={() => onMove("down")}
-                    className="rounded border px-3 py-2 text-sm"
-                    style={{ borderColor: "var(--color-border)" }}
+                    className="rounded border px-3 py-2 text-sm border-line"
                   >
                     Move down
                   </button>
                 </div>
 
                 {error && (
-                  <p role="alert" className="mb-4 text-sm" style={{ color: "var(--color-danger-text)" }}>
+                  <p role="alert" className="mb-4 text-sm text-danger-text">
                     {error}
                   </p>
                 )}
@@ -215,20 +194,18 @@ export function ChannelSettingsDialog({
                   <button
                     type="button"
                     onClick={() => setConfirmingDelete(true)}
-                    className="rounded px-3 py-2 text-sm"
-                    style={{ color: "var(--color-danger-text)" }}
+                    className="btn btn-danger-ghost"
                   >
                     Delete channel
                   </button>
                   <div className="flex gap-2">
-                    <button type="button" onClick={onClose} className="rounded px-3 py-2 text-sm">
+                    <button type="button" onClick={onClose} className="btn btn-ghost">
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={pending}
-                      className="rounded px-3 py-2 text-sm font-medium"
-                      style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+                      className="btn btn-primary"
                     >
                       {pending ? "Saving..." : "Save"}
                     </button>
@@ -237,13 +214,13 @@ export function ChannelSettingsDialog({
               </form>
 
               {confirmingDelete && (
-                <div className="mt-4 border-t pt-4" style={{ borderColor: "var(--color-border)" }}>
+                <div className="mt-4 border-t border-line pt-4">
                   <p className="mb-3 text-sm">Delete #{channel.name}? This cannot be undone.</p>
                   <div className="flex justify-end gap-2">
                     <button
                       type="button"
                       onClick={() => setConfirmingDelete(false)}
-                      className="rounded px-3 py-2 text-sm"
+                      className="btn btn-ghost"
                     >
                       Cancel
                     </button>
@@ -251,8 +228,7 @@ export function ChannelSettingsDialog({
                       type="button"
                       disabled={pending}
                       onClick={handleDelete}
-                      className="rounded px-3 py-2 text-sm font-medium"
-                      style={{ backgroundColor: "var(--color-danger)", color: "white" }}
+                      className="btn btn-danger"
                     >
                       {pending ? "Deleting..." : "Delete channel"}
                     </button>

@@ -78,8 +78,7 @@ export function CreateChannelDialog({
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      className="w-full max-w-sm rounded-lg border p-6"
-      style={{ borderColor: "var(--color-border)", backgroundColor: "var(--color-bg-sidebar)", color: "var(--color-text-primary)" }}
+      className="w-full max-w-sm p-6"
       aria-label={kind === "category" ? "Create a category" : "Create a channel"}
     >
       <h2 className="mb-4 text-lg font-semibold">{kind === "category" ? "Create a category" : "Create a channel"}</h2>
@@ -92,8 +91,7 @@ export function CreateChannelDialog({
           value={name}
           onChange={(e) => setName(e.target.value)}
           autoFocus
-          className="mb-4 w-full rounded border px-3 py-2 text-sm"
-          style={{ backgroundColor: "var(--color-bg-main)", borderColor: "var(--color-border)", color: "var(--color-text-primary)" }}
+          className="field mb-4 w-full px-3 py-2 text-sm"
         />
 
         {kind === "channel" && (
@@ -115,8 +113,7 @@ export function CreateChannelDialog({
               id="new-channel-parent"
               value={parentId}
               onChange={(e) => setParentId(e.target.value)}
-              className="mb-4 w-full rounded border px-3 py-2 text-sm"
-              style={{ backgroundColor: "var(--color-bg-main)", borderColor: "var(--color-border)", color: "var(--color-text-primary)" }}
+              className="field mb-4 w-full px-3 py-2 text-sm"
             >
               <option value="">No category</option>
               {categories.map((category) => (
@@ -129,20 +126,19 @@ export function CreateChannelDialog({
         )}
 
         {error && (
-          <p role="alert" className="mb-4 text-sm" style={{ color: "var(--color-danger-text)" }}>
+          <p role="alert" className="mb-4 text-sm text-danger-text">
             {error}
           </p>
         )}
 
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded px-3 py-2 text-sm">
+          <button type="button" onClick={onClose} className="btn btn-ghost">
             Cancel
           </button>
           <button
             type="submit"
             disabled={pending}
-            className="rounded px-3 py-2 text-sm font-medium"
-            style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+            className="btn btn-primary"
           >
             {pending ? "Creating..." : "Create"}
           </button>

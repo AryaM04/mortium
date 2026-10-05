@@ -1,6 +1,6 @@
 // The left-most rail: the Home button (friends and DMs), one icon per
-// guild, a "+" to create or join one, and a plain pill to mark the active
-// guild. A right-click on a guild icon sets its notification level.
+// guild, and a "+" to create or join one. An accent bar and an accent ring
+// mark the active item. A right-click on a guild icon sets its notification level.
 import { useState } from "react";
 import { Link } from "wouter";
 import { aggregateGuildUnread, countUnreadMessages, formatBadgeCount } from "@mortium/client-core";
@@ -11,11 +11,20 @@ import { readLastLocation } from "../lib/lastLocation.js";
 import { HOME_PATH } from "../lib/dms.js";
 import { NotificationLevelMenu } from "./NotificationLevelMenu.js";
 import { serverUrl } from "../lib/server-url.js";
+import { MessageIcon, PlusIcon } from "./icons.js";
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).slice(0, 2);
   return parts.map((part) => part[0]?.toUpperCase() ?? "").join("") || "?";
 }
+
+/** The short accent bar at the left of the active rail item. */
+function ActiveBar() {
+  return <span aria-hidden="true" className="absolute left-0 h-5 w-1 rounded-r-full bg-accent" />;
+}
+
+const tile =
+  "flex h-10 w-10 items-center justify-center rounded-[12px] border text-sm font-semibold transition-colors duration-150";
 
 function GuildIcon({
   id,
@@ -39,13 +48,7 @@ function GuildIcon({
   const href = firstChannelId ? `/app/${id}/${firstChannelId}` : `/app/${id}`;
   return (
     <div className="relative flex w-full items-center justify-center">
-      {active && (
-        <span
-          aria-hidden="true"
-          className="absolute left-0 h-8 w-1 rounded-r"
-          style={{ backgroundColor: "var(--color-text-primary)" }}
-        />
-      )}
+      {active && <ActiveBar />}
       <Link
         href={href}
         title={name}
@@ -55,27 +58,28 @@ function GuildIcon({
           event.preventDefault();
           onOpenMenu({ x: event.clientX, y: event.clientY });
         }}
+        className={`rounded-[12px] ${active ? "ring-2 ring-accent ring-offset-2 ring-offset-canvas" : ""}`}
       >
         {iconKey ? (
           <img
             src={serverUrl(`/api/v1/icons/${id}/${iconKey}`)}
             alt=""
-            className="h-12 w-12 rounded-full object-cover"
+            className="h-10 w-10 rounded-[12px] object-cover"
           />
         ) : (
           <div
-            className="flex h-12 w-12 items-center justify-center rounded-full font-semibold"
-            style={{ backgroundColor: "var(--color-bg-sidebar)" }}
+            className={`${tile} ${
+              active
+                ? "border-transparent bg-accent-soft text-accent-text"
+                : "border-line bg-elevated text-secondary hover:bg-hover hover:text-primary"
+            }`}
           >
             {initialsOf(name)}
           </div>
         )}
       </Link>
       {mentionCount > 0 ? (
-        <span
-          className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[10px] font-semibold leading-none"
-          style={{ backgroundColor: "var(--color-danger)", color: "white" }}
-        >
+        <span className="badge absolute right-1.5 -top-1 ring-2 ring-canvas">
           <span aria-hidden="true">{formatBadgeCount(mentionCount)}</span>
           <span className="sr-only">
             {mentionCount} {mentionCount === 1 ? "mention" : "mentions"}
@@ -83,10 +87,7 @@ function GuildIcon({
         </span>
       ) : (
         hasUnread && (
-          <span
-            className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2"
-            style={{ backgroundColor: "white", borderColor: "var(--color-bg-rail)" }}
-          >
+          <span className="absolute right-2.5 top-0 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-canvas">
             <span className="sr-only">Unread channels</span>
           </span>
         )
@@ -97,10 +98,7 @@ function GuildIcon({
 
 function UnreadBadge({ count, label }: { count: number; label: string }) {
   return (
-    <span
-      className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[10px] font-semibold leading-none"
-      style={{ backgroundColor: "var(--color-danger)", color: "white" }}
-    >
+    <span className="badge absolute right-1.5 -top-1 ring-2 ring-canvas">
       <span aria-hidden="true">{formatBadgeCount(count)}</span>
       <span className="sr-only">
         {count} {label}
@@ -121,22 +119,19 @@ function HomeButton({ active }: { active: boolean }) {
   }
   return (
     <div className="relative flex w-full items-center justify-center">
-      {active && (
-        <span
-          aria-hidden="true"
-          className="absolute left-0 h-8 w-1 rounded-r"
-          style={{ backgroundColor: "var(--color-text-primary)" }}
-        />
-      )}
+      {active && <ActiveBar />}
       <Link
         href={HOME_PATH}
         title="Home"
         aria-label="Home"
         aria-current={active ? "page" : undefined}
-        className="flex h-12 w-12 items-center justify-center rounded-full font-semibold"
-        style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+        className={`${tile} ${
+          active
+            ? "border-transparent bg-accent text-on-accent ring-2 ring-accent ring-offset-2 ring-offset-canvas"
+            : "border-line bg-elevated text-accent-text hover:bg-hover"
+        }`}
       >
-        DC
+        <MessageIcon size={18} />
       </Link>
       {unread > 0 && <UnreadBadge count={unread} label={unread === 1 ? "unread direct message" : "unread direct messages"} />}
     </div>
@@ -173,11 +168,10 @@ export function ServerRail({ activeGuildId }: { activeGuildId?: string }) {
   return (
     <nav
       aria-label="Servers"
-      className="flex w-[72px] flex-col items-center gap-2 overflow-y-auto py-3"
-      style={{ backgroundColor: "var(--color-bg-rail)" }}
+      className="flex w-[64px] shrink-0 flex-col items-center gap-2.5 overflow-y-auto py-1"
     >
       <HomeButton active={activeGuildId === undefined || activeGuildId === "@me"} />
-      <div className="my-1 h-px w-8" style={{ backgroundColor: "var(--color-border)" }} />
+      <div className="h-px w-6 shrink-0 bg-line-strong" />
       {guildList.map((guild) => {
         const summary = aggregateGuildUnread(messageChannels, viewableTextChannelIds(guild.id), selfUserId);
         return (
@@ -199,10 +193,9 @@ export function ServerRail({ activeGuildId }: { activeGuildId?: string }) {
         title="Add a server"
         aria-label="Add a server"
         onClick={() => setDialogOpen(true)}
-        className="flex h-12 w-12 items-center justify-center rounded-full text-2xl"
-        style={{ backgroundColor: "var(--color-bg-sidebar)", color: "var(--color-text-muted)" }}
+        className={`${tile} shrink-0 border-dashed border-line-strong bg-transparent text-muted hover:border-accent hover:text-accent-text`}
       >
-        +
+        <PlusIcon size={18} />
       </button>
       <CreateOrJoinGuildDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
       {menu && guilds[menu.guildId] && (

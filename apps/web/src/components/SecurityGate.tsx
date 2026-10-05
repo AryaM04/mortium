@@ -20,15 +20,14 @@ import { BackupSetup, ResetIdentity, Restore, downloadKey } from "./SecurityDial
 
 const VerificationDialog = lazy(() => import("./VerificationDialog.js"));
 
-const button = "rounded px-3 py-2 text-sm";
-const primary = { backgroundColor: "var(--color-accent)", color: "white" };
-const field = "w-full rounded border px-2 py-1 text-sm";
-const fieldStyle = { backgroundColor: "var(--color-bg-main)", borderColor: "var(--color-border)", color: "var(--color-text-primary)" };
+const button = "btn btn-ghost";
+const primary = { backgroundColor: "var(--color-accent)", color: "var(--color-on-accent)" };
+const field = "field w-full";
 
 function Part({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mb-5">
-      <h2 className="mb-2 text-sm font-semibold uppercase" style={{ color: "var(--color-text-muted)" }}>
+      <h2 className="eyebrow mb-2">
         {title}
       </h2>
       {children}
@@ -38,7 +37,7 @@ function Part({ title, children }: { title: string; children: React.ReactNode })
 
 function Problem({ text }: { text: string | null }) {
   return text ? (
-    <p role="alert" className="mt-2 text-sm" style={{ color: "var(--color-danger-text)" }}>
+    <p role="alert" className="mt-2 text-sm text-danger-text">
       {text}
     </p>
   ) : null;
@@ -46,7 +45,7 @@ function Problem({ text }: { text: string | null }) {
 
 function SignOut() {
   return (
-    <button type="button" className="text-sm underline" onClick={() => void session.store.getState().logout()}>
+    <button type="button" className="text-sm link" onClick={() => void session.store.getState().logout()}>
       Sign out
     </button>
   );
@@ -87,7 +86,6 @@ function PasswordUnlock() {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         className={field}
-        style={fieldStyle}
       />
       <div className="flex justify-end">
         <button type="button" className={button} style={primary} disabled={pending || password === ""} onClick={() => void unlock()}>
@@ -226,14 +224,14 @@ function ShowKeyScreen() {
         Your password unlocks your encrypted messages on a new device. You need this recovery key only if you forget
         your password or reset it by email. Keep it in a safe place.
       </p>
-      <code data-testid="recovery-key" className="mb-2 block rounded p-2 text-center font-mono text-sm" style={{ backgroundColor: "var(--color-bg-main)" }}>
+      <code data-testid="recovery-key" className="mb-2 block rounded-lg border border-line-strong bg-input p-3 text-center font-mono text-sm text-accent-text">
         {recoveryKey}
       </code>
       <div className="mb-4 flex gap-3 text-sm">
-        <button type="button" className="underline" onClick={() => void navigator.clipboard?.writeText(recoveryKey)}>
+        <button type="button" className="link" onClick={() => void navigator.clipboard?.writeText(recoveryKey)}>
           Copy
         </button>
-        <button type="button" className="underline" onClick={() => downloadKey(recoveryKey)}>
+        <button type="button" className="link" onClick={() => downloadKey(recoveryKey)}>
           Download
         </button>
       </div>

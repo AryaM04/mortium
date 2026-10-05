@@ -14,6 +14,7 @@ import { session } from "../lib/session.js";
 import { useSettings } from "../lib/settings.js";
 import { Avatar } from "./Avatar.js";
 import { EmojiPickerButton } from "./EmojiPickerButton.js";
+import { CloseIcon, PaperclipIcon, PencilIcon, ReplyIcon, SendIcon, SmileIcon } from "./icons.js";
 
 const MAX_BODY_LENGTH = 4000;
 const COUNTER_THRESHOLD = MAX_BODY_LENGTH - 200;
@@ -445,11 +446,9 @@ export function Composer(props: ComposerProps) {
   return (
     <div className="px-4 pb-4">
       {(props.replyTarget || props.editTarget) && (
-        <div
-          className="mb-1 flex items-center justify-between rounded-t px-3 py-1 text-xs"
-          style={{ backgroundColor: "var(--color-bg-sidebar)", color: "var(--color-text-muted)" }}
-        >
-          <span>
+        <div className="mx-2 flex items-center justify-between gap-2 rounded-t-lg border border-b-0 border-line bg-sidebar py-1 pl-3 pr-1 text-xs text-secondary">
+          <span className="flex min-w-0 items-center gap-1.5 truncate">
+            {props.editTarget ? <PencilIcon size={12} className="shrink-0 text-accent-text" /> : <ReplyIcon size={12} className="shrink-0 text-accent-text" />}
             {props.editTarget ? "Editing a message." : `Reply to ${props.replyTarget!.authorName}.`}
           </span>
           <button
@@ -463,8 +462,9 @@ export function Composer(props: ComposerProps) {
               }
             }}
             aria-label="Cancel"
+            className="icon-btn h-6 w-6"
           >
-            ×
+            <CloseIcon size={14} />
           </button>
         </div>
       )}
@@ -473,8 +473,7 @@ export function Composer(props: ComposerProps) {
           id={listboxId}
           role="listbox"
           aria-label="Members"
-          className="mb-1 max-h-56 overflow-y-auto rounded border py-1 shadow-lg"
-          style={{ backgroundColor: "var(--color-bg-main)", borderColor: "var(--color-border)" }}
+          className="menu mb-2 max-h-56 overflow-y-auto"
         >
           {suggestions.map((member, index) => (
             <div
@@ -486,14 +485,11 @@ export function Composer(props: ComposerProps) {
                 event.preventDefault();
                 pickMention(member);
               }}
-              className="flex items-center gap-2 px-3 py-1 text-sm"
-              style={{ backgroundColor: index === activeIndex ? "var(--color-bg-sidebar)" : "transparent" }}
+              className={`flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm ${index === activeIndex ? "bg-active" : ""}`}
             >
-              {member.user && <Avatar user={member.user} size={20} />}
+              {member.user && <Avatar user={member.user} size={22} />}
               <span>{memberLabel(member)}</span>
-              {member.user && (
-                <span style={{ color: "var(--color-text-muted)" }}>@{member.user.username}</span>
-              )}
+              {member.user && <span className="text-muted">@{member.user.username}</span>}
             </div>
           ))}
         </div>
@@ -505,9 +501,9 @@ export function Composer(props: ComposerProps) {
               <LinkEmbedCard embed={preview.embed} localImageUrl={preview.imageUrl} onRemove={removePreview} />
             </Suspense>
           ) : (
-            <div className="flex items-center gap-2 text-xs" style={{ color: "var(--color-text-muted)" }}>
+            <div className="flex items-center gap-2 text-xs text-muted">
               <span>Loading the link preview.</span>
-              <button type="button" onClick={removePreview} className="underline">
+              <button type="button" onClick={removePreview} className="link">
                 Remove preview
               </button>
             </div>
@@ -515,28 +511,26 @@ export function Composer(props: ComposerProps) {
         </div>
       )}
       {uploads.length > 0 && (
-        <ul className="mb-1 flex flex-wrap gap-2" aria-label="Files to send">
+        <ul className="mb-2 flex flex-wrap gap-2" aria-label="Files to send">
           {uploads.map((upload) => (
             <li
               key={upload.key}
-              className="flex items-center gap-2 rounded border px-2 py-1 text-xs"
-              style={{ borderColor: upload.error ? "var(--color-danger-text)" : "var(--color-border)" }}
+              className={`flex items-center gap-2 rounded-lg border bg-elevated py-1 pl-2.5 pr-1 text-xs ${upload.error ? "border-danger-text" : "border-line-strong"}`}
               data-upload-state={upload.error ? "failed" : upload.result ? "ready" : "uploading"}
             >
               <span className="max-w-40 truncate">{upload.name}</span>
-              <span style={{ color: upload.error ? "var(--color-danger-text)" : "var(--color-text-muted)" }}>
+              <span className={upload.error ? "text-danger-text" : "text-muted"}>
                 {upload.error ?? (upload.result ? formatFileSize(upload.size) : `${Math.round(upload.progress * 100)}%`)}
               </span>
-              <button type="button" onClick={() => removeUpload(upload.key)} aria-label={`Remove ${upload.name}`}>
-                ×
+              <button type="button" onClick={() => removeUpload(upload.key)} aria-label={`Remove ${upload.name}`} className="icon-btn h-6 w-6">
+                <CloseIcon size={12} />
               </button>
             </li>
           ))}
         </ul>
       )}
       <div
-        className="flex items-end gap-2 rounded px-3 py-2"
-        style={{ backgroundColor: "var(--color-bg-sidebar)" }}
+        className="flex items-end gap-1 rounded-xl border border-line-strong bg-elevated p-1.5 transition-[border-color,box-shadow] duration-150 focus-within:border-accent focus-within:shadow-[0_0_0_3px_var(--color-accent-soft)]"
         onDragOver={(event) => {
           if (event.dataTransfer.types.includes("Files")) {
             event.preventDefault();
@@ -567,10 +561,10 @@ export function Composer(props: ComposerProps) {
               aria-label="Attach files"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploads.length >= MAX_ATTACHMENTS}
-              className="rounded px-1.5 py-1 text-base"
-              style={{ color: "var(--color-text-muted)" }}
+              className="icon-btn"
+              title="Attach files"
             >
-              +
+              <PaperclipIcon size={18} />
             </button>
           </>
         )}
@@ -602,24 +596,19 @@ export function Composer(props: ComposerProps) {
               addFiles([...event.clipboardData.files]);
             }
           }}
-          className="max-h-60 flex-1 resize-none bg-transparent py-1 text-sm outline-none"
-          style={{ color: "var(--color-text-primary)" }}
+          className="max-h-60 min-h-8 flex-1 resize-none bg-transparent px-1.5 py-1.5 text-sm leading-5 text-primary outline-none placeholder:text-muted disabled:cursor-not-allowed"
         />
         {remaining <= COUNTER_THRESHOLD && (
-          <span
-            className="pb-1 text-xs"
-            style={{ color: remaining < 0 ? "var(--color-danger-text)" : "var(--color-text-muted)" }}
-          >
+          <span className={`self-center text-xs ${remaining < 0 ? "text-danger-text" : "text-muted"}`}>
             {remaining}
           </span>
         )}
         {props.canSend && (
           <EmojiPickerButton
             ariaLabel="Open the emoji picker"
-            label="🙂"
+            label={<SmileIcon size={18} />}
             onPick={insertEmoji}
-            className="rounded px-1.5 py-1 text-base"
-            style={{ color: "var(--color-text-muted)" }}
+            className="icon-btn"
           />
         )}
         <button
@@ -631,10 +620,11 @@ export function Composer(props: ComposerProps) {
             (text.trim().length === 0 && ready.length === 0) ||
             text.length > MAX_BODY_LENGTH
           }
-          className="rounded px-3 py-1 text-sm font-medium"
-          style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+          aria-label="Send"
+          title="Send"
+          className="btn btn-primary h-8 w-8 p-0"
         >
-          Send
+          <SendIcon />
         </button>
       </div>
     </div>

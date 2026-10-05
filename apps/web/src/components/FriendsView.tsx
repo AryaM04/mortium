@@ -17,6 +17,7 @@ import { useRealtime } from "../lib/useRealtime.js";
 import { describeError } from "../lib/errors.js";
 import { openDmWith } from "../lib/dms.js";
 import { joinVoiceChannel } from "../lib/voice.js";
+import { UsersIcon } from "./icons.js";
 
 type Tab = "online" | "all" | "pending" | "blocked" | "add";
 
@@ -67,11 +68,7 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      className="rounded px-2 py-1 text-xs font-medium"
-      style={{
-        backgroundColor: danger ? "transparent" : "var(--color-bg-sidebar)",
-        color: danger ? "var(--color-danger-text)" : "var(--color-text-primary)",
-      }}
+      className={`btn px-2.5 py-1 text-xs ${danger ? "btn-danger-ghost" : "btn-secondary"}`}
     >
       {label}
     </button>
@@ -88,15 +85,11 @@ function FriendRow({
   children: React.ReactNode;
 }) {
   return (
-    <li
-      className="flex items-center gap-3 border-t px-2 py-2"
-      style={{ borderColor: "var(--color-border)" }}
-      data-friend-row={user.username}
-    >
+    <li className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-hover" data-friend-row={user.username}>
       <Avatar user={user} size={32} />
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium">{user.displayName}</div>
-        <div className="truncate text-xs" style={{ color: "var(--color-text-muted)" }}>
+        <div className="truncate text-xs text-muted">
           @{user.username} · {subtitle}
         </div>
       </div>
@@ -196,9 +189,9 @@ function AddFriendForm() {
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-2 p-4">
-      <h2 className="text-sm font-semibold uppercase">Add friend</h2>
-      <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+    <form onSubmit={submit} className="flex max-w-2xl flex-col gap-2 p-6">
+      <h2 className="text-base font-semibold">Add friend</h2>
+      <p className="text-sm text-muted">
         Type the username of the person. The username is not the display name.
       </p>
       <div className="flex gap-2">
@@ -207,20 +200,18 @@ function AddFriendForm() {
           placeholder="username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          className="flex-1 rounded border px-3 py-2 text-sm"
-          style={{ backgroundColor: "var(--color-bg-sidebar)", borderColor: "var(--color-border)", color: "var(--color-text-primary)" }}
+          className="field flex-1"
         />
         <button
           type="submit"
           disabled={pending || username.trim() === ""}
-          className="rounded px-3 py-2 text-sm font-medium disabled:opacity-50"
-          style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+          className="btn btn-primary"
         >
           Send friend request
         </button>
       </div>
       {result && (
-        <p role={result.ok ? "status" : "alert"} className="text-sm" style={{ color: result.ok ? "#3ba55d" : "var(--color-danger-text)" }}>
+        <p role={result.ok ? "status" : "alert"} className={`text-sm ${result.ok ? "text-success-text" : "text-danger-text"}`}>
           {result.text}
         </p>
       )}
@@ -253,13 +244,13 @@ export default function FriendsView() {
   function renderList(list: RelationshipJson[], empty: string) {
     if (list.length === 0) {
       return (
-        <p className="p-4 text-sm" style={{ color: "var(--color-text-muted)" }}>
+        <p className="p-4 text-sm text-muted">
           {empty}
         </p>
       );
     }
     return (
-      <ul className="px-2">
+      <ul className="flex flex-col gap-0.5 p-2">
         {list.map((relationship) => {
           const { user } = relationship;
           if (relationship.status === "accepted") {
@@ -324,15 +315,15 @@ export default function FriendsView() {
   }
 
   return (
-    <main className="flex min-w-0 flex-1 flex-col" style={{ backgroundColor: "var(--color-bg-main)" }}>
+    <main className="panel flex min-w-0 flex-1 flex-col overflow-hidden bg-main">
       <h1 className="sr-only">Friends</h1>
       <div
         role="tablist"
         aria-label="Friends"
-        className="flex items-center gap-2 border-b px-4 py-2"
-        style={{ borderColor: "var(--color-border)" }}
+        className="flex h-12 shrink-0 items-center gap-1 border-b border-line px-4"
       >
-        <span className="mr-2 font-semibold" aria-hidden="true">
+        <span className="mr-3 flex items-center gap-2 font-semibold" aria-hidden="true">
+          <UsersIcon className="text-muted" />
           Friends
         </span>
         {TABS.map((option) => (
@@ -345,23 +336,19 @@ export default function FriendsView() {
               setTab(option.value);
               setError(null);
             }}
-            className="rounded px-2 py-1 text-sm"
-            style={{
-              backgroundColor:
-                option.value === "add"
-                  ? "var(--color-success)"
-                  : tab === option.value
-                    ? "var(--color-bg-sidebar)"
-                    : "transparent",
-              color: option.value === "add" ? "white" : "var(--color-text-primary)",
-            }}
+            className={`flex items-center rounded-lg px-2.5 py-1 text-sm font-medium ${
+              option.value === "add"
+                ? tab === "add"
+                  ? "ml-2 bg-accent-soft text-accent-text"
+                  : "ml-2 bg-accent text-on-accent hover:bg-accent-hover"
+                : tab === option.value
+                  ? "bg-active text-primary"
+                  : "text-muted hover:bg-hover hover:text-secondary"
+            }`}
           >
             {option.label}
             {option.value === "pending" && incomingCount > 0 && (
-              <span
-                className="ml-1 rounded-full px-1.5 text-[10px] font-semibold"
-                style={{ backgroundColor: "var(--color-danger)", color: "white" }}
-              >
+              <span className="badge ml-1.5">
                 {incomingCount}
               </span>
             )}
@@ -369,7 +356,7 @@ export default function FriendsView() {
         ))}
       </div>
       {error && (
-        <p role="alert" className="px-4 pt-2 text-sm" style={{ color: "var(--color-danger-text)" }}>
+        <p role="alert" className="px-4 pt-2 text-sm text-danger-text">
           {error}
         </p>
       )}

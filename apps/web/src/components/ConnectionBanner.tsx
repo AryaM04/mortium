@@ -10,7 +10,7 @@ export function ConnectionBanner() {
     return null;
   }
   return (
-    <div role="status" className="px-3 py-2 text-center text-sm" style={{ backgroundColor: "#5c3d00", color: "#ffe0a3" }}>
+    <div role="status" className="border-b border-warning/30 bg-[#2a2110] px-3 py-2 text-center text-sm text-[#fcd34d]">
       The connection is lost. The app tries to connect again.
     </div>
   );
@@ -26,8 +26,7 @@ export function CryptoTabBanner() {
     <div
       role="status"
       data-crypto-other-tab
-      className="px-3 py-2 text-center text-sm"
-      style={{ backgroundColor: "#5c3d00", color: "#ffe0a3" }}
+      className="mx-1.5 mt-1.5 rounded-lg border border-warning/30 bg-[#2a2110] px-3 py-2 text-center text-sm text-[#fcd34d]"
     >
       Encryption runs in another tab of this app. Use that tab, or close it.
     </div>

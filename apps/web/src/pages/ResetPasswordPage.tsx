@@ -75,15 +75,14 @@ export function ResetPasswordPage() {
           error={fieldError}
         />
         {formError && (
-          <p role="alert" className="mb-4 text-sm" style={{ color: "var(--color-danger-text)" }}>
+          <p role="alert" className="mb-4 text-sm text-danger-text">
             {formError}
           </p>
         )}
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded px-3 py-2 text-sm font-medium"
-          style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+          className="btn btn-primary w-full"
         >
           {pending ? "Saving..." : "Set new password"}
         </button>

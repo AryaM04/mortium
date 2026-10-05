@@ -23,17 +23,16 @@ export default function NotificationSettings() {
   const saveError = useSettings((s) => s.error);
 
   return (
-    <section className="mb-4 flex flex-col gap-2 border-t pt-4" style={{ borderColor: "var(--color-border)" }}>
+    <section className="mb-4 flex flex-col gap-2 border-t border-line pt-4">
       <h3 className="text-sm font-semibold">Notifications</h3>
-      <p className="text-sm" style={{ color: "var(--color-text-muted)" }} data-notification-permission={permission}>
+      <p className="text-sm text-muted" data-notification-permission={permission}>
         {PERMISSION_TEXT[permission]}
       </p>
       {permission === "default" && (
         <button
           type="button"
           onClick={() => void requestNotificationPermission().then(setPermission)}
-          className="self-start rounded px-3 py-1 text-sm font-medium"
-          style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+          className="btn btn-primary self-start px-3 py-1 text-sm font-medium"
         >
           Turn on desktop notifications
         </button>
@@ -47,7 +46,7 @@ export default function NotificationSettings() {
         Play ring sound
       </label>
       {saveError && (
-        <p role="alert" className="text-xs" style={{ color: "var(--color-danger-text)" }}>
+        <p role="alert" className="text-xs text-danger-text">
           {saveError}
         </p>
       )}

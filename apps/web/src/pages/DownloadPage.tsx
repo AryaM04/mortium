@@ -76,7 +76,7 @@ export default function DownloadPage() {
       >
         <h1 className="mb-4 text-lg font-semibold">Download Mortium</h1>
         {error && (
-          <p role="alert" className="mb-4 text-sm" style={{ color: "var(--color-danger-text)" }}>
+          <p role="alert" className="mb-4 text-sm text-danger-text">
             {error}
           </p>
         )}
@@ -85,15 +85,14 @@ export default function DownloadPage() {
           <>
             <p className="mb-4 text-sm" style={muted}>
               Version {release.version}, published on {new Date(release.publishedAt).toLocaleDateString()}.{" "}
-              <a href={release.notesUrl} className="underline">
+              <a href={release.notesUrl} className="link">
                 Release notes
               </a>
             </p>
             {primary && detected && (
               <a
                 href={primary.url}
-                className="mb-4 block rounded px-3 py-3 text-center font-medium"
-                style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+                className="btn btn-primary mb-4 block px-3 py-3 text-center font-medium"
               >
                 Download for {PLATFORM_NAMES[detected]} ({formatSize(primary.size)})
               </a>
@@ -104,7 +103,7 @@ export default function DownloadPage() {
                 <ul className="mb-4 flex flex-col gap-1 text-sm">
                   {others.map((asset) => (
                     <li key={asset.name}>
-                      <a href={asset.url} className="underline">
+                      <a href={asset.url} className="link">
                         {PLATFORM_NAMES[asset.platform]}: {KIND_NAMES[asset.kind]} ({asset.name})
                       </a>{" "}
                       <span style={muted}>{formatSize(asset.size)}</span>

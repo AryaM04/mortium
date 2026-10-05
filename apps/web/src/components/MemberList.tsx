@@ -29,10 +29,10 @@ const PRESENCE_LABEL: Record<string, string> = {
 };
 
 const PRESENCE_COLOR: Record<string, string> = {
-  online: "#3ba55d",
-  idle: "#faa61a",
-  dnd: "#ed4245",
-  offline: "#747f8d",
+  online: "var(--color-online)",
+  idle: "var(--color-idle)",
+  dnd: "var(--color-dnd)",
+  offline: "var(--color-offline)",
 };
 
 function roleColorOf(memberRoles: RoleJson[]): string | undefined {
@@ -63,7 +63,7 @@ function MemberRow({
           onOpenMenu(e);
         }}
         onClick={onOpenMenu}
-        className="flex w-full items-center gap-2 rounded px-2 py-1 text-left"
+        className="flex h-10 w-full items-center gap-2.5 rounded-lg px-2 text-left hover:bg-hover"
       >
         <div className="relative">
           {member.user?.avatarKey ? (
@@ -74,8 +74,7 @@ function MemberRow({
             />
           ) : (
             <div
-              className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold"
-              style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-avatar text-xs font-semibold text-avatar-text"
               aria-hidden="true"
             >
               {initialsOf(member.user?.displayName ?? name)}
@@ -83,14 +82,11 @@ function MemberRow({
           )}
           <span
             aria-hidden="true"
-            className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2"
-            style={{
-              backgroundColor: PRESENCE_COLOR[status] ?? PRESENCE_COLOR.offline,
-              borderColor: "var(--color-bg-members)",
-            }}
+            className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-sidebar"
+            style={{ backgroundColor: PRESENCE_COLOR[status] ?? PRESENCE_COLOR.offline }}
           />
         </div>
-        <span className="truncate text-sm" style={{ color: nameColor }}>
+        <span className={`truncate text-sm ${status === "offline" ? "text-muted" : "text-secondary"}`} style={{ color: nameColor }}>
           {name}
         </span>
         <span className="sr-only">{PRESENCE_LABEL[status] ?? "Offline"}</span>
@@ -231,17 +227,13 @@ export function MemberList({ guildId }: { guildId: string }) {
   return (
     <aside
       aria-label="Members"
-      className="flex w-60 flex-col overflow-y-auto p-2"
-      style={{ backgroundColor: "var(--color-bg-members)" }}
+      className="panel flex w-60 shrink-0 flex-col overflow-y-auto p-2"
     >
       {grouped.map(
         (section) =>
           section.members.length > 0 && (
             <div key={section.label}>
-              <div
-                className="mb-1 mt-3 px-2 text-xs font-semibold uppercase"
-                style={{ color: "var(--color-text-muted)" }}
-              >
+              <div className="eyebrow mb-1 mt-3 px-2">
                 {section.label}
               </div>
               <ul>

@@ -23,6 +23,7 @@ import { displayNameOf } from "../lib/members.js";
 import { voiceStore } from "../lib/voice.js";
 import { jumpStore } from "../lib/jump.js";
 import { SearchBox } from "./SearchBox.js";
+import { HashIcon, SpeakerIcon } from "./icons.js";
 
 export function ChatPane({ channelId }: { channelId: string | null }) {
   const guildChannel = useRealtime((s) => (channelId ? s.channels[channelId] : undefined));
@@ -107,9 +108,9 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
 
   if (!channelId || !channel) {
     return (
-      <main className="flex flex-1 flex-col" style={{ backgroundColor: "var(--color-bg-main)" }}>
+      <main className="panel flex min-w-0 flex-1 flex-col overflow-hidden bg-main">
         <ConnectionBanner />
-        <div className="flex flex-1 items-center justify-center" style={{ color: "var(--color-text-muted)" }}>
+        <div className="flex flex-1 items-center justify-center text-muted">
           Choose a channel to start.
         </div>
       </main>
@@ -127,31 +128,32 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
   }
 
   return (
-    <main className="flex min-w-0 flex-1 flex-col" style={{ backgroundColor: "var(--color-bg-main)" }}>
+    <main className="panel flex min-w-0 flex-1 flex-col overflow-hidden bg-main">
       <ConnectionBanner />
       {dmChannel ? (
-        <div className="relative flex items-center">
+        <div className="relative flex h-12 shrink-0 items-center border-b border-line pr-2">
           <div className="min-w-0 flex-1">
             <DmHeader channel={dmChannel} />
           </div>
           <SearchBox guildId={null} />
         </div>
       ) : (
-        <div className="relative flex items-center gap-2 border-b px-4 py-3" style={{ borderColor: "var(--color-border)" }}>
-          <h1 className="font-semibold">
-            {channel.type === "voice" ? "\u{1F50A}" : "#"} {channel.name}
+        <div className="relative flex h-12 shrink-0 items-center gap-2 border-b border-line pl-4 pr-2">
+          <h1 className="flex shrink-0 items-center gap-1.5 font-semibold">
+            {channel.type === "voice" ? <SpeakerIcon className="text-muted" /> : <HashIcon className="text-muted" />}
+            {/* Keep the channel type in the heading name, as before the icons. */}
+            <span className="sr-only">{channel.type === "voice" ? "\u{1F50A}" : "#"} </span>
+            {channel.name}
           </h1>
           {guildChannel?.topic && (
-            <span className="truncate text-sm" style={{ color: "var(--color-text-muted)" }}>
-              {guildChannel.topic}
-            </span>
+            <span className="truncate border-l border-line-strong pl-2 text-sm text-muted">{guildChannel.topic}</span>
           )}
           <SearchBox guildId={guildId} />
         </div>
       )}
 
       {dmChannel && connectedVoiceChannelId === channelId && (
-        <div className="flex max-h-[45%] min-h-[180px] border-b" style={{ borderColor: "var(--color-border)" }}>
+        <div className="flex max-h-[45%] min-h-[180px] border-b border-line bg-canvas">
           <VoiceCallView guildId={null} channelId={channelId} />
         </div>
       )}
@@ -161,7 +163,7 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
           <VoiceCallView guildId={guildId} channelId={channelId} />
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center p-3 text-center">
-            <p style={{ color: "var(--color-text-muted)" }}>
+            <p className="text-muted">
               Click this channel in the list on the left to join the voice call.
             </p>
           </div>

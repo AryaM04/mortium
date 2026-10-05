@@ -20,6 +20,16 @@ import { describeKeyCode } from "../lib/ptt.js";
 import { desktopFeatures } from "../lib/platform.js";
 import { voiceDeviceSettingsStore } from "../lib/voice-settings.js";
 import { VoiceSettingsDialogLoader } from "./VoiceSettingsDialogLoader.js";
+import {
+  HeadphonesIcon,
+  HeadphonesOffIcon,
+  MicIcon,
+  MicOffIcon,
+  PhoneOffIcon,
+  ScreenIcon,
+  SettingsIcon,
+  VideoIcon,
+} from "./icons.js";
 
 const QUALITY_LABEL: Record<string, string> = {
   good: "Good connection",
@@ -56,44 +66,35 @@ export function VoiceStatusPanel() {
 
   if (status === "idle") {
     return errorMessage ? (
-      <div
-        className="border-t px-3 py-2 text-xs"
-        style={{ borderColor: "var(--color-border)", color: "var(--color-danger-text)" }}
-        role="alert"
-      >
+      <div className="card mx-2 mt-1 px-3 py-2 text-xs text-danger-text" role="alert">
         {errorMessage}
       </div>
     ) : null;
   }
 
+  // A pressed toggle shows in the danger color, so a muted microphone is easy to see.
+  const toggle = (on: boolean) =>
+    `icon-btn h-8 w-auto flex-1 ${on ? "bg-danger-soft text-danger-text hover:text-danger-text" : "bg-hover text-secondary"}`;
+
   return (
-    <div
-      className="flex flex-col gap-1 border-t px-3 py-2"
-      style={{ borderColor: "var(--color-border)" }}
-    >
+    <div className="card mx-2 mt-1 flex flex-col gap-2 p-2.5">
       <div className="flex items-start justify-between gap-2">
-        <div className="flex flex-col">
-          <span
-            className="text-sm font-semibold"
-            style={{ color: "var(--color-text-primary)" }}
-            data-voice-status={status}
-          >
-            {status === "connecting" ? "Voice connecting" : "Voice connected"}
-            {channelName ? `: ${channelName}` : ""}
+        <div className="flex min-w-0 flex-col">
+          <span className="flex items-center gap-1.5 text-sm font-semibold text-success-text" data-voice-status={status}>
+            <span
+              aria-hidden="true"
+              className={`h-2 w-2 shrink-0 rounded-full ${status === "connecting" ? "bg-warning" : "bg-success"}`}
+            />
+            <span className="truncate">
+              {status === "connecting" ? "Voice connecting" : "Voice connected"}
+              {channelName ? `: ${channelName}` : ""}
+            </span>
           </span>
-          <span
-            className="text-xs"
-            style={{ color: "var(--color-text-muted)" }}
-            data-voice-quality={quality}
-          >
+          <span className="text-xs text-muted" data-voice-quality={quality}>
             {status === "connecting" ? "Connecting" : QUALITY_LABEL[quality]}
           </span>
           {inputMode === "push-to-talk" && (
-            <span
-              className="text-xs"
-              style={{ color: "var(--color-text-muted)" }}
-              data-voice-ptt-active={pttActive}
-            >
+            <span className="text-xs text-muted" data-voice-ptt-active={pttActive}>
               Push to talk{pttKeyCode ? ` (${describeKeyCode(pttKeyCode)})` : ""}:{" "}
               {pttActive ? "open" : "closed"}
             </span>
@@ -103,11 +104,10 @@ export function VoiceStatusPanel() {
           type="button"
           aria-label="Voice call settings"
           onClick={() => setVoiceSettingsOpen(true)}
-          className="rounded px-1 text-sm"
-          style={{ color: "var(--color-text-muted)" }}
+          className="icon-btn h-7 w-7"
           title="Voice and video settings"
         >
-          &#9881;
+          <SettingsIcon size={15} />
         </button>
       </div>
       {voiceSettingsOpen && (
@@ -117,32 +117,26 @@ export function VoiceStatusPanel() {
         />
       )}
       {errorMessage && (
-        <span className="text-xs" style={{ color: "var(--color-danger-text)" }} role="alert">
+        <span className="text-xs text-danger-text" role="alert">
           {errorMessage}
         </span>
       )}
-      <div className="flex gap-2">
+      {/* Icon buttons. Each aria-label is the text that the button showed before. */}
+      <div className="flex gap-1.5">
         <button
           type="button"
           onClick={toggleCamera}
           aria-pressed={cameraOn}
           disabled={!cameraSupported}
-          title={!cameraSupported ? "This browser does not support the camera." : undefined}
+          aria-label={cameraOn ? "Stop camera" : "Camera"}
+          title={!cameraSupported ? "This browser does not support the camera." : cameraOn ? "Stop camera" : "Camera"}
           data-voice-camera={cameraOn}
-          className="flex-1 rounded px-2 py-1 text-xs"
-          style={{
-            backgroundColor: cameraOn ? "var(--color-accent)" : "var(--color-bg-main)",
-            color: cameraOn ? "white" : "var(--color-text-primary)",
-          }}
+          className={`icon-btn h-8 w-auto flex-1 ${cameraOn ? "bg-accent text-on-accent hover:bg-accent-hover hover:text-on-accent" : "bg-hover text-secondary"}`}
         >
-          {cameraOn ? "Stop camera" : "Camera"}
+          <VideoIcon />
         </button>
         {screenUnavailableReason ? (
-          <span
-            className="flex-1 text-xs"
-            style={{ color: "var(--color-text-muted)" }}
-            data-voice-screen-unavailable="true"
-          >
+          <span className="flex-1 text-xs text-muted" data-voice-screen-unavailable="true">
             {screenUnavailableReason}
           </span>
         ) : (
@@ -151,76 +145,70 @@ export function VoiceStatusPanel() {
             onClick={toggleScreenShare}
             aria-pressed={screenOn}
             disabled={!screenShareSupported}
+            aria-label={screenOn ? "Stop share" : "Share screen"}
             title={
-              !screenShareSupported ? "This browser does not support screen sharing." : undefined
+              !screenShareSupported
+                ? "This browser does not support screen sharing."
+                : screenOn
+                  ? "Stop share"
+                  : "Share screen"
             }
             data-voice-screen={screenOn}
-            className="flex-1 rounded px-2 py-1 text-xs"
-            style={{
-              backgroundColor: screenOn ? "var(--color-accent)" : "var(--color-bg-main)",
-              color: screenOn ? "white" : "var(--color-text-primary)",
-            }}
+            className={`icon-btn h-8 w-auto flex-1 ${screenOn ? "bg-accent text-on-accent hover:bg-accent-hover hover:text-on-accent" : "bg-hover text-secondary"}`}
           >
-            {screenOn ? "Stop share" : "Share screen"}
+            <ScreenIcon />
           </button>
         )}
-      </div>
-      {serverMuted && (
-        <span
-          className="text-xs"
-          style={{ color: "var(--color-danger-text)" }}
-          role="status"
-          data-voice-server-muted="true"
-        >
-          A moderator muted you. You cannot unmute yourself.
-        </span>
-      )}
-      {serverDeafened && (
-        <span
-          className="text-xs"
-          style={{ color: "var(--color-danger-text)" }}
-          role="status"
-          data-voice-server-deafened="true"
-        >
-          A moderator deafened you. You cannot undeafen yourself.
-        </span>
-      )}
-      <div className="flex gap-2">
         <button
           type="button"
           onClick={toggleMute}
           disabled={serverMuted}
-          title={serverMuted ? "A moderator muted you. You cannot unmute yourself." : undefined}
+          aria-label={muted || serverMuted ? "Unmute" : "Mute"}
+          title={serverMuted ? "A moderator muted you. You cannot unmute yourself." : muted ? "Unmute" : "Mute"}
           aria-pressed={muted || serverMuted}
           data-voice-muted={muted || serverMuted}
-          className="flex-1 rounded px-2 py-1 text-xs"
-          style={{ backgroundColor: "var(--color-bg-main)", color: "var(--color-text-primary)" }}
+          className={toggle(muted || serverMuted)}
         >
-          {muted || serverMuted ? "Unmute" : "Mute"}
+          {muted || serverMuted ? <MicOffIcon /> : <MicIcon />}
         </button>
         <button
           type="button"
           onClick={toggleDeafen}
           disabled={serverDeafened}
+          aria-label={deafened || serverDeafened ? "Undeafen" : "Deafen"}
           title={
-            serverDeafened ? "A moderator deafened you. You cannot undeafen yourself." : undefined
+            serverDeafened
+              ? "A moderator deafened you. You cannot undeafen yourself."
+              : deafened
+                ? "Undeafen"
+                : "Deafen"
           }
           aria-pressed={deafened || serverDeafened}
           data-voice-deafened={deafened || serverDeafened}
-          className="flex-1 rounded px-2 py-1 text-xs"
-          style={{ backgroundColor: "var(--color-bg-main)", color: "var(--color-text-primary)" }}
+          className={toggle(deafened || serverDeafened)}
         >
-          {deafened || serverDeafened ? "Undeafen" : "Deafen"}
+          {deafened || serverDeafened ? <HeadphonesOffIcon /> : <HeadphonesIcon />}
         </button>
         <button
           type="button"
           onClick={() => void leaveVoice()}
-          className="flex-1 rounded px-2 py-1 text-xs"
-          style={{ backgroundColor: "var(--color-danger)", color: "white" }}
+          aria-label="Disconnect"
+          title="Disconnect"
+          className="icon-btn h-8 w-auto flex-1 bg-danger text-white hover:bg-danger-hover hover:text-white"
         >
-          Disconnect
+          <PhoneOffIcon />
         </button>
       </div>
+      {serverMuted && (
+        <span className="text-xs text-danger-text" role="status" data-voice-server-muted="true">
+          A moderator muted you. You cannot unmute yourself.
+        </span>
+      )}
+      {serverDeafened && (
+        <span className="text-xs text-danger-text" role="status" data-voice-server-deafened="true">
+          A moderator deafened you. You cannot undeafen yourself.
+        </span>
+      )}
     </div>
   );
 }

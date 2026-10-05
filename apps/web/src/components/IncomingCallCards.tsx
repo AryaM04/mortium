@@ -9,6 +9,7 @@ import { memberUser } from "../lib/members.js";
 import { declineCall, useIncomingCalls, type IncomingCall } from "../lib/ring.js";
 import { joinVoiceChannel } from "../lib/voice.js";
 import { dmPath } from "../lib/dms.js";
+import { PhoneIcon, PhoneOffIcon } from "./icons.js";
 
 function IncomingCallCard({ call }: { call: IncomingCall }) {
   const state = useRealtime((s) => s);
@@ -23,14 +24,13 @@ function IncomingCallCard({ call }: { call: IncomingCall }) {
       role="alertdialog"
       aria-label={`Incoming call from ${callerName}`}
       data-incoming-call={call.channelId}
-      className="flex flex-col gap-2 border-t px-3 py-2"
-      style={{ borderColor: "var(--color-border)", backgroundColor: "var(--color-bg-main)" }}
+      className="card mx-2 mt-1 flex flex-col gap-2 border-accent/40 p-2.5 shadow-[var(--shadow-soft)]"
     >
       <div className="flex items-center gap-2">
         {caller && <Avatar user={caller} size={32} />}
         <div className="min-w-0">
           <div className="truncate text-sm font-semibold">{callerName}</div>
-          <div className="truncate text-xs" style={{ color: "var(--color-text-muted)" }}>
+          <div className="truncate text-xs text-muted">
             {where ? `Incoming call in ${where}` : "Incoming call"}
           </div>
         </div>
@@ -42,17 +42,17 @@ function IncomingCallCard({ call }: { call: IncomingCall }) {
             navigate(dmPath(call.channelId));
             void joinVoiceChannel(null, call.channelId);
           }}
-          className="flex-1 rounded px-2 py-1 text-sm font-medium"
-          style={{ backgroundColor: "var(--color-success)", color: "white" }}
+          className="btn btn-success flex-1 px-2 py-1"
         >
+          <PhoneIcon size={14} />
           Accept
         </button>
         <button
           type="button"
           onClick={() => declineCall(call.channelId)}
-          className="flex-1 rounded px-2 py-1 text-sm font-medium"
-          style={{ backgroundColor: "var(--color-danger)", color: "white" }}
+          className="btn btn-danger flex-1 px-2 py-1"
         >
+          <PhoneOffIcon size={14} />
           Decline
         </button>
       </div>

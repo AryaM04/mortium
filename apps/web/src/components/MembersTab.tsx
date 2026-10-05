@@ -19,6 +19,7 @@ import { session } from "../lib/session.js";
 import { describeError } from "../lib/errors.js";
 import { realtimeStore } from "../lib/realtime.js";
 import { useRealtime } from "../lib/useRealtime.js";
+import { CloseIcon } from "./icons.js";
 
 const DELETE_WINDOW_OPTIONS: Array<{ label: string; seconds: number }> = [
   { label: "None", seconds: 0 },
@@ -68,22 +69,16 @@ function RoleMenu({
     <div
       role="menu"
       aria-label={`Manage roles for ${displayName(member)}`}
-      className="absolute z-10 mt-1 w-56 rounded border p-2 shadow-lg"
-      style={{ backgroundColor: "var(--color-bg-main)", borderColor: "var(--color-border)" }}
+      className="menu absolute right-0 top-full z-10 mt-1 w-56 p-2"
     >
       <div className="mb-1 flex items-center justify-between">
-        <span
-          className="text-xs font-semibold uppercase"
-          style={{ color: "var(--color-text-muted)" }}
-        >
-          Roles
-        </span>
-        <button type="button" onClick={onClose} aria-label="Close" className="text-sm">
-          &times;
+        <span className="eyebrow">Roles</span>
+        <button type="button" onClick={onClose} aria-label="Close" className="icon-btn h-6 w-6">
+          <CloseIcon size={14} />
         </button>
       </div>
       {error && (
-        <p role="alert" className="mb-1 text-xs" style={{ color: "var(--color-danger-text)" }}>
+        <p role="alert" className="mb-1 text-xs text-danger-text">
           {error}
         </p>
       )}
@@ -110,7 +105,7 @@ function RoleMenu({
           );
         })}
         {manageableRoles.length === 0 && (
-          <li className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+          <li className="text-xs text-muted">
             No roles you can manage.
           </li>
         )}
@@ -257,20 +252,15 @@ export function MembersTab({ guildId }: { guildId: string }) {
         placeholder="Search members"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        className="mb-3 w-full rounded border px-3 py-2 text-sm"
-        style={{
-          backgroundColor: "var(--color-bg-main)",
-          borderColor: "var(--color-border)",
-          color: "var(--color-text-primary)",
-        }}
+        className="field mb-3 w-full px-3 py-2 text-sm"
       />
       {error && (
-        <p role="alert" className="mb-2 text-sm" style={{ color: "var(--color-danger-text)" }}>
+        <p role="alert" className="mb-2 text-sm text-danger-text">
           {error}
         </p>
       )}
       {loading && (
-        <p className="mb-2 text-xs" style={{ color: "var(--color-text-muted)" }}>
+        <p className="mb-2 text-xs text-muted">
           Loading members...
         </p>
       )}
@@ -282,13 +272,12 @@ export function MembersTab({ guildId }: { guildId: string }) {
           return (
             <li
               key={member.userId}
-              className="flex items-center gap-2 rounded px-2 py-1.5"
-              style={{ backgroundColor: "var(--color-bg-main)" }}
+              className="flex items-center gap-2 rounded-lg border border-line bg-main px-3 py-2"
             >
               <span className="flex-1 truncate text-sm">
                 {displayName(member)}
                 {isTargetOwner && (
-                  <span className="ml-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
+                  <span className="ml-1 text-xs text-muted">
                     (owner)
                   </span>
                 )}
@@ -315,8 +304,7 @@ export function MembersTab({ guildId }: { guildId: string }) {
                       onClick={() =>
                         setRoleMenuFor(roleMenuFor === member.userId ? null : member.userId)
                       }
-                      className="rounded px-2 py-1 text-xs"
-                      style={{ backgroundColor: "var(--color-bg-sidebar)" }}
+                      className="btn btn-secondary px-2 py-1 text-xs"
                     >
                       Roles
                     </button>
@@ -336,8 +324,7 @@ export function MembersTab({ guildId }: { guildId: string }) {
                       type="button"
                       disabled={busyUserId === member.userId}
                       onClick={() => void handleKick(member)}
-                      className="rounded px-2 py-1 text-xs"
-                      style={{ backgroundColor: "var(--color-bg-sidebar)" }}
+                      className="btn btn-secondary px-2 py-1 text-xs"
                     >
                       Kick
                     </button>
@@ -345,8 +332,7 @@ export function MembersTab({ guildId }: { guildId: string }) {
                       type="button"
                       disabled={busyUserId === member.userId}
                       onClick={() => setBanTarget(member)}
-                      className="rounded px-2 py-1 text-xs"
-                      style={{ backgroundColor: "var(--color-danger)", color: "white" }}
+                      className="btn btn-danger px-2 py-1 text-xs"
                     >
                       Ban
                     </button>
@@ -356,8 +342,7 @@ export function MembersTab({ guildId }: { guildId: string }) {
                   <button
                     type="button"
                     onClick={() => setTransferTarget(member)}
-                    className="rounded px-2 py-1 text-xs"
-                    style={{ backgroundColor: "var(--color-bg-sidebar)" }}
+                    className="btn btn-secondary px-2 py-1 text-xs"
                   >
                     Transfer ownership
                   </button>
@@ -369,18 +354,11 @@ export function MembersTab({ guildId }: { guildId: string }) {
       </ul>
 
       {banTarget && (
-        <div
-          className="fixed inset-0 z-20 flex items-center justify-center"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
+        <div className="fixed inset-0 z-20 flex items-center justify-center bg-[rgba(4,6,10,0.6)] backdrop-blur-[3px]">
           <div
             role="dialog"
             aria-label={`Ban ${displayName(banTarget)}`}
-            className="w-full max-w-sm rounded-lg border p-4"
-            style={{
-              backgroundColor: "var(--color-bg-sidebar)",
-              borderColor: "var(--color-border)",
-            }}
+            className="menu w-full max-w-sm p-4"
           >
             <h3 className="mb-2 text-sm font-semibold">Ban {displayName(banTarget)}</h3>
             <label className="mb-2 flex flex-col gap-1 text-sm">
@@ -388,12 +366,7 @@ export function MembersTab({ guildId }: { guildId: string }) {
               <input
                 value={banReason}
                 onChange={(e) => setBanReason(e.target.value)}
-                className="rounded border px-2 py-1 text-sm"
-                style={{
-                  backgroundColor: "var(--color-bg-main)",
-                  borderColor: "var(--color-border)",
-                  color: "var(--color-text-primary)",
-                }}
+                className="field px-2 py-1 text-sm"
               />
             </label>
             <label className="mb-3 flex flex-col gap-1 text-sm">
@@ -401,12 +374,7 @@ export function MembersTab({ guildId }: { guildId: string }) {
               <select
                 value={banWindowSeconds}
                 onChange={(e) => setBanWindowSeconds(Number(e.target.value))}
-                className="rounded border px-2 py-1 text-sm"
-                style={{
-                  backgroundColor: "var(--color-bg-main)",
-                  borderColor: "var(--color-border)",
-                  color: "var(--color-text-primary)",
-                }}
+                className="field px-2 py-1 text-sm"
               >
                 {DELETE_WINDOW_OPTIONS.map((option) => (
                   <option key={option.seconds} value={option.seconds}>
@@ -419,15 +387,14 @@ export function MembersTab({ guildId }: { guildId: string }) {
               <button
                 type="button"
                 onClick={() => setBanTarget(null)}
-                className="rounded px-3 py-1.5 text-sm"
+                className="btn btn-ghost"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={() => void handleBan()}
-                className="rounded px-3 py-1.5 text-sm font-medium"
-                style={{ backgroundColor: "var(--color-danger)", color: "white" }}
+                className="btn btn-danger px-3 py-1.5"
               >
                 Ban
               </button>
@@ -437,18 +404,11 @@ export function MembersTab({ guildId }: { guildId: string }) {
       )}
 
       {transferTarget && (
-        <div
-          className="fixed inset-0 z-20 flex items-center justify-center"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
+        <div className="fixed inset-0 z-20 flex items-center justify-center bg-[rgba(4,6,10,0.6)] backdrop-blur-[3px]">
           <div
             role="dialog"
             aria-label={`Transfer ownership to ${displayName(transferTarget)}`}
-            className="w-full max-w-sm rounded-lg border p-4"
-            style={{
-              backgroundColor: "var(--color-bg-sidebar)",
-              borderColor: "var(--color-border)",
-            }}
+            className="menu w-full max-w-sm p-4"
           >
             <h3 className="mb-2 text-sm font-semibold">
               Transfer ownership to {displayName(transferTarget)}
@@ -461,18 +421,13 @@ export function MembersTab({ guildId }: { guildId: string }) {
               aria-label={`Type ${transferTarget.user?.username ?? "the username"} to confirm`}
               value={transferConfirmText}
               onChange={(e) => setTransferConfirmText(e.target.value)}
-              className="mb-3 w-full rounded border px-2 py-1 text-sm"
-              style={{
-                backgroundColor: "var(--color-bg-main)",
-                borderColor: "var(--color-border)",
-                color: "var(--color-text-primary)",
-              }}
+              className="field mb-3 w-full px-2 py-1 text-sm"
             />
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setTransferTarget(null)}
-                className="rounded px-3 py-1.5 text-sm"
+                className="btn btn-ghost"
               >
                 Cancel
               </button>
@@ -480,8 +435,7 @@ export function MembersTab({ guildId }: { guildId: string }) {
                 type="button"
                 disabled={transferConfirmText !== transferTarget.user?.username}
                 onClick={() => void handleTransfer()}
-                className="rounded px-3 py-1.5 text-sm font-medium"
-                style={{ backgroundColor: "var(--color-danger)", color: "white" }}
+                className="btn btn-danger px-3 py-1.5"
               >
                 Transfer ownership
               </button>

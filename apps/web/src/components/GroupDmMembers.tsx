@@ -11,12 +11,13 @@ import { describeError } from "../lib/errors.js";
 import { leftDmIds } from "../lib/dms.js";
 import { useRealtime } from "../lib/useRealtime.js";
 import { presenceUiStore } from "../lib/presence.js";
+import { PlusIcon } from "./icons.js";
 
 const PRESENCE_COLOR: Record<string, string> = {
-  online: "#3ba55d",
-  idle: "#faa61a",
-  dnd: "#ed4245",
-  offline: "#747f8d",
+  online: "var(--color-online)",
+  idle: "var(--color-idle)",
+  dnd: "var(--color-dnd)",
+  offline: "var(--color-offline)",
 };
 
 export default function GroupDmMembers({ channel }: { channel: DmChannelJson }) {
@@ -58,26 +59,25 @@ export default function GroupDmMembers({ channel }: { channel: DmChannelJson }) 
   return (
     <aside
       aria-label="Group members"
-      className="flex w-60 shrink-0 flex-col gap-1 overflow-y-auto p-2"
-      style={{ backgroundColor: "var(--color-bg-members)" }}
+      className="panel flex w-60 shrink-0 flex-col gap-1 overflow-y-auto p-2"
     >
-      <div className="mb-1 mt-2 px-2 text-xs font-semibold uppercase" style={{ color: "var(--color-text-muted)" }}>
+      <div className="eyebrow mb-1 mt-2 px-2">
         Members ({channel.recipients.length})
       </div>
       <ul className="flex flex-col gap-0.5">
         {channel.recipients.map((user) => (
-          <li key={user.id} className="group flex items-center gap-2 rounded px-2 py-1" data-group-member={user.displayName}>
+          <li key={user.id} className="group flex h-10 items-center gap-2.5 rounded-lg px-2 hover:bg-hover" data-group-member={user.displayName}>
             <div className="relative">
               <Avatar user={user} size={28} />
               <span
                 aria-hidden="true"
-                className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2"
-                style={{ backgroundColor: PRESENCE_COLOR[statusOf(user.id)], borderColor: "var(--color-bg-members)" }}
+                className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-sidebar"
+                style={{ backgroundColor: PRESENCE_COLOR[statusOf(user.id)] }}
               />
             </div>
             <span className="min-w-0 flex-1 truncate text-sm">{user.displayName}</span>
             {user.id === channel.ownerId && (
-              <span className="text-xs" style={{ color: "#faa61a" }} title="Group owner">
+              <span className="rounded bg-warning-soft px-1.5 py-0.5 text-[11px] font-medium text-warning-text" title="Group owner">
                 Owner
               </span>
             )}
@@ -86,8 +86,7 @@ export default function GroupDmMembers({ channel }: { channel: DmChannelJson }) 
                 type="button"
                 aria-label={`Remove ${user.displayName} from the group`}
                 onClick={() => void run(() => removeDmRecipient(session.apiClient, channel.id, user.id))}
-                className="hidden rounded px-1 text-xs group-hover:block group-focus-within:block"
-                style={{ color: "var(--color-danger-text)" }}
+                className="btn btn-danger-ghost hidden px-1.5 py-0.5 text-xs group-hover:inline-flex group-focus-within:inline-flex"
               >
                 Remove
               </button>
@@ -96,7 +95,7 @@ export default function GroupDmMembers({ channel }: { channel: DmChannelJson }) 
         ))}
       </ul>
       {error && (
-        <p role="alert" className="px-2 text-xs" style={{ color: "var(--color-danger-text)" }}>
+        <p role="alert" className="px-2 text-xs text-danger-text">
           {error}
         </p>
       )}
@@ -107,24 +106,23 @@ export default function GroupDmMembers({ channel }: { channel: DmChannelJson }) 
             disabled={full}
             title={full ? `A group DM can have at most ${MAX_GROUP_DM_MEMBERS} people.` : undefined}
             onClick={() => setAdding(true)}
-            className="rounded px-2 py-1 text-left text-sm disabled:opacity-50"
-            style={{ backgroundColor: "var(--color-bg-main)" }}
+            className="btn btn-secondary justify-start px-2.5 py-1.5"
           >
+            <PlusIcon size={14} />
             Add friends
           </button>
         )}
         {confirmingLeave ? (
-          <div className="flex flex-col gap-1 rounded border p-2 text-sm" style={{ borderColor: "var(--color-border)" }}>
+          <div className="card flex flex-col gap-2 rounded-lg p-2.5 text-sm">
             <span>Leave this group? You cannot come back unless the owner adds you again.</span>
             <div className="flex justify-end gap-1">
-              <button type="button" onClick={() => setConfirmingLeave(false)} className="rounded px-2 py-1 text-xs">
+              <button type="button" onClick={() => setConfirmingLeave(false)} className="btn btn-ghost px-2 py-1 text-xs">
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={() => void run(leaveGroup)}
-                className="rounded px-2 py-1 text-xs font-medium"
-                style={{ backgroundColor: "var(--color-danger)", color: "white" }}
+                className="btn btn-danger px-2 py-1 text-xs"
               >
                 Leave group
               </button>
@@ -134,8 +132,7 @@ export default function GroupDmMembers({ channel }: { channel: DmChannelJson }) 
           <button
             type="button"
             onClick={() => setConfirmingLeave(true)}
-            className="rounded px-2 py-1 text-left text-sm"
-            style={{ color: "var(--color-danger-text)" }}
+            className="btn btn-danger-ghost justify-start px-2.5 py-1.5"
           >
             Leave group
           </button>

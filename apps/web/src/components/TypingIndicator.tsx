@@ -43,8 +43,7 @@ export function TypingIndicator({ channelId, guildId }: { channelId: string; gui
       role="status"
       aria-live="polite"
       aria-atomic="true"
-      className="h-5 truncate px-4 text-xs"
-      style={{ color: "var(--color-text-muted)" }}
+      className="h-5 truncate px-4 text-xs text-muted"
     >
       {text}
     </div>

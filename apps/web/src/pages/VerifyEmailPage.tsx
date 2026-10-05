@@ -47,7 +47,7 @@ export function VerifyEmailPage() {
       {status === "checking" && <p className="text-sm">Checking your link...</p>}
       {status === "done" && <p className="text-sm">Your email address is verified. You can close this page.</p>}
       {status === "failed" && (
-        <p role="alert" className="text-sm" style={{ color: "var(--color-danger-text)" }}>
+        <p role="alert" className="text-sm text-danger-text">
           {error}
         </p>
       )}

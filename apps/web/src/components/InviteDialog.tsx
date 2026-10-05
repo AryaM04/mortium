@@ -81,8 +81,7 @@ export function InviteDialog({
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      className="w-full max-w-sm rounded-lg border p-6"
-      style={{ borderColor: "var(--color-border)", backgroundColor: "var(--color-bg-sidebar)", color: "var(--color-text-primary)" }}
+      className="w-full max-w-sm p-6"
       aria-label="Invite people"
     >
       <h2 className="mb-4 text-lg font-semibold">Invite people</h2>
@@ -96,8 +95,7 @@ export function InviteDialog({
             id="invite-age"
             value={maxAgeSeconds}
             onChange={(e) => setMaxAgeSeconds(Number(e.target.value) as InviteMaxAgeSeconds)}
-            className="mb-4 w-full rounded border px-3 py-2 text-sm"
-            style={{ backgroundColor: "var(--color-bg-main)", borderColor: "var(--color-border)", color: "var(--color-text-primary)" }}
+            className="field mb-4 w-full px-3 py-2 text-sm"
           >
             {INVITE_MAX_AGE_SECONDS.map((seconds) => (
               <option key={seconds} value={seconds}>
@@ -113,8 +111,7 @@ export function InviteDialog({
             id="invite-uses"
             value={maxUses}
             onChange={(e) => setMaxUses(Number(e.target.value))}
-            className="mb-4 w-full rounded border px-3 py-2 text-sm"
-            style={{ backgroundColor: "var(--color-bg-main)", borderColor: "var(--color-border)", color: "var(--color-text-primary)" }}
+            className="field mb-4 w-full px-3 py-2 text-sm"
           >
             {USE_LIMITS.map((limit) => (
               <option key={limit} value={limit}>
@@ -124,21 +121,20 @@ export function InviteDialog({
           </select>
 
           {error && (
-            <p role="alert" className="mb-4 text-sm" style={{ color: "var(--color-danger-text)" }}>
+            <p role="alert" className="mb-4 text-sm text-danger-text">
               {error}
             </p>
           )}
 
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={onClose} className="rounded px-3 py-2 text-sm">
+            <button type="button" onClick={onClose} className="btn btn-ghost">
               Cancel
             </button>
             <button
               type="button"
               disabled={pending}
               onClick={handleCreate}
-              className="rounded px-3 py-2 text-sm font-medium"
-              style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+              className="btn btn-primary"
             >
               {pending ? "Creating..." : "Generate invite"}
             </button>
@@ -154,25 +150,23 @@ export function InviteDialog({
               id="invite-link"
               readOnly
               value={inviteUrl}
-              className="flex-1 rounded border px-3 py-2 text-sm"
-              style={{ backgroundColor: "var(--color-bg-main)", borderColor: "var(--color-border)", color: "var(--color-text-primary)" }}
+              className="field flex-1 px-3 py-2 text-sm"
             />
             <button
               type="button"
               onClick={handleCopy}
-              className="rounded px-3 py-2 text-sm font-medium"
-              style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+              className="btn btn-primary"
             >
               {copied ? "Copied" : "Copy"}
             </button>
           </div>
           {error && (
-            <p role="alert" className="mb-4 text-sm" style={{ color: "var(--color-danger-text)" }}>
+            <p role="alert" className="mb-4 text-sm text-danger-text">
               {error}
             </p>
           )}
           <div className="flex justify-end">
-            <button type="button" onClick={onClose} className="rounded px-3 py-2 text-sm">
+            <button type="button" onClick={onClose} className="btn btn-ghost">
               Done
             </button>
           </div>

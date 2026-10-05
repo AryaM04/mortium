@@ -107,13 +107,14 @@ function MainShell() {
   const params = useParams<{ guildId?: string; channelId?: string }>();
 
   return (
-    <div className="flex h-full w-full flex-col">
+    <div className="flex h-full w-full flex-col bg-canvas">
       <VerifyBanner />
       <SecurityBanner />
       <NoticeBanner />
       <CryptoTabBanner />
       <ShortcutHandler guildId={params.guildId} channelId={params.channelId} />
-      <div className="flex flex-1">
+      {/* The rail sits on the canvas. The other columns are floating panels with a small gap. */}
+      <div className="flex min-h-0 flex-1 gap-1.5 py-1.5 pr-1.5">
         <ServerRail activeGuildId={params.guildId} />
         {params.guildId === "@me" ? (
           <HomeView channelId={params.channelId ?? null} />

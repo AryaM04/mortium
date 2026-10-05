@@ -305,8 +305,7 @@ export function MessageList({
           onClick={() => {
             virtuosoRef.current?.scrollToIndex({ index: rows.length - 1, behavior: smoothScroll() });
           }}
-          className="absolute bottom-3 right-4 rounded-full px-3 py-1 text-xs font-medium shadow"
-          style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+          className="btn btn-primary absolute bottom-3 right-4 rounded-full px-3 py-1 text-xs shadow-[var(--shadow-soft)]"
         >
           Jump to present
         </button>

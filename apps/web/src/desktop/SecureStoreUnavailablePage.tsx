@@ -10,7 +10,7 @@ export function SecureStoreUnavailablePage({ reason }: { reason: string }) {
         {reason}
       </p>
       <p className="mb-2 text-sm font-semibold">To correct the problem:</p>
-      <ol className="mb-4 list-decimal pl-5 text-sm" style={{ color: "var(--color-text-muted)" }}>
+      <ol className="mb-4 list-decimal pl-5 text-sm text-muted">
         <li>Install GNOME Keyring (package gnome-keyring) or KWallet.</li>
         <li>Make sure that the key ring starts with your desktop session and is unlocked.</li>
         <li>

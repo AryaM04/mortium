@@ -100,8 +100,7 @@ export function QuickSwitcher({ guildId, onClose }: { guildId: string | null; on
           setActive(0);
         }}
         onKeyDown={onKeyDown}
-        className="mb-2 w-full rounded border px-3 py-2 text-sm"
-        style={{ backgroundColor: "var(--color-bg-main)", borderColor: "var(--color-border)", color: "var(--color-text-primary)" }}
+        className="field mb-2 w-full px-3 py-2 text-sm"
       />
       <ul id="quick-switcher-list" role="listbox" aria-label="Results" className="max-h-72 overflow-y-auto">
         {results.map((target, index) => (
@@ -117,13 +116,13 @@ export function QuickSwitcher({ guildId, onClose }: { guildId: string | null; on
             style={{ backgroundColor: index === current ? "var(--color-bg-main)" : "transparent" }}
           >
             <span className="truncate">{target.label}</span>
-            <span className="shrink-0 text-xs" style={{ color: "var(--color-text-muted)" }}>
+            <span className="shrink-0 text-xs text-muted">
               {target.hint}
             </span>
           </li>
         ))}
       </ul>
-      <div role="status" className="px-3 pt-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
+      <div role="status" className="px-3 pt-1 text-xs text-muted">
         {results.length === 0 ? "No match." : ""}
       </div>
     </dialog>
@@ -142,7 +141,7 @@ export function ShortcutsHelp({ onClose }: { onClose: () => void }) {
       style={dialogStyle}
     >
       <h2 className="mb-4 text-lg font-semibold">Keyboard shortcuts</h2>
-      <p className="mb-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
+      <p className="mb-3 text-xs text-muted">
         Only Quick switcher and Escape work while the focus is in a text field.
       </p>
       <dl className="mb-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
@@ -157,8 +156,7 @@ export function ShortcutsHelp({ onClose }: { onClose: () => void }) {
         <button
           type="button"
           onClick={() => ref.current?.close()}
-          className="rounded px-3 py-2 text-sm font-medium"
-          style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+          className="btn btn-primary"
         >
           Close
         </button>

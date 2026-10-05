@@ -46,7 +46,7 @@ export function AuthCallbackPage() {
   return (
     <AuthLayout title="Signing you in">
       {error ? (
-        <p role="alert" className="text-sm" style={{ color: "var(--color-danger-text)" }}>
+        <p role="alert" className="text-sm text-danger-text">
           {error}
         </p>
       ) : (

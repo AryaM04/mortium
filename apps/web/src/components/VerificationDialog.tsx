@@ -40,8 +40,8 @@ export default function VerificationDialog() {
   }
   const crypto = currentCrypto();
   const { txnId, phase } = view;
-  const button = "rounded px-3 py-2 text-sm";
-  const primary = { backgroundColor: "var(--color-accent)", color: "white" };
+  const button = "btn btn-ghost";
+  const primary = { backgroundColor: "var(--color-accent)", color: "var(--color-on-accent)" };
 
   return (
     <dialog
@@ -51,8 +51,7 @@ export default function VerificationDialog() {
         event.preventDefault();
         void crypto?.verification.cancel(txnId);
       }}
-      className="w-full max-w-md rounded-lg border p-6"
-      style={{ borderColor: "var(--color-border)", backgroundColor: "var(--color-bg-sidebar)", color: "var(--color-text-primary)" }}
+      className="w-full max-w-md p-6"
     >
       <h2 className="mb-3 text-lg font-semibold">{view.ownUser ? "Verify a device" : `Verify ${who(view)}`}</h2>
 

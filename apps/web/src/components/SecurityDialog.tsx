@@ -11,16 +11,15 @@ import { describeError } from "../lib/errors.js";
 import { newRecoveryKeyStore, saveKeyWrap, whileRestoring } from "../lib/password-unlock.js";
 import { session } from "../lib/session.js";
 
-const button = "rounded px-3 py-2 text-sm";
-const primary = { backgroundColor: "var(--color-accent)", color: "white" };
+const button = "btn btn-ghost";
+const primary = { backgroundColor: "var(--color-accent)", color: "var(--color-on-accent)" };
 const danger = { color: "var(--color-danger-text)" };
-const field = "w-full rounded border px-2 py-1 text-sm";
-const fieldStyle = { backgroundColor: "var(--color-bg-main)", borderColor: "var(--color-border)", color: "var(--color-text-primary)" };
+const field = "field w-full";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mb-5">
-      <h3 className="mb-2 text-sm font-semibold uppercase" style={{ color: "var(--color-text-muted)" }}>
+      <h3 className="eyebrow mb-2">
         {title}
       </h3>
       {children}
@@ -116,8 +115,8 @@ export function BackupSetup({ required = false }: { required?: boolean }) {
           The app makes a recovery key. It encrypts your message keys before they go to the server. You can also set a
           passphrase: then the passphrase gives the same key.
         </p>
-        <input type="password" aria-label="Passphrase (optional)" placeholder="Passphrase (optional)" value={passphrase} onChange={(e) => setPassphrase(e.target.value)} className={field} style={fieldStyle} />
-        <input type="password" aria-label="Type the passphrase again" placeholder="Type the passphrase again" value={again} onChange={(e) => setAgain(e.target.value)} className={field} style={fieldStyle} />
+        <input type="password" aria-label="Passphrase (optional)" placeholder="Passphrase (optional)" value={passphrase} onChange={(e) => setPassphrase(e.target.value)} className={field} />
+        <input type="password" aria-label="Type the passphrase again" placeholder="Type the passphrase again" value={again} onChange={(e) => setAgain(e.target.value)} className={field} />
         <div className="flex justify-end gap-2">
           {!required && (
             <button type="button" className={button} onClick={() => setState({ step: "idle" })}>
@@ -138,20 +137,20 @@ export function BackupSetup({ required = false }: { required?: boolean }) {
         Write down this recovery key and keep it in a safe place. You see it only one time. Without it (or the passphrase),
         a new device cannot read your old messages.
       </p>
-      <code data-testid="recovery-key" className="rounded p-2 text-center font-mono text-sm" style={{ backgroundColor: "var(--color-bg-main)" }}>
+      <code data-testid="recovery-key" className="rounded-lg border border-line-strong bg-input p-3 text-center font-mono text-sm text-accent-text">
         {state.recoveryKey}
       </code>
       <div className="flex gap-3 text-sm">
-        <button type="button" className="underline" onClick={() => void navigator.clipboard?.writeText(state.recoveryKey)}>
+        <button type="button" className="link" onClick={() => void navigator.clipboard?.writeText(state.recoveryKey)}>
           Copy
         </button>
-        <button type="button" className="underline" onClick={() => downloadKey(state.recoveryKey)}>
+        <button type="button" className="link" onClick={() => downloadKey(state.recoveryKey)}>
           Download
         </button>
       </div>
       <label className="text-sm">
         Type the last group of the key to confirm that you wrote it down.
-        <input aria-label="Last group of the recovery key" value={lastGroup} onChange={(e) => setLastGroup(e.target.value)} className={`${field} mt-1`} style={fieldStyle} />
+        <input aria-label="Last group of the recovery key" value={lastGroup} onChange={(e) => setLastGroup(e.target.value)} className={`${field} mt-1`} />
       </label>
       <div className="flex justify-end gap-2">
         {!required && (
@@ -214,10 +213,9 @@ export function Restore() {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         className={`${field} font-mono`}
-        style={fieldStyle}
       />
       <div className="flex justify-between gap-2">
-        <button type="button" className="text-sm underline" onClick={() => setUsePassphrase(!usePassphrase)}>
+        <button type="button" className="text-sm link" onClick={() => setUsePassphrase(!usePassphrase)}>
           {usePassphrase ? "Use the recovery key" : "Use the passphrase"}
         </button>
         <button type="button" className={button} style={primary} disabled={pending || value.trim() === ""} onClick={() => void restore()}>
@@ -261,7 +259,7 @@ export function ResetIdentity() {
   }
   if (!open) {
     return (
-      <button type="button" className="text-sm underline" style={danger} onClick={() => setOpen(true)}>
+      <button type="button" className="text-sm link" style={danger} onClick={() => setOpen(true)}>
         Reset the identity
       </button>
     );
@@ -272,12 +270,12 @@ export function ResetIdentity() {
         Caution: do this only when you lost all your verified devices and your recovery key. After the reset, your other
         devices are not verified, the key backup is deleted, and other people see a warning that your identity changed.
       </p>
-      <input type="password" aria-label="Account password" placeholder="Account password" value={password} onChange={(e) => setPassword(e.target.value)} className={field} style={fieldStyle} />
+      <input type="password" aria-label="Account password" placeholder="Account password" value={password} onChange={(e) => setPassword(e.target.value)} className={field} />
       <div className="flex justify-end gap-2">
         <button type="button" className={button} onClick={() => setOpen(false)}>
           Cancel
         </button>
-        <button type="button" className={button} style={{ backgroundColor: "#a12d2d", color: "white" }} disabled={pending || password === ""} onClick={() => void reset()}>
+        <button type="button" className={button} style={{ backgroundColor: "var(--color-danger)", color: "#ffffff" }} disabled={pending || password === ""} onClick={() => void reset()}>
           Reset the identity
         </button>
       </div>
@@ -326,8 +324,7 @@ export default function SecurityDialog({ open, onClose }: { open: boolean; onClo
       ref={dialogRef}
       onClose={onClose}
       aria-label="Security"
-      className="w-full max-w-lg rounded-lg border p-6"
-      style={{ borderColor: "var(--color-border)", backgroundColor: "var(--color-bg-sidebar)", color: "var(--color-text-primary)" }}
+      className="w-full max-w-lg p-6"
     >
       <h2 className="mb-4 text-lg font-semibold">Security</h2>
       {!security.ready ? (
@@ -354,9 +351,9 @@ export default function SecurityDialog({ open, onClose }: { open: boolean; onClo
                     {device.current ? " (this device)" : ""}
                   </span>
                   <span className="flex items-center gap-2">
-                    <span style={{ color: device.verified ? "#3ba55d" : "#e0a352" }}>{device.verified ? "Verified" : "Not verified"}</span>
+                    <span style={{ color: device.verified ? "var(--color-success-text)" : "var(--color-warning-text)" }}>{device.verified ? "Verified" : "Not verified"}</span>
                     {!device.current && !device.verified && security.deviceVerified && (
-                      <button type="button" className="underline" onClick={() => void verify(device.deviceId)}>
+                      <button type="button" className="link" onClick={() => void verify(device.deviceId)}>
                         Verify
                       </button>
                     )}
@@ -390,7 +387,7 @@ export default function SecurityDialog({ open, onClose }: { open: boolean; onClo
             {backup?.version && (
               <button
                 type="button"
-                className="mt-3 text-sm underline"
+                className="mt-3 text-sm link"
                 style={danger}
                 onClick={() => void currentCrypto()?.security.deleteBackup().catch((err: unknown) => setError(describeError(err)))}
               >

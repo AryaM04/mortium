@@ -189,8 +189,7 @@ export function EmojiPicker({ anchorEl, onPick, onClose }: EmojiPickerProps) {
       </div>
       {!searching && (
         <div
-          className="flex gap-1 overflow-x-auto border-b px-2 pb-1"
-          style={{ borderColor: "var(--color-border)" }}
+          className="flex gap-1 overflow-x-auto border-b px-2 pb-1 border-line"
           role="tablist"
           aria-label="Emoji categories"
         >
@@ -214,7 +213,7 @@ export function EmojiPicker({ anchorEl, onPick, onClose }: EmojiPickerProps) {
       )}
       <div className="grid max-h-56 grid-cols-8 gap-0.5 overflow-y-auto p-2" role="group" aria-label="Emoji">
         {items.length === 0 && (
-          <p className="col-span-8 py-4 text-center text-xs" style={{ color: "var(--color-text-muted)" }}>
+          <p className="col-span-8 py-4 text-center text-xs text-muted">
             No emoji found.
           </p>
         )}
@@ -237,7 +236,7 @@ export function EmojiPicker({ anchorEl, onPick, onClose }: EmojiPickerProps) {
         ))}
       </div>
       {category === RECENT_CATEGORY && !searching && recent.length === 0 && (
-        <p className="px-3 pb-2 text-xs" style={{ color: "var(--color-text-muted)" }}>
+        <p className="px-3 pb-2 text-xs text-muted">
           You have no recent emoji. They keep the last {MAX_RECENT_EMOJI} you used.
         </p>
       )}

@@ -67,11 +67,10 @@ export function PickFriendsDialog({
       ref={dialogRef}
       onClose={onClose}
       aria-label={title}
-      className="w-full max-w-sm rounded-lg border p-5"
-      style={{ borderColor: "var(--color-border)", backgroundColor: "var(--color-bg-sidebar)", color: "var(--color-text-primary)" }}
+      className="w-full max-w-sm p-5"
     >
       <h2 className="mb-1 text-lg font-semibold">{title}</h2>
-      <p className="mb-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
+      <p className="mb-3 text-xs text-muted">
         You can pick {max - picked.length} more {max - picked.length === 1 ? "friend" : "friends"}.
       </p>
       <input
@@ -79,12 +78,11 @@ export function PickFriendsDialog({
         placeholder="Type the name of a friend"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
-        className="mb-2 w-full rounded border px-2 py-1 text-sm"
-        style={{ backgroundColor: "var(--color-bg-main)", borderColor: "var(--color-border)", color: "var(--color-text-primary)" }}
+        className="field mb-2 w-full px-2 py-1 text-sm"
       />
       <ul className="mb-3 flex max-h-64 flex-col gap-1 overflow-y-auto">
         {friends.length === 0 && (
-          <li className="px-2 py-2 text-sm" style={{ color: "var(--color-text-muted)" }}>
+          <li className="px-2 py-2 text-sm text-muted">
             No friends to show.
           </li>
         )}
@@ -101,7 +99,7 @@ export function PickFriendsDialog({
                 />
                 <Avatar user={user} size={24} />
                 <span className="truncate">{user.displayName}</span>
-                <span className="truncate text-xs" style={{ color: "var(--color-text-muted)" }}>
+                <span className="truncate text-xs text-muted">
                   @{user.username}
                 </span>
               </label>
@@ -110,20 +108,19 @@ export function PickFriendsDialog({
         })}
       </ul>
       {error && (
-        <p role="alert" className="mb-2 text-sm" style={{ color: "var(--color-danger-text)" }}>
+        <p role="alert" className="mb-2 text-sm text-danger-text">
           {error}
         </p>
       )}
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={onClose} className="rounded px-3 py-2 text-sm">
+        <button type="button" onClick={onClose} className="btn btn-ghost">
           Cancel
         </button>
         <button
           type="button"
           disabled={pending || picked.length === 0}
           onClick={() => void confirm()}
-          className="rounded px-3 py-2 text-sm font-medium disabled:opacity-50"
-          style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+          className="btn btn-primary"
         >
           {confirmLabel}
         </button>

@@ -18,7 +18,7 @@ export function Avatar({ user, size = 40 }: { user: User; size?: number }) {
       <img
         src={serverUrl(`/api/v1/avatars/${user.id}/${user.avatarKey}`)}
         alt={`${user.displayName}'s avatar`}
-        className="rounded-full object-cover"
+        className="shrink-0 rounded-full object-cover"
         style={style}
         onError={() => setFailed(true)}
       />
@@ -27,8 +27,8 @@ export function Avatar({ user, size = 40 }: { user: User; size?: number }) {
 
   return (
     <div
-      className="flex items-center justify-center rounded-full font-semibold"
-      style={{ ...style, backgroundColor: "var(--color-accent)", color: "white" }}
+      className="flex shrink-0 items-center justify-center rounded-full bg-avatar font-semibold text-avatar-text"
+      style={style}
       aria-hidden="true"
     >
       {initialsOf(user.displayName)}

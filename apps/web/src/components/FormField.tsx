@@ -13,24 +13,19 @@ export function FormField({ label, error, id, ...inputProps }: FormFieldProps) {
   const errorId = `${inputId}-error`;
 
   return (
-    <div className="mb-4 flex flex-col gap-1">
-      <label htmlFor={inputId} className="text-sm font-medium">
+    <div className="mb-4 flex flex-col gap-1.5">
+      <label htmlFor={inputId} className="text-[13px] font-medium text-secondary">
         {label}
       </label>
       <input
         id={inputId}
         aria-invalid={error ? "true" : "false"}
         aria-describedby={error ? errorId : undefined}
-        className="rounded border px-3 py-2 text-sm"
-        style={{
-          backgroundColor: "var(--color-bg-main)",
-          borderColor: error ? "var(--color-danger-text)" : "var(--color-border)",
-          color: "var(--color-text-primary)",
-        }}
+        className="field"
         {...inputProps}
       />
       {error && (
-        <p id={errorId} role="alert" style={{ color: "var(--color-danger-text)" }} className="text-sm">
+        <p id={errorId} role="alert" className="text-sm text-danger-text">
           {error}
         </p>
       )}
