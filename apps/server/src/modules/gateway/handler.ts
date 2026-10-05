@@ -53,6 +53,12 @@ const DEFAULT_HEARTBEAT_INTERVAL_MS = 30_000;
 const DEFAULT_IDENTIFY_TIMEOUT_MS = 10_000;
 const HEARTBEAT_TIMEOUT_FACTOR = 1.5;
 const RATE_LIMIT_MAX_MESSAGES = 120;
+/**
+ * TO_DEVICE_SEND has its own, higher limit. A voice call sends each offer,
+ * answer, ICE candidate and media signal as one op, so a join or a camera
+ * toggle in a call of 10 users sends some hundred ops.
+ */
+const TO_DEVICE_RATE_LIMIT_MAX_MESSAGES = 1_200;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const MAX_PAYLOAD_BYTES = 64 * 1024;
 
@@ -61,6 +67,8 @@ interface ConnectionState {
   identifyTimer: ReturnType<typeof setTimeout> | null;
   heartbeatTimer: ReturnType<typeof setTimeout> | null;
   messageTimestamps: number[];
+  /** The times of the TO_DEVICE_SEND ops. They do not count toward `messageTimestamps`. */
+  toDeviceTimestamps: number[];
   closed: boolean;
   /** TO_DEVICE_SEND ops of this connection run one after the other, so the queue keeps their order. */
   toDeviceChain: Promise<void>;
@@ -70,6 +78,7 @@ async function buildReadyPayload(
   db: DbClient,
   gateway: GatewayService,
   voice: VoiceService,
+  ringer: CallRinger | undefined,
   userId: bigint,
   deviceId: string,
   sessionId: string,
@@ -95,6 +104,7 @@ async function buildReadyPayload(
     relationships,
     privateChannels,
     privateVoiceStates,
+    incomingCalls: ringer?.ringsFor(userId) ?? [],
     oneTimeKeyCount,
     needsFallbackKey,
   };
@@ -141,6 +151,7 @@ export function registerGatewayRoute(
       identifyTimer: null,
       heartbeatTimer: null,
       messageTimestamps: [],
+      toDeviceTimestamps: [],
       closed: false,
       toDeviceChain: Promise.resolve(),
     };
@@ -256,7 +267,7 @@ export function registerGatewayRoute(
       gateway.notifyConnectionCountChanged(claims.userId);
       voice.claimForSession(claims.userId, claims.deviceId, session.id, (id) => gateway.hasLiveSession(id));
 
-      const ready = await buildReadyPayload(db, gateway, voice, claims.userId, claims.deviceId, session.id);
+      const ready = await buildReadyPayload(db, gateway, voice, ringer, claims.userId, claims.deviceId, session.id);
       // A close during the build already detached the session.
       if (state.closed) {
         return;
@@ -469,20 +480,28 @@ export function registerGatewayRoute(
         return;
       }
 
-      const now = Date.now();
-      state.messageTimestamps = state.messageTimestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-      state.messageTimestamps.push(now);
-      if (state.messageTimestamps.length > RATE_LIMIT_MAX_MESSAGES) {
-        closeConnection(GatewayCloseCode.RATE_LIMITED, "Too many messages.");
-        return;
-      }
-
       let envelope;
       try {
         const text = typeof raw === "string" ? raw : raw.toString("utf8");
         envelope = gatewayEnvelopeSchema.parse(JSON.parse(text));
       } catch {
         closeConnection(GatewayCloseCode.DECODE_ERROR, "The message is not a valid gateway envelope.");
+        return;
+      }
+
+      const now = Date.now();
+      const isToDevice = envelope.op === GatewayOpcode.TO_DEVICE_SEND;
+      const timestamps = (isToDevice ? state.toDeviceTimestamps : state.messageTimestamps).filter(
+        (t) => now - t < RATE_LIMIT_WINDOW_MS,
+      );
+      timestamps.push(now);
+      if (isToDevice) {
+        state.toDeviceTimestamps = timestamps;
+      } else {
+        state.messageTimestamps = timestamps;
+      }
+      if (timestamps.length > (isToDevice ? TO_DEVICE_RATE_LIMIT_MAX_MESSAGES : RATE_LIMIT_MAX_MESSAGES)) {
+        closeConnection(GatewayCloseCode.RATE_LIMITED, "Too many messages.");
         return;
       }
 

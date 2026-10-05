@@ -83,6 +83,10 @@ export function toVoiceStateUpdate(state: VoiceState, leaving = false): VoiceSta
   };
 }
 
+function sameGuild(state: VoiceState | undefined, guildId: bigint | null): state is VoiceState {
+  return state !== undefined && guildId !== null && state.guildId === guildId;
+}
+
 export class VoiceService {
   private readonly graceMs: number;
   private readonly userPeer = new Map<string, VoiceState>();
@@ -147,12 +151,9 @@ export class VoiceService {
    * caller can broadcast a leave for the old channel.
    */
   join(input: JoinInput): { state: VoiceState; previous: VoiceState | null } {
-    const peers = this.channelPeers.get(input.channelId.toString());
-    if (peers && peers.size >= VOICE_CHANNEL_CAP) {
-      throw new VoiceError("CHANNEL_FULL", "This voice channel already has the most members it can hold.");
-    }
-
     const existing = this.userPeer.get(input.userId.toString());
+    this.checkCapacity(input.channelId, existing);
+
     let previous: VoiceState | null = null;
     if (existing) {
       previous = existing;
@@ -169,14 +170,27 @@ export class VoiceService {
       selfDeaf: input.selfDeaf,
       selfVideo: false,
       selfStream: false,
-      serverMute: false,
-      serverDeaf: false,
+      // A rejoin in the same guild keeps the moderator flags, so that a rejoin does not remove them.
+      serverMute: sameGuild(existing, input.guildId) ? existing.serverMute : false,
+      serverDeaf: sameGuild(existing, input.guildId) ? existing.serverDeaf : false,
       joinedAt: new Date().toISOString(),
       callId: input.callId,
       sessionId: input.sessionId,
     };
     this.addInternal(state);
     return { state, previous };
+  }
+
+  /**
+   * Throw CHANNEL_FULL when the channel has no free place. The old state of
+   * the user does not count, because the join or the move replaces it.
+   */
+  private checkCapacity(channelId: bigint, existing: VoiceState | undefined): void {
+    const peers = this.channelPeers.get(channelId.toString());
+    const ownPlace = existing && existing.channelId === channelId ? 1 : 0;
+    if (peers && peers.size - ownPlace >= VOICE_CHANNEL_CAP) {
+      throw new VoiceError("CHANNEL_FULL", "This voice channel already has the most members it can hold.");
+    }
   }
 
   /** Leave voice. A no-op (returns null) when the caller is not the live device for this user. */
@@ -359,13 +373,12 @@ export class VoiceService {
       this.clearGrace(existing);
       return { previous: existing, next: null };
     }
-    const peers = this.channelPeers.get(channelId.toString());
-    if (peers && peers.size >= VOICE_CHANNEL_CAP) {
-      throw new VoiceError("CHANNEL_FULL", "This voice channel already has the most members it can hold.");
-    }
+    this.checkCapacity(channelId, existing);
     this.removeInternal(existing);
     this.clearGrace(existing);
-    const next: VoiceState = { ...existing, channelId };
+    // The client joins the new channel again with a new call id. Until then it
+    // sends no camera or screen share there, and the one-stream check must apply.
+    const next: VoiceState = { ...existing, channelId, selfVideo: false, selfStream: false };
     this.addInternal(next);
     return { previous: existing, next };
   }

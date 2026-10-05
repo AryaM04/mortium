@@ -10,6 +10,8 @@ export const DEFAULT_CALL_RING_MS = 30_000;
 
 interface Ring {
   timer: ReturnType<typeof setTimeout>;
+  /** The user who started the call. */
+  callerId: bigint;
   /** The people who got CALL_RING. They all get CALL_RING_STOP. */
   recipientIds: bigint[];
 }
@@ -31,7 +33,7 @@ export class CallRinger {
     }
     const timer = setTimeout(() => this.stop(channelId), this.ringMs);
     timer.unref?.();
-    this.rings.set(key, { timer, recipientIds: targets });
+    this.rings.set(key, { timer, callerId, recipientIds: targets });
     this.gateway.toUsers(targets, DispatchEvent.CALL_RING, { channelId: key, userId: callerId.toString() });
   }
 
@@ -45,6 +47,17 @@ export class CallRinger {
     clearTimeout(ring.timer);
     this.rings.delete(key);
     this.gateway.toUsers(ring.recipientIds, DispatchEvent.CALL_RING_STOP, { channelId: key });
+  }
+
+  /** Each call that rings for `userId` now, in the shape of a CALL_RING payload. */
+  ringsFor(userId: bigint): Array<{ channelId: string; userId: string }> {
+    const result: Array<{ channelId: string; userId: string }> = [];
+    for (const [channelId, ring] of this.rings) {
+      if (ring.recipientIds.includes(userId)) {
+        result.push({ channelId, userId: ring.callerId.toString() });
+      }
+    }
+    return result;
   }
 
   isRinging(channelId: bigint): boolean {

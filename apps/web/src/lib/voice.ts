@@ -245,6 +245,13 @@ async function loadEngine(): Promise<VoiceEngine> {
       created.on("error", (error) => {
         voiceStore.setState({ errorMessage: describeError(error) });
       });
+      created.on("forcedMute", () => {
+        // The server refused an unmute. In push-to-talk mode, the next key press tries again.
+        if (voiceDeviceSettingsStore.getState().inputMode !== "push-to-talk") {
+          manualMuted = true;
+        }
+        voiceStore.setState({ muted: true });
+      });
       created.on("localMedia", ({ cameraOn, screenOn }) => {
         voiceStore.setState({
           cameraOn,
@@ -281,8 +288,29 @@ async function loadEngine(): Promise<VoiceEngine> {
               localScreenStream: null,
             });
           }
+          // A moderator moved this device to another channel. The server keeps
+          // the call id, so join the new channel locally with a new call id.
+          const current = voiceStore.getState();
+          if (
+            update.channelId !== null &&
+            update.userId === selfUserId &&
+            update.deviceId === selfDeviceId &&
+            update.callId === callId &&
+            current.status !== "idle" &&
+            update.channelId !== current.channelId
+          ) {
+            void joinVoiceChannel(update.guildId, update.channelId, { keepAudio: true });
+          }
         } else if (event.t === "VOICE_ERROR") {
           created.handleVoiceError(event.d as Parameters<VoiceEngine["handleVoiceError"]>[0]);
+        } else if (event.t === "READY") {
+          // A new session after a long network drop. The server can have
+          // removed the voice state, and the peers ignore signals of a call
+          // that they do not know. Thus join the same channel again.
+          const { status, guildId, channelId } = voiceStore.getState();
+          if (status !== "idle" && channelId !== null) {
+            void joinVoiceChannel(guildId, channelId, { keepAudio: true });
+          }
         }
       });
 
@@ -297,8 +325,15 @@ async function loadEngine(): Promise<VoiceEngine> {
   return engineLoad;
 }
 
-/** Join a voice channel, or a DM call when `guildId` is null. Leave the current call first if there is one. */
-export async function joinVoiceChannel(guildId: string | null, channelId: string): Promise<void> {
+/**
+ * Join a voice channel, or a DM call when `guildId` is null. Leave the current call first if there is one.
+ * With `keepAudio`, the new call keeps the mute and deafen of the current call (a rejoin that the app starts).
+ */
+export async function joinVoiceChannel(
+  guildId: string | null,
+  channelId: string,
+  options: { keepAudio?: boolean } = {},
+): Promise<void> {
   voiceStore.setState({ status: "connecting", guildId, channelId, errorMessage: null });
   let voiceEngine: VoiceEngine;
   try {
@@ -316,21 +351,31 @@ export async function joinVoiceChannel(guildId: string | null, channelId: string
     return;
   }
   const saved = voiceDeviceSettingsStore.getState();
-  if (saved.inputDeviceId) {
-    voiceEngine.setInputDevice(saved.inputDeviceId);
-  }
-  if (saved.outputDeviceId) {
-    void voiceEngine.setOutputDevice(saved.outputDeviceId);
-  }
+  voiceEngine.setInputDevice(saved.inputDeviceId);
+  void voiceEngine.setOutputDevice(saved.outputDeviceId);
   // Set the mic gate before the join, so the engine applies it to the
   // mic track the moment the track exists. In push-to-talk mode the mic
   // is closed for the whole join, and the key works while it connects.
-  manualMuted = false;
-  voiceEngine.setDeafen(false);
-  voiceEngine.setMute(saved.inputMode === "push-to-talk");
-  voiceStore.setState({ muted: saved.inputMode === "push-to-talk", deafened: false, pttActive: false });
+  if (options.keepAudio) {
+    // The engine keeps the mute and the deafen of the current call. Only the push-to-talk key is up again.
+    const muted = manualMuted || saved.inputMode === "push-to-talk";
+    if (muted !== voiceStore.getState().muted) {
+      voiceEngine.setMute(muted);
+    }
+    voiceStore.setState({ muted, pttActive: false });
+  } else {
+    manualMuted = false;
+    const muted = saved.inputMode === "push-to-talk";
+    voiceEngine.setDeafen(false);
+    voiceEngine.setMute(muted);
+    voiceStore.setState({ muted, deafened: false, pttActive: false });
+  }
   setUpPushToTalkIfNeeded();
-  await voiceEngine.join(guildId, channelId);
+  try {
+    await voiceEngine.join(guildId, channelId);
+  } catch {
+    // The server refused the join. The "error" event already carries the reason.
+  }
   if (voiceEngine.channelId === channelId) {
     voiceStore.setState({ status: "connected" });
   } else {
@@ -416,24 +461,24 @@ export function applyPeerVolume(userId: string, volume: number): void {
   engine?.setUserVolume(userId, volume);
 }
 
-/** Hot-swaps the microphone during a call. Does nothing when not in a call; the choice still applies on the next join. */
-export function applyInputDeviceLive(deviceId: string): void {
+/** Hot-swaps the microphone during a call. Null is the default microphone. Does nothing when not in a call; the choice still applies on the next join. */
+export function applyInputDeviceLive(deviceId: string | null): void {
   if (voiceStore.getState().status === "connected") {
     engine?.setInputDevice(deviceId);
   }
 }
 
-/** Hot-swaps the audio output device during a call. Does nothing when not in a call. */
-export function applyOutputDeviceLive(deviceId: string): void {
+/** Hot-swaps the audio output device during a call. Null is the default device. Does nothing when not in a call. */
+export function applyOutputDeviceLive(deviceId: string | null): void {
   if (voiceStore.getState().status === "connected") {
     void engine?.setOutputDevice(deviceId);
   }
 }
 
-/** Hot-swaps the camera during a call, only while the camera is already on. */
-export function applyCameraDeviceLive(deviceId: string): void {
+/** Hot-swaps the camera during a call, only while the camera is already on. Null is the default camera. */
+export function applyCameraDeviceLive(deviceId: string | null): void {
   if (voiceStore.getState().status === "connected" && voiceStore.getState().cameraOn) {
-    void engine?.setCamera(true, deviceId);
+    void engine?.setCamera(true, deviceId ?? undefined);
   }
 }
 
@@ -459,12 +504,12 @@ async function handleDeviceChange(): Promise<void> {
 
   if (settings.inputDeviceId && !ids.has(settings.inputDeviceId)) {
     updateVoiceDeviceSettings({ inputDeviceId: null });
-    engine.setInputDevice("default");
+    engine.setInputDevice(null);
     notice = "The chosen microphone was disconnected. Using the default microphone.";
   }
   if (settings.outputDeviceId && !ids.has(settings.outputDeviceId)) {
     updateVoiceDeviceSettings({ outputDeviceId: null });
-    void engine.setOutputDevice("default");
+    void engine.setOutputDevice(null);
     notice = "The chosen speaker was disconnected. Using the default speaker.";
   }
   if (settings.cameraDeviceId && !ids.has(settings.cameraDeviceId) && voiceStore.getState().cameraOn) {

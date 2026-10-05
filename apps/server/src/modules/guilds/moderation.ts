@@ -263,12 +263,14 @@ export async function applyVoiceModeration(
     }
 
     const moved = voice.moveUser(targetUserId, destinationId);
-    if (moved) {
-      gateway.toUsers(oldViewers, DispatchEvent.VOICE_STATE_UPDATE, toVoiceStateUpdate(moved.previous, true));
-      if (moved.next) {
-        const newViewers = await gateway.computeChannelViewers(db, guildId, destinationId);
-        gateway.toUsers(newViewers, DispatchEvent.VOICE_STATE_UPDATE, toVoiceStateUpdate(moved.next));
-      }
+    if (moved?.next) {
+      // The moved user gets no leave: the client ends a call on a leave with
+      // its call id. It gets the new state, and its client joins the new channel.
+      const newViewers = await gateway.computeChannelViewers(db, guildId, destinationId);
+      const leaveAudience = oldViewers.filter((id) => id !== targetUserId);
+      const stateAudience = newViewers.includes(targetUserId) ? newViewers : [...newViewers, targetUserId];
+      gateway.toUsers(leaveAudience, DispatchEvent.VOICE_STATE_UPDATE, toVoiceStateUpdate(moved.previous, true));
+      gateway.toUsers(stateAudience, DispatchEvent.VOICE_STATE_UPDATE, toVoiceStateUpdate(moved.next));
     }
   }
 }

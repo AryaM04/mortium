@@ -26,6 +26,9 @@ export const ICE_RESTART_BACKOFFS_MS = [1_000, 2_000];
 /** After this many failed restarts, the peer connection is closed and rebuilt from scratch. */
 export const MAX_ICE_RESTARTS = ICE_RESTART_BACKOFFS_MS.length;
 
+/** How long an offer can wait for an answer. Then the engine rolls the offer back and offers again. */
+export const OFFER_ANSWER_TIMEOUT_MS = 10_000;
+
 /** TURN credentials are re-fetched this long before they actually expire. */
 export const TURN_REFRESH_SKEW_MS = 10 * 60 * 1_000;
 
@@ -76,7 +79,6 @@ function keyOf(key: PeerKey): string {
 export interface AudioElementLike {
   srcObject: MediaStream | null;
   muted: boolean;
-  setSinkId?(deviceId: string): Promise<void>;
 }
 
 export interface VoiceEngineDeps {
@@ -119,6 +121,7 @@ export type VoiceEngineErrorKind =
   | "camera-permission-denied"
   | "screen-permission-denied"
   | "output-device-unsupported"
+  | "mic-disconnected"
   | "voice-error"
   | "ice-failed";
 
@@ -134,6 +137,8 @@ export interface VoiceEngineEventMap {
   error: VoiceEngineErrorEvent;
   /** The local camera or screen-share on/off state changed (a toggle call, or the browser's own "Stop sharing"). */
   localMedia: { cameraOn: boolean; screenOn: boolean };
+  /** The engine muted the microphone itself, because the server refused an unmute. */
+  forcedMute: true;
 }
 
 class Emitter<T> {
@@ -169,13 +174,15 @@ export interface VoiceDebugPeerStats {
 }
 
 export interface VoiceEngine {
-  /** Join a voice channel. The guild id is null for the call of a DM or a group DM. */
+  /** Join a voice channel. The guild id is null for the call of a DM or a group DM. Rejects when the server refuses the join. */
   join(guildId: string | null, channelId: string): Promise<void>;
   leave(): Promise<void>;
   setMute(muted: boolean): void;
   setDeafen(deafened: boolean): void;
-  setInputDevice(deviceId: string): void;
-  setOutputDevice(deviceId: string): Promise<void>;
+  /** Use this microphone. Null means the default microphone. */
+  setInputDevice(deviceId: string | null): void;
+  /** Use this speaker or headset. Null means the default output device. */
+  setOutputDevice(deviceId: string | null): Promise<void>;
   setUserVolume(userId: string, volume: number): void;
   /** Turn the local camera on or off, or switch its input device while on. A no-op when not in a call. */
   setCamera(on: boolean, deviceId?: string): Promise<void>;
@@ -263,6 +270,13 @@ function sampleSpeaking(state: SpeakingState): boolean | null {
   return null;
 }
 
+/** The Web Audio nodes and the helper element of one remote audio stream. */
+interface RemoteAudio {
+  source: MediaStreamAudioSourceNode | null;
+  gain: GainNode | null;
+  element: AudioElementLike | null;
+}
+
 interface PeerRuntime {
   key: PeerKey;
   pc: RTCPeerConnection;
@@ -300,9 +314,12 @@ interface PeerRuntime {
   candidateQueue: RTCIceCandidateInit[];
   restartsAttempted: number;
   restartTimer: ReturnType<typeof setTimeout> | null;
-  sourceNode: MediaStreamAudioSourceNode | null;
-  gainNode: GainNode | null;
-  audioEl: AudioElementLike | null;
+  /** Rolls back an offer that got no answer. See `OFFER_ANSWER_TIMEOUT_MS`. */
+  offerTimer: ReturnType<typeof setTimeout> | null;
+  /** The audio nodes of the peer's microphone. */
+  micAudio: RemoteAudio | null;
+  /** The audio nodes of the peer's screen share audio. They are apart from the microphone nodes. */
+  screenAudio: RemoteAudio | null;
   connectionState: RTCPeerConnectionState;
   speakingState: SpeakingState;
   /** This peer's dedicated camera transceiver, added once and reused with `replaceTrack`. Null before the camera is ever turned on. */
@@ -311,6 +328,13 @@ interface PeerRuntime {
   screenTransceiver: RTCRtpTransceiver | null;
   /** This peer's dedicated screen-share audio transceiver (system audio), added once and reused. */
   screenAudioTransceiver: RTCRtpTransceiver | null;
+  /**
+   * The stream id that this peer sees for our camera. A later toggle uses
+   * `replaceTrack`, so the peer keeps the stream id of the first toggle.
+   */
+  cameraSentStreamId: string | null;
+  /** The stream id that this peer sees for our screen share. See `cameraSentStreamId`. */
+  screenSentStreamId: string | null;
   /** The remote camera stream id from the peer's last "media" signal, or null when they report no camera. */
   remoteCameraStreamId: string | null;
   /** The remote screen-share stream id from the peer's last "media" signal, or null when they report no screen share. */
@@ -323,8 +347,8 @@ interface PeerRuntime {
   cameraAdaptive: AdaptiveSenderState;
   /** Adaptive-quality running state for this peer's screen-share sender. */
   screenAdaptive: AdaptiveSenderState;
-  /** A video stream `ontrack` reported before the matching media signal arrived, keyed by stream id. */
-  pendingRemoteStreams: Map<string, MediaStream>;
+  /** Each remote video stream of this peer that has a live, unmuted track, keyed by stream id. */
+  remoteVideoStreams: Map<string, MediaStream>;
   /**
    * Every description-setting operation for this peer (an outgoing
    * negotiate() and an incoming handleDescription()) runs through this
@@ -353,11 +377,12 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
     localSpeaking: new Emitter(),
     error: new Emitter(),
     localMedia: new Emitter(),
+    forcedMute: new Emitter(),
   };
 
   const peers = new Map<string, PeerRuntime>();
   /** Peer ids currently being created by `ensurePeer`, so a concurrent caller joins the same creation instead of starting a second one. */
-  const pendingEnsurePeer = new Map<string, Promise<PeerRuntime>>();
+  const pendingEnsurePeer = new Map<string, Promise<PeerRuntime | null>>();
   const userVolumes = new Map<string, number>();
 
   let currentGuildId: string | null = null;
@@ -378,14 +403,24 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
   // VOICE_STATE_UPDATE echo for our own peer), so `join()` never starts
   // signaling before the server has actually registered us in the
   // channel. Without this, an offer sent right after VOICE_JOIN can beat
-  // VOICE_JOIN's own processing and come back NOT_IN_VOICE.
-  let joinConfirmed: (() => void) | null = null;
+  // VOICE_JOIN's own processing and come back NOT_IN_VOICE. The value is
+  // the message of a VOICE_ERROR when the server refused the join, or null.
+  let joinConfirmed: ((refusal: string | null) => void) | null = null;
   // Resolves once the server confirms (or rejects) a pending
   // `setScreenShare(true)`'s VOICE_STATE selfStream=true. See
   // setScreenShare() for why capture must wait for this.
   let selfStreamConfirm: ((confirmed: boolean) => void) | null = null;
   let muted = false;
   let deafened = false;
+  /** The flags that a moderator set on our own voice state. */
+  let serverMuted = false;
+  let serverDeafened = false;
+  /**
+   * True when the server can refuse an unmute: it forced the mute at join
+   * (no SPEAK), or it refused an unmute. The track stays off until the
+   * server accepts an unmute.
+   */
+  let speakDenied = false;
   /**
    * Goes up on each join, each leave and each input device change. A mic
    * request that finishes after a newer one of these started is stale:
@@ -394,8 +429,13 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
   let micGeneration = 0;
   /** Goes up on each join and each teardown. A `join()` stops after an `await` when this value changed. */
   let callGeneration = 0;
+  /** Goes up on each camera toggle and each teardown. A camera capture that finishes after a change is stopped. */
+  let cameraGeneration = 0;
+  /** Goes up on each screen share toggle and each teardown. See `cameraGeneration`. */
+  let screenGeneration = 0;
   let inputDeviceId: string | undefined;
-  let outputDeviceId: string | undefined;
+  /** The selected output device. Null is the default device. Undefined means that the user selected no device. */
+  let outputDeviceId: string | null | undefined;
   let cameraStream: MediaStream | null = null;
   let screenStream: MediaStream | null = null;
   let cameraOn = false;
@@ -420,25 +460,25 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
     }));
   }
 
-  /** This engine's own view of its local streams, sent to every peer after a local camera/screen change and to a newly connected peer. */
-  function currentStreamsPayload(): { camera?: string; screen?: string } {
-    const payload: { camera?: string; screen?: string } = {};
-    if (cameraStream) {
-      payload.camera = cameraStream.id;
+  /**
+   * Tell one peer which of our streams are the camera and the screen
+   * share. Each id is the stream id that this peer sees, which can be
+   * different from the id of the local stream (see `cameraSentStreamId`).
+   */
+  function sendMediaSignal(runtime: PeerRuntime): void {
+    const streams: { camera?: string; screen?: string } = {};
+    if (cameraStream && runtime.cameraSentStreamId) {
+      streams.camera = runtime.cameraSentStreamId;
     }
-    if (screenStream) {
-      payload.screen = screenStream.id;
+    if (screenStream && runtime.screenSentStreamId) {
+      streams.screen = runtime.screenSentStreamId;
     }
-    return payload;
-  }
-
-  function sendMediaSignal(target: PeerKey): void {
-    signalTransport?.send(target, { kind: "media", streams: currentStreamsPayload() });
+    signalTransport?.send(runtime.key, { kind: "media", streams });
   }
 
   function broadcastMediaSignal(): void {
     for (const runtime of peers.values()) {
-      sendMediaSignal(runtime.key);
+      sendMediaSignal(runtime);
     }
   }
 
@@ -486,10 +526,39 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
     if (!localStream) {
       return;
     }
-    const enabled = !muted && !deafened;
+    const enabled = !muted && !deafened && !serverMuted && !serverDeafened && !speakDenied;
     for (const track of localStream.getAudioTracks()) {
       track.enabled = enabled;
     }
+  }
+
+  function applyOutputGain(): void {
+    if (masterGain) {
+      masterGain.gain.value = deafened || serverDeafened ? 0 : 1;
+    }
+  }
+
+  /** Send the remote audio to the selected output device. The audible path is the audio context. */
+  function applyOutputDevice(): void {
+    if (!audioContext || outputDeviceId === undefined) {
+      return;
+    }
+    // The Audio Output Devices API adds `setSinkId` to `AudioContext`. It is not yet in TypeScript's DOM lib.
+    const context = audioContext as AudioContext & { setSinkId?(deviceId: string): Promise<void> };
+    if (!context.setSinkId) {
+      emitError({
+        kind: "output-device-unsupported",
+        message: "The browser does not support output device selection.",
+      });
+      return;
+    }
+    // An empty string selects the default output device.
+    context.setSinkId(outputDeviceId ?? "").catch(() => {
+      emitError({
+        kind: "output-device-unsupported",
+        message: "The browser could not switch the output device.",
+      });
+    });
   }
 
   // ---- speaking detection (one shared timer for the whole call) ---------------
@@ -744,22 +813,33 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
     return document.createElement("audio") as unknown as AudioElementLike;
   }
 
+  /**
+   * Play one remote audio stream. The first audio stream of a peer is the
+   * microphone: the peer adds it before any screen share transceiver, and
+   * a later microphone change uses `replaceTrack`. A later audio stream is
+   * the screen share audio. It gets its own nodes, so that it does not
+   * replace the microphone nodes, and only the microphone drives the
+   * speaking ring.
+   */
   function attachRemoteStream(runtime: PeerRuntime, stream: MediaStream): void {
+    const isMic = runtime.micAudio === null;
+    const audio: RemoteAudio = { source: null, gain: null, element: null };
     if (audioContext && masterGain) {
       const source = audioContext.createMediaStreamSource(stream);
       const gain = audioContext.createGain();
       gain.gain.value = userVolumes.get(runtime.key.userId) ?? 1;
       source.connect(gain);
       gain.connect(masterGain);
+      audio.source = source;
+      audio.gain = gain;
 
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 512;
-      source.connect(analyser);
-
-      runtime.sourceNode = source;
-      runtime.gainNode = gain;
-      runtime.speakingState.analyser = analyser;
-      runtime.speakingState.buffer = new Uint8Array(new ArrayBuffer(analyser.frequencyBinCount));
+      if (isMic) {
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 512;
+        source.connect(analyser);
+        runtime.speakingState.analyser = analyser;
+        runtime.speakingState.buffer = new Uint8Array(new ArrayBuffer(analyser.frequencyBinCount));
+      }
     }
 
     // Chromium is known to output silence from Web Audio for a
@@ -767,31 +847,29 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
     // the audio graph above is wired correctly. A muted <audio> element
     // works around this; the audible path is the Web Audio graph, not
     // this element.
-    const audioEl = makeAudioElement();
-    if (audioEl) {
-      audioEl.srcObject = stream;
-      audioEl.muted = true;
-      if (outputDeviceId) {
-        applySinkId(audioEl, outputDeviceId);
+    const element = makeAudioElement();
+    if (element) {
+      element.srcObject = stream;
+      element.muted = true;
+      audio.element = element;
+    }
+
+    if (isMic) {
+      runtime.micAudio = audio;
+    } else {
+      if (runtime.screenAudio) {
+        releaseRemoteAudio(runtime.screenAudio);
       }
-      runtime.audioEl = audioEl;
+      runtime.screenAudio = audio;
     }
   }
 
-  function applySinkId(audioEl: AudioElementLike, deviceId: string): void {
-    if (!audioEl.setSinkId) {
-      emitError({
-        kind: "output-device-unsupported",
-        message: "The browser does not support output device selection.",
-      });
-      return;
+  function releaseRemoteAudio(audio: RemoteAudio): void {
+    audio.source?.disconnect();
+    audio.gain?.disconnect();
+    if (audio.element) {
+      audio.element.srcObject = null;
     }
-    audioEl.setSinkId(deviceId).catch(() => {
-      emitError({
-        kind: "output-device-unsupported",
-        message: "The browser could not switch the output device.",
-      });
-    });
   }
 
   // ---- perfect negotiation ------------------------------------------------------
@@ -832,12 +910,44 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
       const patched = applyOpusFec(offer, audioBitrateBps);
       await runtime.pc.setLocalDescription(patched);
       signalTransport?.send(runtime.key, { kind: "description", description: patched });
+      startOfferTimer(runtime);
     } catch {
       // A dropped offer is not fatal: `onnegotiationneeded` or the next
       // membership change tries again.
     } finally {
       runtime.makingOffer = false;
     }
+  }
+
+  function clearOfferTimer(runtime: PeerRuntime): void {
+    if (runtime.offerTimer) {
+      clearTimeoutFn(runtime.offerTimer);
+      runtime.offerTimer = null;
+    }
+  }
+
+  /**
+   * The gateway drops a signal while the socket is down. Without an
+   * answer, the connection stays in "have-local-offer", and each later
+   * offer to this peer stops. Thus roll back an offer that got no answer
+   * in time, and offer again.
+   */
+  function startOfferTimer(runtime: PeerRuntime): void {
+    clearOfferTimer(runtime);
+    runtime.offerTimer = setTimeoutFn(() => {
+      runtime.offerTimer = null;
+      void enqueueSignaling(runtime, async () => {
+        if (runtime.pc.signalingState !== "have-local-offer") {
+          return;
+        }
+        try {
+          await runtime.pc.setLocalDescription({ type: "rollback" });
+        } catch {
+          return;
+        }
+        await negotiateNow(runtime);
+      });
+    }, OFFER_ANSWER_TIMEOUT_MS);
   }
 
   async function flushCandidateQueue(runtime: PeerRuntime): Promise<void> {
@@ -868,6 +978,7 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
         // The polite side yields: roll back its own in-flight offer
         // before accepting the peer's, per the perfect-negotiation
         // pattern (see engine.ts negotiate()/handleDescription()).
+        clearOfferTimer(runtime);
         await runtime.pc.setLocalDescription({ type: "rollback" });
       }
       await runtime.pc.setRemoteDescription(description);
@@ -876,7 +987,19 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
       const patched = applyOpusFec(answer, audioBitrateBps);
       await runtime.pc.setLocalDescription(patched);
       signalTransport?.send(runtime.key, { kind: "description", description: patched });
+      // A transceiver that we added before the offer arrived (a camera or
+      // a screen share that is already on for a later peer) does not match
+      // a line of that offer, and an answer cannot add a line. It has no
+      // mid until we send an offer of our own.
+      if (runtime.pc.getTransceivers().some((transceiver) => transceiver.mid === null)) {
+        void negotiate(runtime);
+      }
     } else {
+      if (runtime.pc.signalingState !== "have-local-offer") {
+        // A late answer to an offer that we rolled back. The new offer gets its own answer.
+        return;
+      }
+      clearOfferTimer(runtime);
       await runtime.pc.setRemoteDescription(description);
       await flushCandidateQueue(runtime);
     }
@@ -887,12 +1010,23 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
       return;
     }
     const id = keyOf(from);
-    let runtime = peers.get(id);
+    if (payload.kind === "rebuild") {
+      // The peer closed its connection to us and makes a new one. Close
+      // ours too, so that its next offer goes to a new connection.
+      const old = peers.get(id);
+      if (old) {
+        closePeer(old);
+        peers.delete(id);
+        emitPeers();
+      }
+      return;
+    }
+    // A later peer's offer (or an early candidate) can arrive before we
+    // learned about them from VOICE_STATE_UPDATE: create the connection
+    // now, lazily, rather than wait.
+    const runtime = peers.get(id) ?? (await ensurePeer(from));
     if (!runtime) {
-      // A later peer's offer (or an early candidate) arrives before we
-      // learned about them from VOICE_STATE_UPDATE: create the
-      // connection now, lazily, rather than wait.
-      runtime = await ensurePeer(from);
+      return;
     }
 
     if (payload.kind === "description") {
@@ -920,46 +1054,45 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
    * gateway and the peer connection).
    */
   function applyMediaSignal(runtime: PeerRuntime, streams: { camera?: string; screen?: string }): void {
-    const nextCameraId = streams.camera ?? null;
-    const nextScreenId = streams.screen ?? null;
-    runtime.remoteCameraStreamId = nextCameraId;
-    runtime.remoteScreenStreamId = nextScreenId;
+    runtime.remoteCameraStreamId = streams.camera ?? null;
+    runtime.remoteScreenStreamId = streams.screen ?? null;
+    resolveRemoteVideo(runtime);
+  }
 
-    runtime.remoteCameraStream = nextCameraId ? (runtime.pendingRemoteStreams.get(nextCameraId) ?? null) : null;
-    runtime.remoteScreenStream = nextScreenId ? (runtime.pendingRemoteStreams.get(nextScreenId) ?? null) : null;
+  /** Match the live remote video streams of a peer to the stream ids of its last media signal. */
+  function resolveRemoteVideo(runtime: PeerRuntime): void {
+    const cameraId = runtime.remoteCameraStreamId;
+    const screenId = runtime.remoteScreenStreamId;
+    const camera = cameraId ? (runtime.remoteVideoStreams.get(cameraId) ?? null) : null;
+    const screen = screenId ? (runtime.remoteVideoStreams.get(screenId) ?? null) : null;
+    if (camera === runtime.remoteCameraStream && screen === runtime.remoteScreenStream) {
+      return;
+    }
+    runtime.remoteCameraStream = camera;
+    runtime.remoteScreenStream = screen;
     emitPeers();
   }
 
   /**
-   * Route one incoming remote video track to the camera or the screen
-   * share, by matching its stream id against the peer's last media
-   * signal. If the signal has not arrived yet, the stream is held in
-   * `pendingRemoteStreams` until it does (see `applyMediaSignal`).
+   * Keep one incoming remote video track. The media signal tells if its
+   * stream is the camera or the screen share. The signal can arrive
+   * before or after the track. A muted track hides its stream. The stream
+   * shows again when the track unmutes, for example after the peer turns
+   * the camera off and on again.
    */
   function handleRemoteVideoTrack(runtime: PeerRuntime, stream: MediaStream, track: MediaStreamTrack): void {
-    const clearOnEnd = (): void => {
-      if (runtime.remoteCameraStream === stream) {
-        runtime.remoteCameraStream = null;
-        emitPeers();
-      }
-      if (runtime.remoteScreenStream === stream) {
-        runtime.remoteScreenStream = null;
-        emitPeers();
-      }
-      runtime.pendingRemoteStreams.delete(stream.id);
+    const hide = (): void => {
+      runtime.remoteVideoStreams.delete(stream.id);
+      resolveRemoteVideo(runtime);
     };
-    track.onended = clearOnEnd;
-    track.onmute = clearOnEnd;
-
-    if (runtime.remoteCameraStreamId === stream.id) {
-      runtime.remoteCameraStream = stream;
-      emitPeers();
-    } else if (runtime.remoteScreenStreamId === stream.id) {
-      runtime.remoteScreenStream = stream;
-      emitPeers();
-    } else {
-      runtime.pendingRemoteStreams.set(stream.id, stream);
-    }
+    const show = (): void => {
+      runtime.remoteVideoStreams.set(stream.id, stream);
+      resolveRemoteVideo(runtime);
+    };
+    track.onended = hide;
+    track.onmute = hide;
+    track.onunmute = show;
+    show();
   }
 
   // ---- ICE recovery ------------------------------------------------------------
@@ -969,31 +1102,33 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
       clearTimeoutFn(runtime.restartTimer);
       runtime.restartTimer = null;
     }
+    clearOfferTimer(runtime);
     runtime.pc.onicecandidate = null;
     runtime.pc.ontrack = null;
     runtime.pc.onconnectionstatechange = null;
     runtime.pc.onnegotiationneeded = null;
     runtime.pc.close();
-    if (runtime.sourceNode) {
-      runtime.sourceNode.disconnect();
+    if (runtime.micAudio) {
+      releaseRemoteAudio(runtime.micAudio);
     }
-    if (runtime.gainNode) {
-      runtime.gainNode.disconnect();
-    }
-    if (runtime.audioEl) {
-      runtime.audioEl.srcObject = null;
+    if (runtime.screenAudio) {
+      releaseRemoteAudio(runtime.screenAudio);
     }
   }
 
+  /**
+   * Close the connection to a peer and make a new one. Only the impolite
+   * side does this, the same rule that decides who restarts ICE below. It
+   * first sends a "rebuild" signal, so that the polite side also closes
+   * its old connection and accepts the offer of the new one.
+   */
   async function rebuildPeer(runtime: PeerRuntime): Promise<void> {
     const key = runtime.key;
     closePeer(runtime);
     peers.delete(keyOf(key));
+    signalTransport?.send(key, { kind: "rebuild" });
     const fresh = await ensurePeer(key);
-    // The impolite side offers first on a rebuild, the same rule that
-    // decides who restarts ICE below: it keeps one side in charge of
-    // recovery instead of both sides racing to renegotiate at once.
-    if (!fresh.polite) {
+    if (fresh) {
       await negotiate(fresh);
     }
     emitPeers();
@@ -1001,6 +1136,7 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
 
   function attemptIceRestart(runtime: PeerRuntime): void {
     if (runtime.restartsAttempted >= MAX_ICE_RESTARTS) {
+      emitError({ kind: "ice-failed", message: "The connection to a voice peer failed. The app makes a new connection." });
       void rebuildPeer(runtime);
       return;
     }
@@ -1036,7 +1172,8 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
 
   // ---- peer connection lifecycle ------------------------------------------------
 
-  async function ensurePeer(key: PeerKey): Promise<PeerRuntime> {
+  /** Get or make the connection to a peer. Returns null when the call ended while the connection was made. */
+  async function ensurePeer(key: PeerKey): Promise<PeerRuntime | null> {
     const id = keyOf(key);
     const existing = peers.get(id);
     if (existing) {
@@ -1056,8 +1193,13 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
       return pending;
     }
 
-    const creating = (async (): Promise<PeerRuntime> => {
+    const call = callGeneration;
+    const creating = (async (): Promise<PeerRuntime | null> => {
       const iceServers = await getIceServers();
+      // A leave (or a new join) started during the wait. Do not make a connection that nothing closes.
+      if (call !== callGeneration || currentChannelId === null) {
+        return null;
+      }
       const pc = deps.createPeerConnection({ iceServers });
       const runtime: PeerRuntime = {
         key,
@@ -1068,21 +1210,23 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
         candidateQueue: [],
         restartsAttempted: 0,
         restartTimer: null,
-        sourceNode: null,
-        gainNode: null,
-        audioEl: null,
+        offerTimer: null,
+        micAudio: null,
+        screenAudio: null,
         connectionState: pc.connectionState,
         speakingState: createSpeakingState(),
         cameraTransceiver: null,
         screenTransceiver: null,
         screenAudioTransceiver: null,
+        cameraSentStreamId: null,
+        screenSentStreamId: null,
         remoteCameraStreamId: null,
         remoteScreenStreamId: null,
         remoteCameraStream: null,
         remoteScreenStream: null,
         cameraAdaptive: createAdaptiveSenderState(),
         screenAdaptive: createAdaptiveSenderState(),
-        pendingRemoteStreams: new Map(),
+        remoteVideoStreams: new Map(),
         signalingQueue: Promise.resolve(),
       };
       peers.set(id, runtime);
@@ -1100,17 +1244,21 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
       }
       // A late joiner: this peer connection starts with whatever camera
       // and screen share are already live, on their own dedicated
-      // transceivers, the same as a mid-call toggle would set up.
+      // transceivers, the same as a mid-call toggle would set up. When the
+      // peer offers first, these transceivers get a mid only from a later
+      // offer of ours (see `handleDescriptionNow`).
       if (cameraOn && cameraStream) {
         const track = cameraStream.getVideoTracks()[0];
         if (track) {
           runtime.cameraTransceiver = pc.addTransceiver(track, { direction: "sendonly", streams: [cameraStream] });
+          runtime.cameraSentStreamId = cameraStream.id;
         }
       }
       if (screenOn && screenStream) {
         const videoTrack = screenStream.getVideoTracks()[0];
         if (videoTrack) {
           runtime.screenTransceiver = pc.addTransceiver(videoTrack, { direction: "sendonly", streams: [screenStream] });
+          runtime.screenSentStreamId = screenStream.id;
         }
         const audioTrack = screenStream.getAudioTracks()[0];
         if (audioTrack) {
@@ -1118,7 +1266,7 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
         }
       }
       if (cameraOn || screenOn) {
-        sendMediaSignal(key);
+        sendMediaSignal(runtime);
       }
 
       pc.onicecandidate = (event) => {
@@ -1137,7 +1285,10 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
       pc.onconnectionstatechange = () => {
         runtime.connectionState = pc.connectionState;
         emitPeers();
-        if (pc.connectionState === "failed") {
+        if (pc.connectionState === "connected") {
+          // The connection recovered. A later failure gets all its ICE restarts again.
+          runtime.restartsAttempted = 0;
+        } else if (pc.connectionState === "failed") {
           handlePeerFailed(runtime);
         }
       };
@@ -1184,9 +1335,21 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
         void teardown(false);
       } else if (update.channelId === currentChannelId) {
         if (joinConfirmed) {
-          joinConfirmed();
+          // The server forces the mute at join when we cannot speak in this channel.
+          if (update.selfMute && !muted) {
+            speakDenied = true;
+            forceMute();
+          }
+          joinConfirmed(null);
           joinConfirmed = null;
+        } else if (!update.selfMute) {
+          // The server accepted an unmute, so we can speak.
+          speakDenied = false;
         }
+        serverMuted = update.serverMute;
+        serverDeafened = update.serverDeaf;
+        applyMuteToLocalTrack();
+        applyOutputGain();
         if (selfStreamConfirm && update.selfStream) {
           selfStreamConfirm(true);
           selfStreamConfirm = null;
@@ -1216,7 +1379,25 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
     }
   }
 
+  /** Mute the microphone without a VOICE_STATE, because the server already has the mute. */
+  function forceMute(): void {
+    muted = true;
+    applyMuteToLocalTrack();
+    emitters.forcedMute.emit(true);
+  }
+
   function handleVoiceError(payload: { code: VoiceErrorCode; message: string }): void {
+    const refusesJoin =
+      payload.code === "CHANNEL_FULL" || payload.code === "NO_PERMISSION" || payload.code === "NOT_A_VOICE_CHANNEL";
+    if (joinConfirmed && refusesJoin) {
+      // The server refused the join that waits for its echo.
+      joinConfirmed(payload.message);
+      joinConfirmed = null;
+    } else if (payload.code === "NO_PERMISSION" && currentChannelId !== null) {
+      // The server refused an unmute. Undo the local unmute.
+      speakDenied = true;
+      forceMute();
+    }
     if (payload.code === "STREAM_IN_USE" && selfStreamConfirm) {
       selfStreamConfirm(false);
       selfStreamConfirm = null;
@@ -1229,11 +1410,16 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
   async function teardown(shouldSendLeave: boolean): Promise<void> {
     micGeneration += 1;
     callGeneration += 1;
+    cameraGeneration += 1;
+    screenGeneration += 1;
     // Let a join that waits for its echo continue now. It sees the new generation and stops.
     if (joinConfirmed) {
-      joinConfirmed();
+      joinConfirmed(null);
       joinConfirmed = null;
     }
+    serverMuted = false;
+    serverDeafened = false;
+    speakDenied = false;
     const wasActive = currentChannelId !== null || peers.size > 0 || localStream !== null;
     if (!wasActive) {
       return;
@@ -1359,16 +1545,16 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
       return;
     }
 
-    localStream = stream;
-    applyMuteToLocalTrack();
-    if (inputDeviceId !== requestedDeviceId && inputDeviceId !== undefined) {
+    useLocalStream(stream);
+    if (inputDeviceId !== requestedDeviceId) {
       // The user chose another mic while the browser opened this one.
-      setInputDevice(inputDeviceId);
+      reopenMic();
     }
     audioContext = deps.createAudioContext();
     masterGain = audioContext.createGain();
-    masterGain.gain.value = deafened ? 0 : 1;
+    applyOutputGain();
     masterGain.connect(audioContext.destination);
+    applyOutputDevice();
     setupLocalSpeakingSource();
 
     signalTransport = deps.createSignalTransport(channelId);
@@ -1383,24 +1569,34 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
     // before the server has processed VOICE_JOIN can arrive first and
     // come back NOT_IN_VOICE (see onPeerVoiceState above). A short
     // timeout keeps this from hanging forever if that echo is ever lost.
-    await new Promise<void>((resolve) => {
-      joinConfirmed = resolve;
-      setTimeoutFn(() => {
-        if (joinConfirmed === resolve) {
+    const refusal = await new Promise<string | null>((resolve) => {
+      const timer = setTimeoutFn(() => {
+        if (joinConfirmed === settle) {
           joinConfirmed = null;
         }
-        resolve();
+        resolve(null);
       }, JOIN_CONFIRM_TIMEOUT_MS);
+      const settle = (value: string | null): void => {
+        clearTimeoutFn(timer);
+        resolve(value);
+      };
+      joinConfirmed = settle;
     });
     // A leave (or a newer join) started during the wait. This join must not make peer connections.
     if (call !== callGeneration) {
       return;
     }
+    if (refusal !== null) {
+      // During a channel change, the server keeps the old voice state when
+      // it refuses the join. The leave removes it.
+      await teardown(true);
+      throw new Error(refusal);
+    }
 
     const initialPeers = deps.getInitialPeers(channelId);
     for (const peerKey of initialPeers) {
       const runtime = await ensurePeer(peerKey);
-      if (call !== callGeneration) {
+      if (call !== callGeneration || !runtime) {
         return;
       }
       // We are the newcomer: we offer to every peer already here.
@@ -1447,6 +1643,8 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
     if (currentChannelId === null) {
       return;
     }
+    // A capture that is still open from an earlier toggle is now stale.
+    const generation = ++cameraGeneration;
 
     if (!on) {
       if (!cameraOn) {
@@ -1491,14 +1689,15 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
         },
       });
     } catch {
-      emitError({ kind: "camera-permission-denied", message: "The browser did not allow use of the camera." });
+      if (generation === cameraGeneration) {
+        emitError({ kind: "camera-permission-denied", message: "The browser did not allow use of the camera." });
+      }
       return;
     }
     const track = stream.getVideoTracks()[0];
-    if (!track) {
-      for (const t of stream.getTracks()) {
-        t.stop();
-      }
+    if (!track || generation !== cameraGeneration) {
+      // A leave, a camera "off" or a newer camera toggle started while the browser opened the camera.
+      stopTracks(stream);
       return;
     }
 
@@ -1511,6 +1710,7 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
         await runtime.cameraTransceiver.sender.replaceTrack(track);
       } else {
         runtime.cameraTransceiver = runtime.pc.addTransceiver(track, { direction: "sendonly", streams: [stream] });
+        runtime.cameraSentStreamId = stream.id;
         await negotiate(runtime);
       }
     }
@@ -1533,6 +1733,8 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
     }
 
     if (!on) {
+      // A screen share that still waits for the picker or the server is now stale.
+      screenGeneration += 1;
       if (!screenOn) {
         return;
       }
@@ -1574,36 +1776,40 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
     if (screenOn) {
       return;
     }
+    const generation = ++screenGeneration;
+    const call = callGeneration;
 
-    // Ask the server first, and wait for its answer, before the browser
-    // ever shows the screen picker. A second streamer must see
-    // STREAM_IN_USE without ever being asked to pick a screen.
-    deps.sendVoiceState({ selfStream: true });
-    const confirmed = await waitSelfStreamConfirm();
-    if (!confirmed) {
-      // handleVoiceError already surfaced the rejection as an "error" event.
-      return;
-    }
-
+    // Show the picker first. Firefox and Safari allow it only soon after a
+    // user action, so it cannot wait for the server.
     let stream: MediaStream;
     try {
       stream = await deps.getDisplayMedia({ video: true, audio: true });
     } catch {
-      // Permission denied, or the picker was cancelled: roll back the
-      // server-side selfStream flag cleanly.
-      deps.sendVoiceState({ selfStream: false });
-      emitError({ kind: "screen-permission-denied", message: "The browser did not allow screen capture." });
+      // Permission denied, or the picker was cancelled.
+      if (generation === screenGeneration) {
+        emitError({ kind: "screen-permission-denied", message: "The browser did not allow screen capture." });
+      }
+      return;
+    }
+    const videoTrack = stream.getVideoTracks()[0];
+    if (!videoTrack || generation !== screenGeneration) {
+      stopTracks(stream);
       return;
     }
 
-    const videoTrack = stream.getVideoTracks()[0];
-    if (!videoTrack) {
-      for (const t of stream.getTracks()) {
-        t.stop();
+    // Then ask the server for the one screen share slot of the channel.
+    deps.sendVoiceState({ selfStream: true });
+    const confirmed = await waitSelfStreamConfirm();
+    if (!confirmed || generation !== screenGeneration) {
+      // On STREAM_IN_USE, handleVoiceError already sent an "error" event.
+      stopTracks(stream);
+      if (confirmed && call === callGeneration) {
+        // The user stopped the share while the server confirmed it. Give the slot back.
+        deps.sendVoiceState({ selfStream: false });
       }
-      deps.sendVoiceState({ selfStream: false });
       return;
     }
+
     // Tell the encoder this is detailed screen content, not a camera:
     // it favours sharpness over frame rate, which matches what people
     // expect when they read a shared screen.
@@ -1622,6 +1828,7 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
         await runtime.screenTransceiver.sender.replaceTrack(videoTrack);
       } else {
         runtime.screenTransceiver = runtime.pc.addTransceiver(videoTrack, { direction: "sendonly", streams: [stream] });
+        runtime.screenSentStreamId = stream.id;
         needsNegotiate = true;
       }
       if (audioTrack) {
@@ -1656,9 +1863,7 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
 
   function setDeafen(nextDeafened: boolean): void {
     deafened = nextDeafened;
-    if (masterGain) {
-      masterGain.gain.value = deafened ? 0 : 1;
-    }
+    applyOutputGain();
     // Un-deafening restores whatever `setMute` last set; it does not force an unmute.
     applyMuteToLocalTrack();
     if (currentChannelId !== null) {
@@ -1666,18 +1871,58 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
     }
   }
 
-  function setInputDevice(deviceId: string): void {
-    inputDeviceId = deviceId;
-    // Before a join, or while `join()` still opens the mic, keep the value only: `join()` reads it.
+  /**
+   * Make `stream` the local microphone stream. When its track ends (for
+   * example, the user disconnects the headset), open the microphone again.
+   * A track that we stop ourselves does not send "ended".
+   */
+  function useLocalStream(stream: MediaStream): void {
+    localStream = stream;
+    // Apply the current gate (mute, deafen, push to talk) before any peer can send the track.
+    applyMuteToLocalTrack();
+    const track = stream.getAudioTracks()[0];
+    if (!track) {
+      return;
+    }
+    track.onended = () => {
+      if (localStream !== stream) {
+        return;
+      }
+      emitError({
+        kind: "mic-disconnected",
+        message: "The microphone stopped. The app opens the microphone again.",
+      });
+      reopenMic();
+    };
+  }
+
+  function setInputDevice(deviceId: string | null): void {
+    const next = deviceId ?? undefined;
+    if (next === inputDeviceId) {
+      return;
+    }
+    inputDeviceId = next;
+    reopenMic();
+  }
+
+  /** Open the selected microphone (or the default one) and put its track on each peer connection. */
+  function reopenMic(): void {
+    // Before a join, or while `join()` still opens the mic, do nothing: `join()` reads `inputDeviceId`.
     if (currentChannelId === null || localStream === null) {
       return;
     }
     const generation = ++micGeneration;
+    const deviceId = inputDeviceId;
     void (async () => {
       let newStream: MediaStream;
       try {
         newStream = await deps.getUserMedia({
-          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, deviceId },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            ...(deviceId ? { deviceId } : {}),
+          },
         });
       } catch {
         if (generation !== micGeneration) {
@@ -1696,10 +1941,9 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
         return;
       }
       const oldStream = localStream;
-      localStream = newStream;
-      // Apply the current gate (mute, deafen, push to talk) before any peer can send the track.
-      applyMuteToLocalTrack();
+      useLocalStream(newStream);
       for (const runtime of peers.values()) {
+        // The first audio sender is the microphone. The screen share audio sender comes later.
         const sender = runtime.pc.getSenders().find((s) => s.track?.kind === "audio");
         if (sender) {
           await sender.replaceTrack(newTrack);
@@ -1717,21 +1961,22 @@ export function createVoiceEngine(deps: VoiceEngineDeps): VoiceEngine {
     })();
   }
 
-  async function setOutputDevice(deviceId: string): Promise<void> {
+  async function setOutputDevice(deviceId: string | null): Promise<void> {
     outputDeviceId = deviceId;
-    for (const runtime of peers.values()) {
-      if (runtime.audioEl) {
-        applySinkId(runtime.audioEl, deviceId);
-      }
-    }
+    applyOutputDevice();
   }
 
   function setUserVolume(userId: string, volume: number): void {
     const clamped = Math.min(2, Math.max(0, volume));
     userVolumes.set(userId, clamped);
     for (const runtime of peers.values()) {
-      if (runtime.key.userId === userId && runtime.gainNode) {
-        runtime.gainNode.gain.value = clamped;
+      if (runtime.key.userId !== userId) {
+        continue;
+      }
+      for (const audio of [runtime.micAudio, runtime.screenAudio]) {
+        if (audio?.gain) {
+          audio.gain.gain.value = clamped;
+        }
       }
     }
   }

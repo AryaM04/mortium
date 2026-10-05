@@ -147,7 +147,7 @@ test.describe("voice video", () => {
     await contextB.close();
   });
 
-  test("a second streamer gets STREAM_IN_USE and never captures", async ({ browser }) => {
+  test("a second streamer gets STREAM_IN_USE and does not share", async ({ browser }) => {
     test.setTimeout(90_000);
 
     const contextA = await browser.newContext();

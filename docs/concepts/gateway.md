@@ -119,6 +119,6 @@ collides with a close code from the WebSocket protocol itself:
 | 4003 | No `IDENTIFY` or `RESUME` in time |
 | 4004 | Sign-in failed (bad token, or device ID mismatch) |
 | 4005 | Already identified on this connection |
-| 4008 | Too many messages (over 120 a minute) |
+| 4008 | Too many messages (over 120 a minute, or over 1200 `TO_DEVICE_SEND` ops a minute) |
 | 4009 | No heartbeat in time |
 | 4010 | The device was signed out, removed, or the password was reset |
