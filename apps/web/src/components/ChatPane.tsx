@@ -6,7 +6,12 @@
 // DM header, and shows the call view above the messages during a DM call.
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "zustand";
-import { dmOtherRecipients, needsStaleRefetch, type AggregatedMessage } from "@mortium/client-core";
+import {
+  aggregateEvent,
+  dmOtherRecipients,
+  needsStaleRefetch,
+  type AggregatedMessage,
+} from "@mortium/client-core";
 import { Permission, hasPermission } from "@mortium/shared";
 import { ConnectionBanner } from "./ConnectionBanner.js";
 import { Composer, type EditTarget, type ReplyTarget } from "./Composer.js";
@@ -54,25 +59,33 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
     s.status === "connected" ? s.channelId : null,
   );
 
+  /** Load the latest page of the open channel. A failed load shows an error with a retry. */
+  function openCurrentChannel(): void {
+    if (!channelId || !channel || !isTextLike) {
+      return;
+    }
+    // A fresh READY (see `applyDispatch` in the store) already seeds
+    // this channel's read marker before this runs, so read it
+    // from the store instead of passing `null`: passing `null` would
+    // wipe out the marker and break the unread and mention badges as
+    // soon as the channel is opened.
+    const seeded = messagesStore.getState().channels[channelId];
+    void messagesStore
+      .getState()
+      .openChannel(
+        channelId,
+        seeded?.lastEventId ?? channel.lastEventId,
+        seeded?.lastReadEventId ?? null,
+      );
+  }
+
   useEffect(() => {
     setReplyTarget(null);
     setEditTarget(null);
     // A jump to a message of this channel loads its own page (see MessageList).
     const jumping = jumpStore.getState().request?.channelId === channelId;
-    if (channelId && channel && isTextLike && !jumping) {
-      // A fresh READY (see `applyDispatch` in the store) already seeds
-      // this channel's read marker before this effect runs, so read it
-      // from the store instead of passing `null`: passing `null` would
-      // wipe out the marker and break the unread and mention badges as
-      // soon as the channel is opened.
-      const seeded = messagesStore.getState().channels[channelId];
-      void messagesStore
-        .getState()
-        .openChannel(
-          channelId,
-          seeded?.lastEventId ?? channel.lastEventId,
-          seeded?.lastReadEventId ?? null,
-        );
+    if (!jumping) {
+      openCurrentChannel();
     }
     // Open the window again only when the channel changes, not on each new event.
   }, [channelId, isTextLike]);
@@ -90,16 +103,25 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
 
   // Mark the channel read once its window catches up to the newest
   // message: this only fires when the tab has focus and the view is at
-  // the bottom, per the `markRead` debounce in the store.
+  // the bottom, per the `markRead` debounce in the store. The id of the
+  // newest event is the dependency, not the number of events: a full
+  // window drops one old event for each new one. A focus event marks the
+  // channel read when the window gets focus again.
+  const newestEventId = channelState?.eventIds[channelState.eventIds.length - 1];
+  const atLatest = channelState?.atLatest;
   useEffect(() => {
-    if (!channelId || !channelState || !document.hasFocus() || !channelState.atLatest) {
+    if (!channelId || !newestEventId || !atLatest) {
       return;
     }
-    const newest = channelState.eventIds[channelState.eventIds.length - 1];
-    if (newest) {
-      messagesStore.getState().markRead(channelId, newest);
+    function markNewestRead(): void {
+      if (document.hasFocus()) {
+        messagesStore.getState().markRead(channelId!, newestEventId!);
+      }
     }
-  }, [channelId, channelState?.eventIds.length, channelState?.atLatest]);
+    markNewestRead();
+    window.addEventListener("focus", markNewestRead);
+    return () => window.removeEventListener("focus", markNewestRead);
+  }, [channelId, newestEventId, atLatest]);
 
   const lastOwnMessageId = useMemo(() => {
     if (!channelState) return null;
@@ -193,6 +215,7 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
             canManageMessages={canManageMessages}
             onReply={startReply}
             onEdit={startEdit}
+            onReload={openCurrentChannel}
           />
           <MessageAnnouncer channelId={channelId} guildId={guildId} />
           <TypingIndicator channelId={channelId} guildId={guildId} />
@@ -211,14 +234,17 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
             editTarget={editTarget}
             onCancelEdit={() => setEditTarget(null)}
             onRequestEditLast={() => {
-              if (lastOwnMessageId) {
-                const payloads = channelState?.payloads ?? {};
-                const body =
-                  payloads[lastOwnMessageId.id] &&
-                  payloads[lastOwnMessageId.id]?.type !== "reaction"
-                    ? (payloads[lastOwnMessageId.id] as { body: string }).body
-                    : "";
-                setEditTarget({ id: lastOwnMessageId.id, body });
+              if (lastOwnMessageId && channelState) {
+                const message = aggregateEvent(
+                  lastOwnMessageId,
+                  channelState.relationsByTarget[lastOwnMessageId.id] ?? [],
+                  channelState.payloads,
+                  messagesState.selfUserId,
+                  channelState.waiting,
+                );
+                if (!message.cannotRead) {
+                  startEdit(message);
+                }
               }
             }}
           />

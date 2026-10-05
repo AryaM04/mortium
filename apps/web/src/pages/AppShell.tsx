@@ -17,6 +17,7 @@ import { CryptoTabBanner } from "../components/ConnectionBanner.js";
 import { HomeView } from "./HomeView.js";
 import { useRealtime } from "../lib/useRealtime.js";
 import { clearLastLocation, readLastLocation, rememberLastLocation } from "../lib/lastLocation.js";
+import { HOME_PATH } from "../lib/dms.js";
 import { showNotice } from "../lib/notice.js";
 import { securityStore } from "../lib/crypto.js";
 import { session } from "../lib/session.js";
@@ -46,9 +47,24 @@ function shouldShowDiagPanel(): boolean {
 }
 
 function AppHome() {
+  const ready = useRealtime((s) => s.sessionId !== null);
+  const guilds = useRealtime((s) => s.guilds);
   const lastLocation = readLastLocation();
+  // The user can leave a server on another device. READY then does not hold it.
+  const gone = ready && lastLocation !== null && !guilds[lastLocation.guildId];
+  useEffect(() => {
+    if (gone) {
+      clearLastLocation();
+    }
+  }, [gone]);
+  if (gone) {
+    return <Redirect to={HOME_PATH} replace />;
+  }
   if (lastLocation) {
-    return <Redirect to={`/app/${lastLocation.guildId}/${lastLocation.channelId}`} />;
+    // Wait for READY. Then the guild is known.
+    return ready ? (
+      <Redirect to={`/app/${lastLocation.guildId}/${lastLocation.channelId}`} />
+    ) : null;
   }
   return <HomeView channelId={null} />;
 }

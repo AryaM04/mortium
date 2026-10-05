@@ -21,6 +21,11 @@ export function showNotice(message: string, timeoutMs = 6000): void {
   }, timeoutMs);
 }
 
+/** Show a notice when the action fails. */
+export function showNoticeOnError(action: Promise<unknown>, message: string): void {
+  action.catch(() => showNotice(message));
+}
+
 export function clearNotice(): void {
   if (hideTimer) {
     clearTimeout(hideTimer);

@@ -36,6 +36,7 @@ import {
   createMessagesStore,
   WAITING_FOR_KEY_TEXT,
   type ChannelMessagesState,
+  type MessagesState,
   type PendingMessage,
 } from "./messages-store.js";
 
@@ -185,6 +186,17 @@ describe("trimWindow", () => {
     expect(trimmed.eventIds.length).toBe(MAX_WINDOW_EVENTS);
     expect(trimmed.eventIds[trimmed.eventIds.length - 1]).toBe(String(MAX_WINDOW_EVENTS));
     expect(trimmed.hasMoreAfter).toBe(true);
+  });
+
+  it("sets atLatest to false when an older page drops the newest events", () => {
+    const ids = Array.from({ length: MAX_WINDOW_EVENTS }, (_, i) => String(i + 100));
+    const eventsById: Record<string, EventJson> = {};
+    for (const id of ids) eventsById[id] = event({ id });
+    const channel: ChannelMessagesState = { ...createChannelMessagesState(), eventIds: ids, eventsById };
+    const older = { events: [event({ id: "50" }), event({ id: "51" })], relations: [], hasMoreBefore: true, hasMoreAfter: false };
+    const next = loadPage(channel, older, "before");
+    expect(next.hasMoreAfter).toBe(true);
+    expect(next.atLatest).toBe(false);
   });
 });
 
@@ -516,8 +528,21 @@ describe("channel LRU cache", () => {
       state = { ...state, channels: { ...state.channels, [String(i)]: createChannelMessagesState() } };
     }
     expect(state.channelOrder.length).toBe(20);
-    expect(state.channels["1"]).toBeUndefined();
+    expect(state.channels["1"]?.eventIds).toEqual([]);
     expect(state.channels["21"]).toBeDefined();
+  });
+
+  it("keeps the read baseline of an evicted channel", () => {
+    const first: ChannelMessagesState = {
+      ...withEvent(createChannelMessagesState(), event({ id: "7" })),
+      lastEventId: "7",
+      lastReadEventId: "5",
+    };
+    let state: MessagesState = { ...createInitialMessagesState(), channels: { "1": first } };
+    for (let i = 1; i <= 21; i++) {
+      state = touchChannel(state, String(i));
+    }
+    expect(state.channels["1"]).toMatchObject({ eventIds: [], lastEventId: "7", lastReadEventId: "5" });
   });
 
   it("re-touching a cached channel moves it to the end without evicting it", () => {

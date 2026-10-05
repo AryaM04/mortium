@@ -8,6 +8,7 @@ import { aggregateEvent, type AggregatedMessage } from "@mortium/client-core";
 import { useStore } from "zustand";
 import { useMessages } from "../lib/useMessages.js";
 import { jumpStore, requestJump } from "../lib/jump.js";
+import { showNotice, showNoticeOnError } from "../lib/notice.js";
 import { useRealtime } from "../lib/useRealtime.js";
 import { messagesStore } from "../lib/messages.js";
 import { displayNameOf, memberUser } from "../lib/members.js";
@@ -34,12 +35,18 @@ function smoothScroll(): "smooth" | "auto" {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
 }
 
+/** Follow a live message when the list is at the bottom. */
+function followLiveMessages(isAtBottom: boolean): "smooth" | "auto" | false {
+  return isAtBottom ? smoothScroll() : false;
+}
+
 export function MessageList({
   channelId,
   guildId,
   canManageMessages,
   onReply,
   onEdit,
+  onReload,
 }: {
   channelId: string;
   /** Null for a DM. */
@@ -47,6 +54,8 @@ export function MessageList({
   canManageMessages: boolean;
   onReply: (message: AggregatedMessage) => void;
   onEdit: (message: AggregatedMessage) => void;
+  /** Load the latest page of the channel again. */
+  onReload: () => void;
 }) {
   const channel = useMessages((s) => s.channels[channelId]);
   const selfUserId = useMessages((s) => s.selfUserId);
@@ -82,6 +91,12 @@ export function MessageList({
   // After a jump, the page around the message can fit on the screen. Then
   // the list is "at bottom", and a follow of the next page scrolled the
   // message out of view, or left the list hidden.
+  // Virtuoso also scrolls to the bottom when the rows grow in the first
+  // 100 ms after a mount, if the list was at bottom and `followOutput` is
+  // not `false`. It does not read the result of a `followOutput` function
+  // for this. The size of the rows is not known at the first paint, so the
+  // list is at bottom for a short time. Thus the prop is `false` (not a
+  // function) while the window does not hold the newest message.
   const wasAtLatestRef = useRef(true);
   useEffect(() => {
     wasAtLatestRef.current = channel?.atLatest ?? true;
@@ -193,7 +208,11 @@ export function MessageList({
         setJumpView({ eventId: jumpRequest.eventId, nonce: jumpRequest.nonce });
         highlightFor2s(jumpRequest.eventId);
       })
-      .catch(() => undefined)
+      .catch(() => {
+        // Show the latest page instead of an empty pane.
+        showNotice("The message did not load. The latest messages show instead.");
+        onReload();
+      })
       .finally(() => {
         if (jumpStore.getState().request === jumpRequest) {
           jumpStore.setState({ request: null });
@@ -228,6 +247,16 @@ export function MessageList({
 
   if (!channel) {
     return null;
+  }
+  if (channel.error && channel.eventIds.length === 0) {
+    return (
+      <div role="alert" className="flex flex-1 flex-col items-center justify-center gap-3 p-3 text-center">
+        <p className="text-danger-text">{channel.error}</p>
+        <button type="button" onClick={onReload} className="btn btn-secondary">
+          Retry
+        </button>
+      </div>
+    );
   }
   const jumpIndex = jumpView ? rows.findIndex((row) => row.key === jumpView.eventId) : -1;
 
@@ -276,9 +305,7 @@ export function MessageList({
         }
         firstItemIndex={firstItemIndex}
         // Follow only live messages, not a newer page of history (see wasAtLatestRef).
-        followOutput={(isAtBottom) =>
-          isAtBottom && wasAtLatestRef.current ? smoothScroll() : false
-        }
+        followOutput={wasAtLatestRef.current ? followLiveMessages : false}
         atBottomStateChange={setAtBottom}
         startReached={() => void messagesStore.getState().loadOlder(channelId)}
         endReached={() => {
@@ -323,17 +350,26 @@ export function MessageList({
               }}
               onReply={() => onReply(message)}
               onEdit={() => onEdit(message)}
-              onDelete={() => void messagesStore.getState().redact(channelId, message.id)}
+              onDelete={() =>
+                showNoticeOnError(
+                  messagesStore.getState().redact(channelId, message.id),
+                  "The message was not deleted. Try again.",
+                )
+              }
               onToggleReaction={(key) => {
                 const reaction = message.reactions.find((r) => r.key === key);
-                if (reaction?.ownEventId) {
-                  void messagesStore.getState().removeOwnReaction(channelId, reaction.ownEventId);
-                } else {
-                  void messagesStore.getState().sendReaction(channelId, message.id, key);
-                }
+                showNoticeOnError(
+                  reaction?.ownEventId
+                    ? messagesStore.getState().removeOwnReaction(channelId, reaction.ownEventId)
+                    : messagesStore.getState().sendReaction(channelId, message.id, key),
+                  "The reaction did not change. Try again.",
+                );
               }}
               onAddReaction={(key) =>
-                void messagesStore.getState().sendReaction(channelId, message.id, key)
+                showNoticeOnError(
+                  messagesStore.getState().sendReaction(channelId, message.id, key),
+                  "The reaction was not added. Try again.",
+                )
               }
             />
           );

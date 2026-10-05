@@ -21,6 +21,7 @@ import {
   searchGuildMembers,
 } from "@mortium/client-core";
 import { messagesStore } from "../lib/messages.js";
+import { showNoticeOnError } from "../lib/notice.js";
 import { session } from "../lib/session.js";
 import { useSettings } from "../lib/settings.js";
 import { Avatar } from "./Avatar.js";
@@ -410,7 +411,10 @@ export function Composer(props: ComposerProps) {
     }
     const mentions = extractMentions(body);
     if (editTarget) {
-      void messagesStore.getState().editMessage(channelId, editTarget.id, body, mentions);
+      showNoticeOnError(
+        messagesStore.getState().editMessage(channelId, editTarget.id, body, mentions),
+        "The edit was not saved. Try again.",
+      );
       props.onCancelEdit();
     } else {
       const embeds = preview?.embed && findFirstLink(body) === preview.url ? [preview.embed] : [];

@@ -20,6 +20,8 @@ import * as messagesApi from "./messages-api.js";
 
 /** Keep at most this many timeline events loaded per channel window. */
 export const MAX_WINDOW_EVENTS = 300;
+/** A channel that is not open keeps only this many live events, to count its unread mentions. */
+export const MAX_UNOPENED_EVENTS = 50;
 /** Keep at most this many channels' windows cached at once (LRU). */
 export const MAX_CACHED_CHANNELS = 20;
 /** How long a typed indicator stays up with no message and no repeat TYPING_START. */
@@ -224,6 +226,8 @@ export interface ChannelMessagesState {
   stale: boolean;
   lastEventId: string | null;
   lastReadEventId: string | null;
+  /** Why the first page did not load, in words for people. Null when the load is fine. */
+  error: string | null;
   pending: PendingMessage[];
   typing: Record<string, number>;
   lastTypingSentAt: number;
@@ -242,6 +246,7 @@ export function createChannelMessagesState(): ChannelMessagesState {
     stale: false,
     lastEventId: null,
     lastReadEventId: null,
+    error: null,
     pending: [],
     typing: {},
     lastTypingSentAt: -Infinity,
@@ -249,28 +254,35 @@ export function createChannelMessagesState(): ChannelMessagesState {
 }
 
 /** Drop events from the far side once the window exceeds `MAX_WINDOW_EVENTS`, and mark that side as having more. */
-export function trimWindow(channel: ChannelMessagesState, keepSide: "before" | "after"): ChannelMessagesState {
-  if (channel.eventIds.length <= MAX_WINDOW_EVENTS) {
+export function trimWindow(
+  channel: ChannelMessagesState,
+  keepSide: "before" | "after",
+  maxEvents = MAX_WINDOW_EVENTS,
+): ChannelMessagesState {
+  if (channel.eventIds.length <= maxEvents) {
     return channel;
   }
-  const overflow = channel.eventIds.length - MAX_WINDOW_EVENTS;
+  const overflow = channel.eventIds.length - maxEvents;
   let eventIds: string[];
   let hasMoreBefore = channel.hasMoreBefore;
   let hasMoreAfter = channel.hasMoreAfter;
+  let atLatest = channel.atLatest;
   if (keepSide === "after") {
     // We just grew the "after" (newest) side, so drop from the front.
     eventIds = channel.eventIds.slice(overflow);
     hasMoreBefore = true;
   } else {
     // We just grew the "before" (oldest) side, so drop from the back.
-    eventIds = channel.eventIds.slice(0, MAX_WINDOW_EVENTS);
+    // The window then no longer holds the newest event.
+    eventIds = channel.eventIds.slice(0, maxEvents);
     hasMoreAfter = true;
+    atLatest = false;
   }
   const eventsById: Record<string, EventJson> = {};
   for (const id of eventIds) {
     eventsById[id] = channel.eventsById[id]!;
   }
-  return { ...channel, eventIds, eventsById, hasMoreBefore, hasMoreAfter };
+  return { ...channel, eventIds, eventsById, hasMoreBefore, hasMoreAfter, atLatest };
 }
 
 function withRelations(channel: ChannelMessagesState, relations: EventJson[]): ChannelMessagesState {
@@ -723,16 +735,27 @@ export function createInitialMessagesState(): MessagesState {
   return { selfUserId: null, channels: {}, channelOrder: [] };
 }
 
-/** Touch a channel as most-recently-used, evicting the oldest once over the cap. */
+/**
+ * Touch a channel as most-recently-used, evicting the oldest once over the cap.
+ * An evicted channel loses its events but keeps its read baseline, so that its
+ * unread state stays correct.
+ */
 export function touchChannel(state: MessagesState, channelId: string): MessagesState {
   const order = state.channelOrder.filter((id) => id !== channelId);
   order.push(channelId);
   let channels = state.channels;
   while (order.length > MAX_CACHED_CHANNELS) {
     const evicted = order.shift()!;
-    if (evicted === channelId) continue;
-    const { [evicted]: _removed, ...rest } = channels;
-    channels = rest;
+    const channel = channels[evicted];
+    if (evicted === channelId || !channel) continue;
+    channels = {
+      ...channels,
+      [evicted]: {
+        ...createChannelMessagesState(),
+        lastEventId: channel.lastEventId,
+        lastReadEventId: channel.lastReadEventId,
+      },
+    };
   }
   return { ...state, channelOrder: order, channels };
 }
@@ -909,18 +932,32 @@ export function createMessagesStore(options: MessagesStoreOptions): StoreApi<Mes
 
     async openChannel(channelId, lastEventId, lastReadEventId) {
       set(touchChannel(get(), channelId));
-      const page = await messagesApi.listEvents(api, channelId, { limit: 50 });
+      const page = await messagesApi.listEvents(api, channelId, { limit: 50 }).catch((error: unknown) => {
+        // Keep the baseline, and show the error with a retry in the message pane.
+        updateChannel(get, set, channelId, (channel) => ({
+          ...channel,
+          lastEventId: laterReadMarker(channel.lastEventId, lastEventId),
+          lastReadEventId: laterReadMarker(channel.lastReadEventId, lastReadEventId),
+          error: sendErrorText(error) ?? "The messages did not load.",
+        }));
+        return null;
+      });
+      if (!page) {
+        return;
+      }
       await applyPage(get, set, channelId, page, (channel) => {
         // `lastReadEventId` was captured before this fetch started, so a
         // `markRead` call that ran in the meantime (for example, this
         // same channel re-opening while already caught up) may have
         // moved the marker further than it. Never move it backward.
-        const nextLastReadEventId = laterReadMarker(channel.lastReadEventId, lastReadEventId);
+        // A live event can also arrive during the fetch, so the same rule
+        // holds for `lastEventId`.
         const withMeta: ChannelMessagesState = {
           ...channel,
-          lastEventId,
-          lastReadEventId: nextLastReadEventId,
+          lastEventId: laterReadMarker(channel.lastEventId, lastEventId),
+          lastReadEventId: laterReadMarker(channel.lastReadEventId, lastReadEventId),
           atLatest: true,
+          error: null,
         };
         return withLaterLiveEvents(channel, loadPage(withMeta, page, "initial"));
       });
@@ -1174,6 +1211,10 @@ export function createMessagesStore(options: MessagesStoreOptions): StoreApi<Mes
           let next = applyEventCreate(channel, event);
           if (event.relType === null || event.relType === "reply") {
             next = clearTypingForSender(next, event.senderId);
+          }
+          // A channel that is not open keeps only a few events (for its mention count).
+          if (!state.channelOrder.includes(event.channelId)) {
+            next = trimWindow(next, "after", MAX_UNOPENED_EVENTS);
           }
           set({ channels: { ...state.channels, [event.channelId]: next } });
           void decodeAndStore(get, set, event.channelId, [event]);
