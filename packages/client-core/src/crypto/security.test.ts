@@ -1,9 +1,16 @@
 // Tests of the key backup, the recovery key, SAS verification and identity
 // changes, with the real vodozemac WASM and the fake server.
 import { beforeAll, describe, expect, it } from "vitest";
+import { IDBFactory } from "fake-indexeddb";
 import { decodeBase64Url, encodeBase64Url, type ChannelMembersResponse, type EventJson } from "@mortium/shared";
+import { ApiError } from "../api.js";
+import { DeviceList } from "./device-list.js";
 import { WrongRecoveryKeyError } from "./key-backup.js";
+import { KeyedQueue } from "./queue.js";
 import { decodeRecoveryKey, encodeRecoveryKey } from "./recovery-key.js";
+import { openCryptoStore, type CryptoStore } from "./store.js";
+import type { CryptoTransport } from "./transport.js";
+import type { Wasm } from "./wasm.js";
 import {
   FakeServer,
   TEST_AUTH_KEY,
@@ -176,6 +183,36 @@ describe("key backup", () => {
     expect(fake.sessions.size).toBe(0);
   });
 
+  it("tries again after a rate limit during a restore, and does not count the session as failed", async () => {
+    const { server, a1, b1 } = await twoUsers();
+    const { recoveryKey } = await setUpBackup(a1);
+    const event = await send(b1, "sent before the restore");
+    await settleClients([a1, b1]);
+    expect(await read(a1, event)).toBe("sent before the restore");
+    await settleClients([a1, b1]);
+
+    // The key server limits the queries of the new device two times when it asks for user 2, the sender.
+    const a2 = newClient("1", "A2");
+    const base = server.transportFor("1", "A2");
+    let limited = 0;
+    const transport: CryptoTransport = {
+      ...base,
+      async queryKeys(userIds) {
+        if (userIds.includes("2") && limited < 2) {
+          limited += 1;
+          throw new ApiError(429, "RATE_LIMITED", "Too many requests. Try again later.");
+        }
+        return base.queryKeys(userIds);
+      },
+    };
+    await server.start(a2, { transport });
+    const result = await a2.handle!.security.restoreBackup({ recoveryKey });
+    expect(limited).toBe(2);
+    expect(result).toMatchObject({ failed: 0, signed: true });
+    expect(result.imported).toBeGreaterThan(0);
+    expect(await read(a2, event)).toBe("sent before the restore");
+  });
+
   it("changes nothing for other users when a sender restores, and marks restored sessions as backed up", async () => {
     const { server, a1 } = await twoUsers();
     const { recoveryKey } = await setUpBackup(a1);
@@ -339,6 +376,42 @@ describe("identity changes", () => {
     await a3.handle!.security.restoreBackup({ recoveryKey });
     expect(server.masters.get("1")!.deviceId).toBe("A3");
     expect(await isVerified(a3)).toBe(true);
+  });
+
+  it("keeps a SAS verification when a device list fetch runs at the same time", async () => {
+    const store = await openCryptoStore("race", new IDBFactory());
+    await store.putUser({ userId: "2", tracked: true, outdated: false, masterKey: "master-2", changedMasterKey: null });
+    // The fetch stops after it read the user and before it writes the user again.
+    let reached!: () => void;
+    const inFetch = new Promise<void>((resolve) => (reached = resolve));
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    let paused = false;
+    const gated: CryptoStore = {
+      ...store,
+      async getDevices(userId) {
+        if (!paused) {
+          paused = true;
+          reached();
+          await gate;
+        }
+        return store.getDevices(userId);
+      },
+    };
+    const list = new DeviceList({
+      store: gated,
+      queue: new KeyedQueue(),
+      wasm: {} as Wasm,
+      transport: { queryKeys: async () => ({ users: [] }) } as unknown as CryptoTransport,
+    });
+    const refreshed = list.refresh(["2"]);
+    await inFetch;
+    const marked = list.markMasterKeyVerified("2", "master-2");
+    release();
+    await refreshed;
+    expect(await marked).toBe(true);
+    expect((await store.getUser("2"))?.verifiedMasterKey).toBe("master-2");
+    store.close();
   });
 
   it("an unsigned device of a different user gets no key", async () => {

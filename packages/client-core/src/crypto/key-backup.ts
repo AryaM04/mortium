@@ -15,6 +15,7 @@ import type { AccountHolder } from "./account.js";
 import type { DeviceList } from "./device-list.js";
 import type { DeviceManager } from "./device-manager.js";
 import type { MegolmMachine } from "./megolm.js";
+import { isTemporaryError } from "./olm-machine.js";
 import { decodeRecoveryKey, encodeRecoveryKey } from "./recovery-key.js";
 import type { SettingsKeys } from "./settings-key.js";
 import type { CryptoStore } from "./store.js";
@@ -38,9 +39,17 @@ export interface BackupTimings {
   batchDelayMs: number;
   /** The wait after a new key before the upload starts, so that keys that arrive together go in one batch. */
   debounceMs: number;
+  /** The wait before the first new try after a temporary error. It doubles after each failure. */
+  retryDelayMs: number;
 }
 
-const DEFAULT_TIMINGS: BackupTimings = { batchDelayMs: 1000, debounceMs: 2000 };
+const DEFAULT_TIMINGS: BackupTimings = { batchDelayMs: 1000, debounceMs: 2000, retryDelayMs: 2000 };
+/** The longest wait between two tries of a restore step. The server rate limit counts one minute. */
+const RESTORE_RETRY_MAX_MS = 60_000;
+/** A restore step fails after this many tries. */
+const RESTORE_TRIES = 6;
+/** The longest wait between two tries of a failed upload. */
+const UPLOAD_RETRY_MAX_MS = 5 * 60_000;
 
 /** The state of the key backup, for the UI. */
 export interface BackupStatus {
@@ -119,6 +128,9 @@ export class KeyBackup {
   private uploading = false;
   private lastError: string | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
+  /** The new try after a failed upload. `whenIdle` does not wait for it. */
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
+  private retryDelay: number;
   private running: Promise<void> | null = null;
   private again = false;
   private stopped = false;
@@ -126,6 +138,7 @@ export class KeyBackup {
 
   constructor(private readonly deps: KeyBackupDeps) {
     this.timings = { ...DEFAULT_TIMINGS, ...deps.timings };
+    this.retryDelay = this.timings.retryDelayMs;
   }
 
   status(): BackupStatus {
@@ -161,6 +174,14 @@ export class KeyBackup {
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;
+    }
+    this.clearRetry();
+  }
+
+  private clearRetry(): void {
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
     }
   }
 
@@ -321,12 +342,14 @@ export class KeyBackup {
     if (!backup || !this.trusted || this.stopped) {
       return;
     }
+    this.clearRetry();
     this.uploading = true;
     this.changed();
     try {
       await this.uploadSecrets(backup);
       await this.uploadSessions(backup);
       this.lastError = null;
+      this.retryDelay = this.timings.retryDelayMs;
     } catch (error) {
       if (errorCode(error) === "BACKUP_NOT_FOUND") {
         // A different device made a new version, or deleted the backup.
@@ -336,7 +359,14 @@ export class KeyBackup {
         return;
       }
       this.lastError = "The keys could not be saved in the backup. The app tries again later.";
-      this.log(`The key backup upload failed: ${String(error)}`);
+      this.log(`The key backup upload failed. The app tries again in ${this.retryDelay} ms: ${String(error)}`);
+      if (!this.stopped) {
+        this.retryTimer = setTimeout(() => {
+          this.retryTimer = null;
+          this.startUpload();
+        }, this.retryDelay);
+        this.retryDelay = Math.min(this.retryDelay * 2, UPLOAD_RETRY_MAX_MS);
+      }
     } finally {
       this.uploading = false;
       this.changed();
@@ -449,7 +479,7 @@ export class KeyBackup {
     onProgress?: (progress: RestoreProgress) => void,
   ): Promise<RestoreResult> {
     const { wasm } = this.deps;
-    const backup = await this.deps.transport.getBackupVersion();
+    const backup = await this.withRetry(() => this.deps.transport.getBackupVersion());
     if (!backup) {
       throw new Error("There is no key backup for this account.");
     }
@@ -491,6 +521,23 @@ export class KeyBackup {
     }
   }
 
+  /** Run one restore step. After a temporary error, for example a rate limit, wait and try again. */
+  private async withRetry<T>(task: () => Promise<T>): Promise<T> {
+    let delay = this.timings.retryDelayMs;
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        return await task();
+      } catch (error) {
+        if (!isTemporaryError(error) || attempt >= RESTORE_TRIES || this.stopped) {
+          throw error;
+        }
+        this.log(`A key backup restore step failed. The app tries again in ${delay} ms: ${String(error)}`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        delay = Math.min(delay * 2, RESTORE_RETRY_MAX_MS);
+      }
+    }
+  }
+
   /** Check the signature of a secret: the trusted master key, or a device that the master key signed. */
   private async secretSignerOk(name: string, value: Uint8Array, signer: string, signature: string): Promise<boolean> {
     const { wasm, deviceList, userId } = this.deps;
@@ -505,7 +552,7 @@ export class KeyBackup {
 
   private async restoreSecrets(backup: BackupVersion, key: BackupKey): Promise<{ signed: boolean; settingsKeys: number }> {
     const { manager, settings, userId } = this.deps;
-    await this.deps.deviceList.refresh([userId]);
+    await this.withRetry(() => this.deps.deviceList.refresh([userId]));
     let signed = false;
     let settingsKeys = 0;
     // The master key first: it proves itself (its public key is the master key of the user), and it makes the other checks work.
@@ -517,13 +564,16 @@ export class KeyBackup {
         continue;
       }
       if (name === MASTER_SECRET) {
-        signed = await manager.importMasterKey(opened.value);
+        signed = await this.withRetry(() => manager.importMasterKey(opened.value));
         if (!signed) {
           this.log("The master key in the key backup is not the master key of this user.");
         }
         continue;
       }
-      if (!name.startsWith(SETTINGS_SECRET_PREFIX) || !(await this.secretSignerOk(name, opened.value, opened.signer, opened.signature))) {
+      if (
+        !name.startsWith(SETTINGS_SECRET_PREFIX) ||
+        !(await this.withRetry(() => this.secretSignerOk(name, opened.value, opened.signer, opened.signature)))
+      ) {
         this.log(`The secret ${name} in the key backup has no valid signature.`);
         continue;
       }
@@ -557,24 +607,30 @@ export class KeyBackup {
     key: BackupKey,
     onProgress?: (progress: RestoreProgress) => void,
   ): Promise<RestoreProgress> {
-    const { transport, megolm, userId } = this.deps;
+    const { transport, deviceList, megolm, userId } = this.deps;
     const progress: RestoreProgress = { imported: 0, failed: 0 };
     let after: string | undefined;
     for (;;) {
-      const page = await transport.getBackupSessions({ version: backup.version, after, limit: DOWNLOAD_PAGE });
-      for (const entry of page.sessions) {
-        let content: Record<string, unknown> | null = null;
+      const page = await this.withRetry(() => transport.getBackupSessions({ version: backup.version, after, limit: DOWNLOAD_PAGE }));
+      const contents = page.sessions.map((entry) => {
         try {
           const plaintext = key.decrypt(decodeBase64Url(entry.data), sessionAad(userId, backup.version, entry.sessionId));
-          content = JSON.parse(new TextDecoder().decode(plaintext)) as Record<string, unknown>;
+          const content = JSON.parse(new TextDecoder().decode(plaintext)) as Record<string, unknown>;
+          return content.sessionId === entry.sessionId && content.channelId === entry.channelId ? content : null;
         } catch {
-          content = null;
+          return null;
         }
-        const ok =
-          content !== null &&
-          content.sessionId === entry.sessionId &&
-          content.channelId === entry.channelId &&
-          (await megolm.importBackedUpSession(content, backup.version));
+      });
+      // Fetch the devices of every sender of this page in one query, so the restore does not reach the rate limit.
+      const senders = contents.flatMap((content) => (typeof content?.senderUserId === "string" ? [content.senderUserId] : []));
+      await this.withRetry(() => deviceList.getDevicesOfUsers(senders)).catch((error: unknown) => {
+        if (isTemporaryError(error)) {
+          throw error;
+        }
+        this.log(`The devices of the key backup senders could not be fetched: ${String(error)}`);
+      });
+      for (const content of contents) {
+        const ok = content !== null && (await this.withRetry(() => megolm.importBackedUpSession(content, backup.version)));
         if (ok) {
           progress.imported += 1;
         } else {

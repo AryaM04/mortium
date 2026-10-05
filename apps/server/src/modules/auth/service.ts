@@ -19,7 +19,7 @@ import {
 import type { AppConfig } from "../../config.js";
 import { isUniqueViolation, type DbClient } from "../../db/client.js";
 import { devices, emailTokens, refreshTokens, users } from "../../db/schema.js";
-import { GatewayCloseCode } from "@mortium/shared";
+import { DispatchEvent, GatewayCloseCode } from "@mortium/shared";
 import { AppError } from "../../errors.js";
 import { nextId } from "../../id.js";
 import type { Mailer } from "../../mailer.js";
@@ -544,7 +544,11 @@ export async function verifyEmail(deps: AuthDeps, token: string): Promise<void> 
     throw new AppError(400, "INVALID_VERIFY_TOKEN", "This verification link is not valid or has expired.");
   }
 
-  await db.update(users).set({ emailVerified: true }).where(eq(users.id, row.userId));
+  const [user] = await db.update(users).set({ emailVerified: true }).where(eq(users.id, row.userId)).returning();
+  // The link can open in a different browser. The open sessions of the user get the change at once.
+  if (user) {
+    deps.gateway?.toUser(user.id, DispatchEvent.USER_UPDATE, toUserJson(user, { includePrivate: true }));
+  }
 }
 
 export async function resendVerification(deps: AuthDeps, userId: bigint): Promise<void> {

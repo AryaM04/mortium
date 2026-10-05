@@ -502,6 +502,12 @@ export class OlmMachine {
     if (last !== undefined && now - last < RECOVERY_INTERVAL_MS) {
       return;
     }
+    // Remove the old entries, so the map does not grow for all time.
+    for (const [peerKey, at] of this.lastRecovery) {
+      if (now - at >= RECOVERY_INTERVAL_MS) {
+        this.lastRecovery.delete(peerKey);
+      }
+    }
     this.lastRecovery.set(device.curve25519, now);
     const task = (async () => {
       const failed: DeviceRef[] = [];

@@ -277,6 +277,8 @@ export const DispatchEvent = {
   USER_SETTINGS_UPDATE: "USER_SETTINGS_UPDATE",
   TO_DEVICE: "TO_DEVICE",
   DEVICE_LIST_UPDATE: "DEVICE_LIST_UPDATE",
+  /** The user of the session changed, for example after an email verification. The payload is the full user. */
+  USER_UPDATE: "USER_UPDATE",
 } as const;
 
 export type DispatchEventName = (typeof DispatchEvent)[keyof typeof DispatchEvent];

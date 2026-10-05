@@ -77,6 +77,7 @@ const CANCEL_TEXT: Record<string, string> = {
   busy: "The other device has a different verification in progress.",
   accepted: "A different device accepted the verification.",
   unexpected: "The verification got a message that it did not expect.",
+  error: "An error stopped the verification. Start it again.",
   no_master_key: "The other user has no identity key. Nothing was verified.",
 };
 
@@ -226,8 +227,14 @@ export class VerificationMachine {
       return;
     }
     this.setPhase(flow, "confirmed");
-    await this.sendMac(flow);
-    await this.checkMac(flow);
+    try {
+      await this.sendMac(flow);
+      await this.checkMac(flow);
+    } catch (error) {
+      // A new try is not possible, because the MAC is sent or checked one time only.
+      this.log(`The verification could not be confirmed: ${String(error)}`);
+      await this.cancel(txnId, "error");
+    }
   }
 
   /** Stop a verification and tell the other device. */
@@ -285,7 +292,7 @@ export class VerificationMachine {
       }
     } catch (error) {
       this.log(`A verification message could not be processed: ${String(error)}`);
-      await this.cancel(txnId, "unexpected");
+      await this.cancel(txnId, "error");
     }
   }
 

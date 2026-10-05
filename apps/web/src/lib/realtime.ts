@@ -9,7 +9,7 @@ import {
   type GatewayDispatch,
   type GatewayState,
 } from "@mortium/client-core";
-import { GatewayOpcode } from "@mortium/shared";
+import { GatewayOpcode, type User } from "@mortium/shared";
 import { session } from "./session.js";
 import { messagesStore } from "./messages.js";
 import { gatewayUrl } from "./server-url.js";
@@ -51,6 +51,9 @@ function startGateway(deviceId: string): void {
       if (event.t === "READY") {
         const payload = event.d as { user: { id: string } };
         messagesStore.getState().setSelfUserId(payload.user.id);
+      } else if (event.t === "USER_UPDATE") {
+        // For example, the email was verified in a different browser.
+        session.store.setState({ user: event.d as User });
       }
       messagesStore.getState().applyDispatch(event.t, event.d);
       for (const listener of dispatchListeners) {

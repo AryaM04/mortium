@@ -1,11 +1,11 @@
 // The Olm account of this device, held in memory, with its pickle in the
 // crypto store. Every change runs in the "account" queue.
-import type { CryptoStore } from "./store.js";
+import { CryptoStoreError, type CryptoStore } from "./store.js";
 import type { KeyedQueue } from "./queue.js";
 import type { Wasm } from "./wasm.js";
 
 export const ACCOUNT_QUEUE = "account";
-const ACCOUNT_VALUE = "account";
+export const ACCOUNT_VALUE = "account";
 
 type Account = InstanceType<Wasm["Account"]>;
 
@@ -21,7 +21,13 @@ export class AccountHolder {
   static async load(wasm: Wasm, store: CryptoStore, pickleKey: Uint8Array, queue: KeyedQueue): Promise<AccountHolder> {
     const pickle = await store.getValue<string>(ACCOUNT_VALUE);
     if (pickle) {
-      return new AccountHolder(wasm.Account.from_pickle(pickle, pickleKey), store, pickleKey, queue);
+      let account: Account;
+      try {
+        account = wasm.Account.from_pickle(pickle, pickleKey);
+      } catch {
+        throw new CryptoStoreError("The stored key does not open the local encryption data of this device.");
+      }
+      return new AccountHolder(account, store, pickleKey, queue);
     }
     const holder = new AccountHolder(new wasm.Account(), store, pickleKey, queue);
     await holder.save();

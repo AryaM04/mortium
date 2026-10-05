@@ -2,6 +2,7 @@
 // holds pickles (encrypted by vodozemac with the pickle key), the device
 // list cache, the Megolm sessions and small state values. See
 // docs/concepts/olm-megolm.md sections 7 and 8.
+import type { SecureStore } from "../platform.js";
 
 /** One Olm session with one peer device. `peerKey` is the Curve25519 key of the peer. */
 export interface SessionRecord {
@@ -169,9 +170,55 @@ function open(factory: IDBFactory, name: string): Promise<IDBDatabase> {
   });
 }
 
+/**
+ * The local crypto data of this device is lost or cannot be opened. A new
+ * try does not help: the user must sign out, and the next sign-in makes a
+ * new device.
+ */
+export class CryptoStoreError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CryptoStoreError";
+  }
+}
+
 /** The database name of the crypto store of one user and device. */
 export function cryptoStoreName(userId: string, deviceId: string): string {
   return `crypto:${userId}:${deviceId}`;
+}
+
+/** The database name of the local search index of one user and device. */
+export function searchIndexName(userId: string, deviceId: string): string {
+  return `search:${userId}:${deviceId}`;
+}
+
+/** The secure store entry of the pickle key of one user and device. */
+export function pickleKeyName(userId: string, deviceId: string): string {
+  return `crypto-pickle-key:${userId}:${deviceId}`;
+}
+
+function deleteDatabase(factory: IDBFactory, name: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = factory.deleteDatabase(name);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error ?? new Error(`The database ${name} could not be deleted.`));
+  });
+}
+
+/**
+ * Delete the local crypto data of a device after a sign-out: the crypto
+ * store, the search index and the pickle key. Call it only while no
+ * context runs the crypto layer of the device (hold the device lock).
+ */
+export async function deleteDeviceData(
+  secureStore: SecureStore,
+  userId: string,
+  deviceId: string,
+  factory: IDBFactory = indexedDB,
+): Promise<void> {
+  await deleteDatabase(factory, cryptoStoreName(userId, deviceId));
+  await deleteDatabase(factory, searchIndexName(userId, deviceId));
+  await secureStore.delete(pickleKeyName(userId, deviceId));
 }
 
 /** Open the IndexedDB crypto store. Tests pass their own `factory`. */
