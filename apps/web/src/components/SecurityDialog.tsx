@@ -8,7 +8,7 @@ import { useStore } from "zustand";
 import type { OwnDevice } from "@mortium/client-core/crypto";
 import { currentCrypto, securityStore } from "../lib/crypto.js";
 import { describeError } from "../lib/errors.js";
-import { saveKeyWrap } from "../lib/password-unlock.js";
+import { saveKeyWrap, whileRestoring } from "../lib/password-unlock.js";
 import { session } from "../lib/session.js";
 
 const button = "rounded px-3 py-2 text-sm";
@@ -180,13 +180,16 @@ export function Restore() {
     setProgress("The app downloads the backup...");
     try {
       const input = usePassphrase ? { passphrase: value } : { recoveryKey: value };
-      const result = await currentCrypto()!.security.restoreBackup(input, (entry) =>
-        setProgress(`${entry.imported} message keys restored.`),
-      );
-      if (!usePassphrase) {
-        // The password can unlock the next new device with this key.
-        await saveKeyWrap(value);
-      }
+      const result = await whileRestoring(async () => {
+        const restored = await currentCrypto()!.security.restoreBackup(input, (entry) =>
+          setProgress(`${entry.imported} message keys restored.`),
+        );
+        if (!usePassphrase) {
+          // The password can unlock the next new device with this key.
+          await saveKeyWrap(value);
+        }
+        return restored;
+      });
       setValue("");
       setProgress(
         `The restore is complete: ${result.imported} message keys.` +

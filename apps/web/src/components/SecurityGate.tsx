@@ -12,7 +12,7 @@ import { Suspense, lazy, useEffect, useState } from "react";
 import { useStore } from "zustand";
 import { currentCrypto, securityStore } from "../lib/crypto.js";
 import { describeError } from "../lib/errors.js";
-import { createBackupWithPassword, newRecoveryKeyStore, unlockWithWrapKey } from "../lib/password-unlock.js";
+import { createBackupWithPassword, newRecoveryKeyStore, unlockWithWrapKey, whileRestoring } from "../lib/password-unlock.js";
 import { session } from "../lib/session.js";
 import type { GateScreen } from "../lib/security-gate.js";
 import { AuthLayout } from "./AuthLayout.js";
@@ -62,8 +62,10 @@ function PasswordUnlock() {
     setPending(true);
     setError(null);
     try {
-      const recoveryKey = await session.keys.unlockWithPassword(password);
-      const result = await currentCrypto()!.security.restoreBackup({ recoveryKey });
+      const result = await whileRestoring(async () => {
+        const recoveryKey = await session.keys.unlockWithPassword(password);
+        return currentCrypto()!.security.restoreBackup({ recoveryKey });
+      });
       setPassword("");
       if (!result.signed) {
         setError("The backup did not verify this device. Verify it with a different device.");

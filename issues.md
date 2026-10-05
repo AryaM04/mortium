@@ -42,10 +42,10 @@ on 2026-10-01. The review read the code. It did not run the app.
 | [Gateway and session](#gateway-and-session-gw-ses) | 1 | 3 | 5 | 0 | 9 |
 | [Encryption](#encryption-cry) | 1 | 8 | 4 | 4 | 17 |
 | [Voice and video](#voice-and-video-vc) | 1 | 6 | 10 | 4 | 21 |
-| [Chat and interface](#chat-and-interface-ui) | 0 | 2 | 6 | 3 | 11 |
+| [Chat and interface](#chat-and-interface-ui) | 0 | 2 | 6 | 4 | 12 |
 | [Server](#server-srv) | 0 | 2 | 3 | 5 | 10 |
 | [Desktop and operations](#desktop-and-operations-ops) | 0 | 0 | 4 | 2 | 6 |
-| **Total** | **3** | **21** | **32** | **18** | **74** |
+| **Total** | **3** | **21** | **32** | **19** | **75** |
 
 ## Recommended fix order
 
@@ -650,3 +650,10 @@ What occurs now when the user reloads the page in a voice channel:
 - Symptom: With `BACKUP_HOUR=08` or `09`, the backup container restarts in a loop and makes no backup.
 - Cause: `infra/scripts/backup.sh:83-84` uses the value in shell arithmetic. The shell reads `08` and `09` as invalid octal numbers.
 - Fix: Remove leading zeros before the arithmetic.
+
+### UI-12: A jump to an old search result can leave the message row hidden
+
+- Severity: Low. Confidence: Suspected. Status: Open.
+- Symptom: A click on an old search result loads the correct page, but the target message does not show. The e2e test `search.spec.ts` fails about one time in three on a Windows PC under load.
+- Cause: Not known. The row is in the page but has no visible size. The jump logic in `MessageList.tsx` (`wasAtLatestRef`, about line 75) had a similar fault before.
+- Fix: Find the cause with a trace of the virtual list during the jump.

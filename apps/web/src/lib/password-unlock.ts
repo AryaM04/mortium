@@ -17,6 +17,23 @@ export interface NewRecoveryKeyState {
 
 export const newRecoveryKeyStore = createStore<NewRecoveryKeyState>(() => ({ recoveryKey: null, saving: false, error: null }));
 
+/**
+ * The number of restores that run now. A restore signs this device before it
+ * ends, and the device is then verified. The gate stays on the screen until
+ * the restore and the key wrap are complete, so that a reload does not stop them.
+ */
+export const restoreBusyStore = createStore<{ count: number }>(() => ({ count: 0 }));
+
+/** Run a restore. The gate stays on the screen while it runs. */
+export async function whileRestoring<T>(action: () => Promise<T>): Promise<T> {
+  restoreBusyStore.setState((state) => ({ count: state.count + 1 }));
+  try {
+    return await action();
+  } finally {
+    restoreBusyStore.setState((state) => ({ count: state.count - 1 }));
+  }
+}
+
 /** One automatic unlock for each device. */
 let unlockTry: { deviceId: string; result: Promise<boolean> } | null = null;
 /** True while the automatic backup runs. */
@@ -48,10 +65,10 @@ export function unlockWithWrapKey(): Promise<boolean> {
     return Promise.resolve(false);
   }
   if (unlockTry?.deviceId !== crypto.deviceId) {
-    const result = (async () => {
+    const result = whileRestoring(async () => {
       const recoveryKey = await session.keys.storedRecoveryKey();
       return recoveryKey !== null && (await crypto.security.restoreBackup({ recoveryKey })).signed;
-    })().catch((error: unknown) => {
+    }).catch((error: unknown) => {
       console.warn("[crypto] The automatic unlock failed.", error);
       return false;
     });
