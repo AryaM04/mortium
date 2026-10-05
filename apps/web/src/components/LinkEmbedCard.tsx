@@ -3,6 +3,7 @@
 // image is an encrypted attachment, or a local object URL in the composer.
 import type { LinkEmbed } from "@mortium/shared";
 import { useDecryptedUrl } from "./AttachmentList.js";
+import { CloseIcon } from "./icons.js";
 
 function EmbedImage({ image }: { image: NonNullable<LinkEmbed["image"]> }) {
   const thumbnail = image.thumbnail!;
@@ -13,7 +14,7 @@ function EmbedImage({ image }: { image: NonNullable<LinkEmbed["image"]> }) {
       alt=""
       width={thumbnail.width}
       height={thumbnail.height}
-      className="mt-2 max-h-40 w-auto rounded"
+      className="mt-2 max-h-40 w-auto rounded-md"
       data-testid="link-embed-image"
     />
   ) : null;
@@ -31,32 +32,24 @@ export function LinkEmbedCard({
 }) {
   return (
     <div
-      className="mt-1 flex max-w-md gap-2 rounded border-l-4 px-3 py-2"
-      style={{ borderColor: "var(--color-accent)", backgroundColor: "var(--color-bg-sidebar)" }}
+      className="mt-1.5 flex max-w-md gap-2 rounded-lg border border-l-[3px] border-line border-l-accent bg-elevated px-3 py-2.5"
       data-testid="link-embed"
     >
       <div className="min-w-0 flex-1">
-        {embed.siteName && (
-          <div className="truncate text-xs" style={{ color: "var(--color-text-muted)" }}>
-            {embed.siteName}
-          </div>
-        )}
+        {embed.siteName && <div className="truncate text-xs text-muted">{embed.siteName}</div>}
         <a
           href={embed.url}
           target="_blank"
           rel="noopener noreferrer nofollow"
-          className="block truncate text-sm font-semibold underline"
-          style={{ color: "var(--color-accent-text)" }}
+          className="link block truncate text-sm font-semibold"
         >
           {embed.title ?? embed.url}
         </a>
         {embed.description && (
-          <p className="line-clamp-3 text-xs" style={{ color: "var(--color-text-primary)" }}>
-            {embed.description}
-          </p>
+          <p className="mt-0.5 line-clamp-3 text-xs text-secondary">{embed.description}</p>
         )}
         {localImageUrl ? (
-          <img src={localImageUrl} alt="" className="mt-2 max-h-40 w-auto rounded" />
+          <img src={localImageUrl} alt="" className="mt-2 max-h-40 w-auto rounded-md" />
         ) : (
           embed.image?.thumbnail && <EmbedImage image={embed.image} />
         )}
@@ -65,11 +58,11 @@ export function LinkEmbedCard({
         <button
           type="button"
           onClick={onRemove}
-          className="self-start text-sm"
+          className="icon-btn h-6 w-6 self-start"
           aria-label="Remove preview"
           title="Remove preview"
         >
-          ×
+          <CloseIcon size={14} />
         </button>
       )}
     </div>

@@ -29,20 +29,24 @@ export default function DesktopSettings() {
   }
 
   return (
-    <section className="mb-4 flex flex-col gap-2 border-t pt-4" style={{ borderColor: "var(--color-border)" }}>
+    <section className="mb-4 flex flex-col gap-2 border-t border-line pt-4">
       <h3 className="text-sm font-semibold">Desktop app</h3>
-      <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+      <p className="text-sm text-muted">
         Server: <span data-desktop-server>{serverOrigin()}</span>
       </p>
-      <button type="button" onClick={() => void changeServer()} className="self-start text-sm underline">
+      <button type="button" onClick={() => void changeServer()} className="self-start text-sm link">
         Change server
       </button>
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={closeToTray} onChange={(event) => toggleCloseToTray(event.target.checked)} />
+        <input
+          type="checkbox"
+          checked={closeToTray}
+          onChange={(event) => toggleCloseToTray(event.target.checked)}
+        />
         Keep the app in the tray when I close the window
       </label>
       {error && (
-        <p role="alert" className="text-xs" style={{ color: "var(--color-danger-text)" }}>
+        <p role="alert" className="text-xs text-danger-text">
           {error}
         </p>
       )}

@@ -52,14 +52,15 @@ export function OAuthButtons() {
               void desktop.openExternal(startUrl(provider));
             }
           }}
-          className="rounded border px-3 py-2 text-center text-sm"
-          style={{ borderColor: "var(--color-border)" }}
+          className="btn btn-secondary w-full"
         >
           {PROVIDER_LABEL[provider]}
         </a>
       ))}
-      <div className="my-2 text-center text-xs" style={{ color: "var(--color-text-muted)" }}>
+      <div className="my-2 flex items-center gap-3 text-xs text-muted">
+        <span className="h-px flex-1 bg-line-strong" />
         or
+        <span className="h-px flex-1 bg-line-strong" />
       </div>
     </div>
   );

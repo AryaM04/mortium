@@ -20,8 +20,6 @@ export function nameOfUser(state: RealtimeState, userId: string): string {
   return user?.displayName ?? `User ${userId}`;
 }
 
-const bannerStyle = { backgroundColor: "#5c1d1d", color: "#ffd9d9" };
-
 export function SecurityBanner() {
   const security = useStore(securityStore);
   if (!security.ready) {
@@ -33,12 +31,21 @@ export function SecurityBanner() {
   return (
     <>
       {security.changedUsers.map((userId) => (
-        <div key={userId} role="alert" className="flex items-center justify-between gap-3 px-3 py-2 text-sm" style={bannerStyle}>
+        <div
+          key={userId}
+          role="alert"
+          className="mx-1.5 mt-1.5 flex items-center justify-between gap-3 rounded-lg border border-danger-text/30 bg-[#2a1117] px-3 py-2 text-sm text-[#fecdd3]"
+        >
           <span>
-            Warning: the identity key of {nameOfUser(state, userId)} changed. This occurs after a reset of their account, or
-            when someone tries to read your messages. Messages to this user stay locked until you accept the change.
+            Warning: the identity key of {nameOfUser(state, userId)} changed. This occurs after a
+            reset of their account, or when someone tries to read your messages. Messages to this
+            user stay locked until you accept the change.
           </span>
-          <button type="button" className="underline" onClick={() => void currentCrypto()?.security.acceptIdentityChange(userId)}>
+          <button
+            type="button"
+            className="btn btn-secondary shrink-0 px-2.5 py-1 text-xs"
+            onClick={() => void currentCrypto()?.security.acceptIdentityChange(userId)}
+          >
             Accept the new identity
           </button>
         </div>

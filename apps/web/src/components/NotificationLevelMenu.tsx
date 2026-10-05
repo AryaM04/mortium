@@ -4,6 +4,7 @@ import { moveMenuFocus } from "../lib/menu-keys.js";
 import { useEffect, useRef } from "react";
 import { notificationLevelOf, type NotificationLevel } from "@mortium/client-core";
 import { settingsStore, useSettings } from "../lib/settings.js";
+import { CheckIcon } from "./icons.js";
 
 const LEVELS: Array<{ value: NotificationLevel; label: string }> = [
   { value: "all", label: "All messages" },
@@ -59,17 +60,10 @@ export function NotificationLevelMenu({
       role="menu"
       onKeyDown={moveMenuFocus}
       aria-label={`Notification settings for ${guildName}`}
-      className="fixed z-40 w-56 rounded border py-1 shadow-lg"
-      style={{
-        left: position.x,
-        top: position.y,
-        backgroundColor: "var(--color-bg-main)",
-        borderColor: "var(--color-border)",
-      }}
+      className="menu fixed z-40 w-56"
+      style={{ left: position.x, top: position.y }}
     >
-      <div className="px-3 py-1 text-xs font-semibold uppercase" style={{ color: "var(--color-text-muted)" }}>
-        Notifications
-      </div>
+      <div className="eyebrow px-2.5 pb-1 pt-1.5">Notifications</div>
       {LEVELS.map((option) => (
         <button
           key={option.value}
@@ -80,12 +74,10 @@ export function NotificationLevelMenu({
             setNotificationLevel(guildId, option.value);
             onClose();
           }}
-          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm"
+          className="menu-item"
         >
-          <span aria-hidden="true" className="w-3">
-            {option.value === level ? "●" : "○"}
-          </span>
-          {option.label}
+          <span className="flex-1">{option.label}</span>
+          {option.value === level && <CheckIcon size={14} className="text-accent-text" />}
         </button>
       ))}
     </div>

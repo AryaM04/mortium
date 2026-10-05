@@ -43,8 +43,12 @@ export function ChangePassword() {
   if (!open) {
     return (
       <div className="mb-4 text-sm">
-        {done && <p role="status" className="mb-1">Your password is changed.</p>}
-        <button type="button" className="underline" onClick={() => setOpen(true)}>
+        {done && (
+          <p role="status" className="mb-1">
+            Your password is changed.
+          </p>
+        )}
+        <button type="button" className="link" onClick={() => setOpen(true)}>
           Change password
         </button>
       </div>
@@ -68,20 +72,15 @@ export function ChangePassword() {
         error={fieldError}
       />
       {formError && (
-        <p role="alert" className="mb-4 text-sm" style={{ color: "var(--color-danger-text)" }}>
+        <p role="alert" className="mb-4 text-sm text-danger-text">
           {formError}
         </p>
       )}
       <div className="flex justify-end gap-2">
-        <button type="button" className="rounded px-3 py-2 text-sm" onClick={() => setOpen(false)}>
+        <button type="button" className="btn btn-ghost" onClick={() => setOpen(false)}>
           Cancel
         </button>
-        <button
-          type="submit"
-          disabled={pending || current === ""}
-          className="rounded px-3 py-2 text-sm font-medium"
-          style={{ backgroundColor: "var(--color-accent)", color: "white" }}
-        >
+        <button type="submit" disabled={pending || current === ""} className="btn btn-primary">
           {pending ? "Saving..." : "Change password"}
         </button>
       </div>

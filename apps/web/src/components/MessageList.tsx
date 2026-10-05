@@ -22,7 +22,11 @@ type Row =
   | { kind: "pending"; key: string; nonce: string; body: string; failed: boolean; error?: string };
 
 function dayLabel(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+  return new Date(iso).toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
 }
 
 /** Smooth scroll, unless the user asks for less motion. */
@@ -89,11 +93,17 @@ export function MessageList({
     highlightTimerRef.current = setTimeout(() => setHighlightId(null), 2_000);
   }
 
-  useEffect(() => () => {
-    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+    },
+    [],
+  );
 
-  const getDisplayName = useCallback((userId: string) => displayNameOf(realtimeState, guildId, userId), [realtimeState, guildId]);
+  const getDisplayName = useCallback(
+    (userId: string) => displayNameOf(realtimeState, guildId, userId),
+    [realtimeState, guildId],
+  );
 
   const getReactorNames = useCallback(
     (userIds: string[]) => userIds.map((id) => getDisplayName(id)).join(", "),
@@ -112,7 +122,13 @@ export function MessageList({
       const event = channel.eventsById[id];
       if (!event) continue;
       const relations = channel.relationsByTarget[id] ?? [];
-      const aggregated = aggregateEvent(event, relations, channel.payloads, selfUserId, channel.waiting);
+      const aggregated = aggregateEvent(
+        event,
+        relations,
+        channel.payloads,
+        selfUserId,
+        channel.waiting,
+      );
 
       const day = new Date(event.createdAt).toDateString();
       if (day !== lastDay) {
@@ -138,7 +154,14 @@ export function MessageList({
     }
 
     for (const pending of channel.pending) {
-      out.push({ kind: "pending", key: `pending-${pending.nonce}`, nonce: pending.nonce, body: pending.body, failed: pending.state === "failed", error: pending.error });
+      out.push({
+        kind: "pending",
+        key: `pending-${pending.nonce}`,
+        nonce: pending.nonce,
+        body: pending.body,
+        failed: pending.state === "failed",
+        error: pending.error,
+      });
     }
 
     return out;
@@ -208,7 +231,9 @@ export function MessageList({
   }
   const jumpIndex = jumpView ? rows.findIndex((row) => row.key === jumpView.eventId) : -1;
 
-  function replyPreviewFor(message: AggregatedMessage): { authorName: string; text: string } | null {
+  function replyPreviewFor(
+    message: AggregatedMessage,
+  ): { authorName: string; text: string } | null {
     if (message.relType !== "reply" || !message.relatesToId) {
       return null;
     }
@@ -217,8 +242,17 @@ export function MessageList({
       return { authorName: "", text: "Original message" };
     }
     const relations = channel!.relationsByTarget[message.relatesToId] ?? [];
-    const targetAgg = aggregateEvent(target, relations, channel!.payloads, selfUserId, channel!.waiting);
-    return { authorName: displayNameOf(realtimeState, guildId, target.senderId), text: targetAgg.body };
+    const targetAgg = aggregateEvent(
+      target,
+      relations,
+      channel!.payloads,
+      selfUserId,
+      channel!.waiting,
+    );
+    return {
+      authorName: displayNameOf(realtimeState, guildId, target.senderId),
+      text: targetAgg.body,
+    };
   }
 
   return (
@@ -236,11 +270,15 @@ export function MessageList({
         // races older pages against `followOutput`'s scroll to the
         // bottom, leaving the view stranded somewhere in the middle.
         initialTopMostItemIndex={
-          jumpView && jumpIndex >= 0 ? { index: jumpIndex, align: "center" } : Math.max(0, rows.length - 1)
+          jumpView && jumpIndex >= 0
+            ? { index: jumpIndex, align: "center" }
+            : Math.max(0, rows.length - 1)
         }
         firstItemIndex={firstItemIndex}
         // Follow only live messages, not a newer page of history (see wasAtLatestRef).
-        followOutput={(isAtBottom) => (isAtBottom && wasAtLatestRef.current ? smoothScroll() : false)}
+        followOutput={(isAtBottom) =>
+          isAtBottom && wasAtLatestRef.current ? smoothScroll() : false
+        }
         atBottomStateChange={setAtBottom}
         startReached={() => void messagesStore.getState().loadOlder(channelId)}
         endReached={() => {
@@ -294,7 +332,9 @@ export function MessageList({
                   void messagesStore.getState().sendReaction(channelId, message.id, key);
                 }
               }}
-              onAddReaction={(key) => void messagesStore.getState().sendReaction(channelId, message.id, key)}
+              onAddReaction={(key) =>
+                void messagesStore.getState().sendReaction(channelId, message.id, key)
+              }
             />
           );
         }}
@@ -303,10 +343,12 @@ export function MessageList({
         <button
           type="button"
           onClick={() => {
-            virtuosoRef.current?.scrollToIndex({ index: rows.length - 1, behavior: smoothScroll() });
+            virtuosoRef.current?.scrollToIndex({
+              index: rows.length - 1,
+              behavior: smoothScroll(),
+            });
           }}
-          className="absolute bottom-3 right-4 rounded-full px-3 py-1 text-xs font-medium shadow"
-          style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+          className="btn btn-primary absolute bottom-3 right-4 rounded-full px-3 py-1 text-xs shadow-[var(--shadow-soft)]"
         >
           Jump to present
         </button>

@@ -23,6 +23,7 @@ import { displayNameOf } from "../lib/members.js";
 import { voiceStore } from "../lib/voice.js";
 import { jumpStore } from "../lib/jump.js";
 import { SearchBox } from "./SearchBox.js";
+import { HashIcon, SpeakerIcon } from "./icons.js";
 
 export function ChatPane({ channelId }: { channelId: string | null }) {
   const guildChannel = useRealtime((s) => (channelId ? s.channels[channelId] : undefined));
@@ -30,7 +31,8 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
   const channel = guildChannel ?? dmChannel;
   // A DM has no guild. The chat parts find names in the DM recipients.
   const guildId = guildChannel ? guildChannel.guildId : null;
-  const isTextLike = channel !== undefined && channel.type !== "voice" && channel.type !== "category";
+  const isTextLike =
+    channel !== undefined && channel.type !== "voice" && channel.type !== "category";
   const realtimeState = useRealtime((s) => s);
   const messagesState = useMessages((s) => s);
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
@@ -48,7 +50,9 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
   const canManageMessages = hasPermission(permissions, Permission.MANAGE_MESSAGES);
 
   const channelState = channelId ? messagesState.channels[channelId] : undefined;
-  const connectedVoiceChannelId = useStore(voiceStore, (s) => (s.status === "connected" ? s.channelId : null));
+  const connectedVoiceChannelId = useStore(voiceStore, (s) =>
+    s.status === "connected" ? s.channelId : null,
+  );
 
   useEffect(() => {
     setReplyTarget(null);
@@ -64,7 +68,11 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
       const seeded = messagesStore.getState().channels[channelId];
       void messagesStore
         .getState()
-        .openChannel(channelId, seeded?.lastEventId ?? channel.lastEventId, seeded?.lastReadEventId ?? null);
+        .openChannel(
+          channelId,
+          seeded?.lastEventId ?? channel.lastEventId,
+          seeded?.lastReadEventId ?? null,
+        );
     }
     // Open the window again only when the channel changes, not on each new event.
   }, [channelId, isTextLike]);
@@ -107,9 +115,9 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
 
   if (!channelId || !channel) {
     return (
-      <main className="flex flex-1 flex-col" style={{ backgroundColor: "var(--color-bg-main)" }}>
+      <main className="panel flex min-w-0 flex-1 flex-col overflow-hidden bg-main">
         <ConnectionBanner />
-        <div className="flex flex-1 items-center justify-center" style={{ color: "var(--color-text-muted)" }}>
+        <div className="flex flex-1 items-center justify-center text-muted">
           Choose a channel to start.
         </div>
       </main>
@@ -118,7 +126,11 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
 
   function startReply(message: AggregatedMessage): void {
     setEditTarget(null);
-    setReplyTarget({ id: message.id, authorName: displayNameOf(realtimeState, guildId, message.senderId), preview: message.body });
+    setReplyTarget({
+      id: message.id,
+      authorName: displayNameOf(realtimeState, guildId, message.senderId),
+      preview: message.body,
+    });
   }
 
   function startEdit(message: AggregatedMessage): void {
@@ -127,22 +139,29 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
   }
 
   return (
-    <main className="flex min-w-0 flex-1 flex-col" style={{ backgroundColor: "var(--color-bg-main)" }}>
+    <main className="panel flex min-w-0 flex-1 flex-col overflow-hidden bg-main">
       <ConnectionBanner />
       {dmChannel ? (
-        <div className="relative flex items-center">
+        <div className="relative flex h-12 shrink-0 items-center border-b border-line pr-2">
           <div className="min-w-0 flex-1">
             <DmHeader channel={dmChannel} />
           </div>
           <SearchBox guildId={null} />
         </div>
       ) : (
-        <div className="relative flex items-center gap-2 border-b px-4 py-3" style={{ borderColor: "var(--color-border)" }}>
-          <h1 className="font-semibold">
-            {channel.type === "voice" ? "\u{1F50A}" : "#"} {channel.name}
+        <div className="relative flex h-12 shrink-0 items-center gap-2 border-b border-line pl-4 pr-2">
+          <h1 className="flex shrink-0 items-center gap-1.5 font-semibold">
+            {channel.type === "voice" ? (
+              <SpeakerIcon className="text-muted" />
+            ) : (
+              <HashIcon className="text-muted" />
+            )}
+            {/* Keep the channel type in the heading name, as before the icons. */}
+            <span className="sr-only">{channel.type === "voice" ? "\u{1F50A}" : "#"} </span>
+            {channel.name}
           </h1>
           {guildChannel?.topic && (
-            <span className="truncate text-sm" style={{ color: "var(--color-text-muted)" }}>
+            <span className="truncate border-l border-line-strong pl-2 text-sm text-muted">
               {guildChannel.topic}
             </span>
           )}
@@ -151,7 +170,7 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
       )}
 
       {dmChannel && connectedVoiceChannelId === channelId && (
-        <div className="flex max-h-[45%] min-h-[180px] border-b" style={{ borderColor: "var(--color-border)" }}>
+        <div className="flex max-h-[45%] min-h-[180px] border-b border-line bg-canvas">
           <VoiceCallView guildId={null} channelId={channelId} />
         </div>
       )}
@@ -161,7 +180,7 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
           <VoiceCallView guildId={guildId} channelId={channelId} />
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center p-3 text-center">
-            <p style={{ color: "var(--color-text-muted)" }}>
+            <p className="text-muted">
               Click this channel in the list on the left to join the voice call.
             </p>
           </div>
@@ -195,7 +214,8 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
               if (lastOwnMessageId) {
                 const payloads = channelState?.payloads ?? {};
                 const body =
-                  payloads[lastOwnMessageId.id] && payloads[lastOwnMessageId.id]?.type !== "reaction"
+                  payloads[lastOwnMessageId.id] &&
+                  payloads[lastOwnMessageId.id]?.type !== "reaction"
                     ? (payloads[lastOwnMessageId.id] as { body: string }).body
                     : "";
                 setEditTarget({ id: lastOwnMessageId.id, body });

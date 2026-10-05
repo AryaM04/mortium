@@ -54,40 +54,30 @@ export function BansTab({ guildId }: { guildId: string }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       {error && (
-        <p role="alert" className="mb-2 text-sm" style={{ color: "var(--color-danger-text)" }}>
+        <p role="alert" className="mb-2 text-sm text-danger-text">
           {error}
         </p>
       )}
       {loading ? (
-        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-          Loading bans...
-        </p>
+        <p className="text-sm text-muted">Loading bans...</p>
       ) : list.length === 0 ? (
-        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-          Nobody is banned from this server.
-        </p>
+        <p className="text-sm text-muted">Nobody is banned from this server.</p>
       ) : (
         <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
           {list.map((ban) => (
             <li
               key={ban.userId}
-              className="flex items-center gap-2 rounded px-2 py-1.5"
-              style={{ backgroundColor: "var(--color-bg-main)" }}
+              className="flex items-center gap-2 rounded-lg border border-line bg-main px-3 py-2"
             >
               <div className="flex-1">
                 <div className="text-sm">User {ban.userId}</div>
-                {ban.reason && (
-                  <div className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                    {ban.reason}
-                  </div>
-                )}
+                {ban.reason && <div className="text-xs text-muted">{ban.reason}</div>}
               </div>
               <button
                 type="button"
                 disabled={busyUserId === ban.userId}
                 onClick={() => void handleUnban(ban.userId)}
-                className="rounded px-2 py-1 text-xs"
-                style={{ backgroundColor: "var(--color-bg-sidebar)" }}
+                className="btn btn-secondary px-2 py-1 text-xs"
               >
                 Unban
               </button>

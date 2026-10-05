@@ -10,6 +10,7 @@ import { describeError } from "../lib/errors.js";
 import { realtimeStore } from "../lib/realtime.js";
 import { rememberLastLocation } from "../lib/lastLocation.js";
 import { serverUrl } from "../lib/server-url.js";
+import { CardPage } from "../components/AuthLayout.js";
 
 export function InvitePage() {
   const { code } = useParams<{ code: string }>();
@@ -62,55 +63,47 @@ export function InvitePage() {
   }
 
   return (
-    <div className="flex h-full w-full items-center justify-center" style={{ backgroundColor: "var(--color-bg-main)" }}>
-      <div
-        className="w-full max-w-sm rounded-lg border p-6"
-        style={{ borderColor: "var(--color-border)", backgroundColor: "var(--color-bg-sidebar)", color: "var(--color-text-primary)" }}
-      >
-        {error && !preview && (
-          <p role="alert" className="text-sm" style={{ color: "var(--color-danger-text)" }}>
-            {error}
-          </p>
-        )}
-        {preview && (
-          <>
-            <p className="mb-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
-              You have been invited to join
-            </p>
-            <div className="mb-4 flex items-center gap-3">
-              {preview.guild.iconKey ? (
-                <img
-                  src={serverUrl(`/api/v1/icons/${preview.guild.id}/${preview.guild.iconKey}`)}
-                  alt=""
-                  className="h-12 w-12 rounded-full object-cover"
-                />
-              ) : (
-                <div className="h-12 w-12 rounded-full" style={{ backgroundColor: "var(--color-bg-main)" }} />
-              )}
-              <div>
-                <div className="font-semibold">{preview.guild.name}</div>
-                <div className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-                  {preview.memberCount} member{preview.memberCount === 1 ? "" : "s"}
-                </div>
+    <CardPage>
+      {error && !preview && (
+        <p role="alert" className="text-sm text-danger-text">
+          {error}
+        </p>
+      )}
+      {preview && (
+        <>
+          <p className="mb-1 text-sm text-muted">You have been invited to join</p>
+          <div className="mb-4 flex items-center gap-3">
+            {preview.guild.iconKey ? (
+              <img
+                src={serverUrl(`/api/v1/icons/${preview.guild.id}/${preview.guild.iconKey}`)}
+                alt=""
+                className="h-12 w-12 rounded-[12px] object-cover"
+              />
+            ) : (
+              <div className="h-12 w-12 rounded-[12px] border border-line-strong bg-hover" />
+            )}
+            <div>
+              <div className="font-semibold">{preview.guild.name}</div>
+              <div className="text-sm text-muted">
+                {preview.memberCount} member{preview.memberCount === 1 ? "" : "s"}
               </div>
             </div>
-            {error && (
-              <p role="alert" className="mb-4 text-sm" style={{ color: "var(--color-danger-text)" }}>
-                {error}
-              </p>
-            )}
-            <button
-              type="button"
-              disabled={pending}
-              onClick={handleAccept}
-              className="w-full rounded px-3 py-2 text-sm font-medium"
-              style={{ backgroundColor: "var(--color-accent)", color: "white" }}
-            >
-              {pending ? "Joining..." : "Accept"}
-            </button>
-          </>
-        )}
-      </div>
-    </div>
+          </div>
+          {error && (
+            <p role="alert" className="mb-4 text-sm text-danger-text">
+              {error}
+            </p>
+          )}
+          <button
+            type="button"
+            disabled={pending}
+            onClick={handleAccept}
+            className="btn btn-primary w-full"
+          >
+            {pending ? "Joining..." : "Accept"}
+          </button>
+        </>
+      )}
+    </CardPage>
   );
 }

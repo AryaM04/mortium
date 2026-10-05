@@ -7,14 +7,25 @@ import { Markdown, MarkdownInline } from "./Markdown.js";
 import { Avatar } from "./Avatar.js";
 import { EmojiPickerButton } from "./EmojiPickerButton.js";
 import type { User } from "@mortium/shared";
+import { PencilIcon, PlusIcon, ReplyArrowIcon, ReplyIcon, SmileIcon, TrashIcon } from "./icons.js";
 
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "🎉"];
 
 // Most messages have no files, so the file views load only when one is needed.
-const AttachmentList = lazy(() => import("./AttachmentList.js").then((module) => ({ default: module.AttachmentList })));
+const AttachmentList = lazy(() =>
+  import("./AttachmentList.js").then((module) => ({ default: module.AttachmentList })),
+);
 const LinkEmbedCard = lazy(() => import("./LinkEmbedCard.js"));
 
-function DeleteConfirmDialog({ open, onCancel, onConfirm }: { open: boolean; onCancel: () => void; onConfirm: () => void }) {
+function DeleteConfirmDialog({
+  open,
+  onCancel,
+  onConfirm,
+}: {
+  open: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current;
@@ -23,13 +34,13 @@ function DeleteConfirmDialog({ open, onCancel, onConfirm }: { open: boolean; onC
     else if (!open && dialog.open) dialog.close();
   }, [open]);
   return (
-    <dialog ref={ref} onClose={onCancel} className="rounded p-4" style={{ backgroundColor: "var(--color-bg-main)", color: "var(--color-text-primary)" }}>
-      <p className="mb-3 text-sm">Do you want to delete this message? You cannot undo this.</p>
+    <dialog ref={ref} onClose={onCancel} className="w-full max-w-sm p-5">
+      <p className="mb-4 text-sm">Do you want to delete this message? You cannot undo this.</p>
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={onCancel} className="rounded px-3 py-1 text-sm">
+        <button type="button" onClick={onCancel} className="btn btn-ghost">
           Cancel
         </button>
-        <button type="button" onClick={onConfirm} className="rounded px-3 py-1 text-sm" style={{ backgroundColor: "var(--color-danger)", color: "white" }}>
+        <button type="button" onClick={onConfirm} className="btn btn-danger">
           Delete
         </button>
       </div>
@@ -85,52 +96,54 @@ export function MessageItem(props: MessageItemProps) {
 
   return (
     <div
-      className="group flex gap-3 px-4 py-1 hover:bg-black/10"
-      style={{ backgroundColor: props.isHighlighted ? "rgba(91, 108, 255, 0.15)" : undefined }}
+      className={`group relative mx-2 flex gap-3 rounded-lg px-3 py-0.5 hover:bg-hover focus-within:bg-hover ${props.showHeader ? "mt-3 pt-1" : ""}`}
+      style={{ backgroundColor: props.isHighlighted ? "rgba(45, 212, 191, 0.15)" : undefined }}
       data-message-id={message.id}
     >
-      <div className="w-10 shrink-0">
-        {props.showHeader && props.author && <Avatar user={props.author} size={40} />}
+      <div className="w-9 shrink-0 pt-0.5">
+        {props.showHeader && props.author && <Avatar user={props.author} size={36} />}
       </div>
       <div className="min-w-0 flex-1">
         {props.replyPreview && (
           <button
             type="button"
             onClick={props.onReplyClick}
-            className="mb-0.5 flex max-w-full items-center gap-1 truncate text-xs"
-            style={{ color: "var(--color-text-muted)" }}
+            className="mb-0.5 flex max-w-full items-center gap-1 truncate text-xs text-muted hover:text-secondary"
           >
-            <span>↪</span>
-            <span className="font-medium">{props.replyPreview.authorName}</span>
+            <ReplyArrowIcon size={12} className="shrink-0" />
+            <span className="font-medium text-secondary">{props.replyPreview.authorName}</span>
             <span className="truncate">{props.replyPreview.text}</span>
           </button>
         )}
         {props.showHeader && (
           <div className="flex items-baseline gap-2">
-            <span className="font-semibold">{props.authorName}</span>
-            <span className="text-xs" title={fullDate} style={{ color: "var(--color-text-muted)" }}>
+            <span className="font-semibold text-primary">{props.authorName}</span>
+            <span className="text-xs text-muted" title={fullDate}>
               {timeLabel}
             </span>
           </div>
         )}
         <div
-          className="text-sm"
+          className="markdown text-sm leading-relaxed"
           style={{
-            color: message.deleted || message.cannotRead ? "var(--color-text-muted)" : "var(--color-text-primary)",
+            color:
+              message.deleted || message.cannotRead
+                ? "var(--color-text-muted)"
+                : "var(--color-text-primary)",
             fontStyle: message.deleted || message.cannotRead ? "italic" : "normal",
           }}
         >
-          {message.deleted || message.cannotRead ? (
-            message.body
-          ) : (
-            message.body.length > 0 && (
-              <Markdown text={message.body} getDisplayName={props.getDisplayName} selfUserId={props.selfUserId} />
-            )
-          )}
+          {message.deleted || message.cannotRead
+            ? message.body
+            : message.body.length > 0 && (
+                <Markdown
+                  text={message.body}
+                  getDisplayName={props.getDisplayName}
+                  selfUserId={props.selfUserId}
+                />
+              )}
           {message.edited && !message.deleted && (
-            <span className="ml-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
-              (edited)
-            </span>
+            <span className="ml-1 text-xs text-muted">(edited)</span>
           )}
         </div>
 
@@ -156,11 +169,11 @@ export function MessageItem(props: MessageItemProps) {
                 type="button"
                 title={props.getReactorNames(reaction.userIds)}
                 onClick={() => props.onToggleReaction(reaction.key)}
-                className="rounded border px-1.5 py-0.5 text-xs"
-                style={{
-                  borderColor: reaction.ownEventId ? "var(--color-accent)" : "var(--color-border)",
-                  backgroundColor: reaction.ownEventId ? "rgba(91, 108, 255, 0.15)" : "transparent",
-                }}
+                className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
+                  reaction.ownEventId
+                    ? "border-accent bg-accent-soft text-accent-text"
+                    : "border-line-strong bg-elevated text-secondary hover:border-muted"
+                }`}
               >
                 {reaction.key} {reaction.userIds.length}
               </button>
@@ -170,22 +183,19 @@ export function MessageItem(props: MessageItemProps) {
       </div>
 
       {!message.deleted && !message.cannotRead && (
-        <div className="relative hidden shrink-0 items-start gap-1 group-hover:flex">
+        <div className="menu absolute -top-3 right-3 z-10 hidden items-center gap-0.5 rounded-lg p-0.5 shadow-[var(--shadow-soft)] group-hover:flex group-focus-within:flex">
           <div className="relative">
             <button
               type="button"
               aria-label="React"
+              title="React"
               onClick={() => setPickerOpen((o) => !o)}
-              className="rounded px-1.5 py-0.5 text-sm"
-              style={{ color: "var(--color-text-muted)" }}
+              className="icon-btn h-7 w-7"
             >
-              🙂
+              <SmileIcon />
             </button>
             {pickerOpen && (
-              <div
-                className="absolute right-0 top-full z-10 flex gap-1 rounded border p-1"
-                style={{ backgroundColor: "var(--color-bg-main)", borderColor: "var(--color-border)" }}
-              >
+              <div className="menu absolute right-0 top-full z-10 mt-1 flex gap-0.5 p-1">
                 {QUICK_REACTIONS.map((key) => (
                   <button
                     key={key}
@@ -194,35 +204,52 @@ export function MessageItem(props: MessageItemProps) {
                       props.onAddReaction(key);
                       setPickerOpen(false);
                     }}
-                    className="px-1 text-sm"
+                    className="flex h-8 w-8 items-center justify-center rounded-md text-base hover:bg-hover"
                   >
                     {key}
                   </button>
                 ))}
                 <EmojiPickerButton
                   ariaLabel="More emoji"
-                  label="+"
+                  label={<PlusIcon />}
                   onPick={(emoji) => {
                     togglePickedReaction(emoji);
                     setPickerOpen(false);
                   }}
-                  className="px-1 text-sm"
-                  style={{ color: "var(--color-text-muted)" }}
+                  className="icon-btn"
                 />
               </div>
             )}
           </div>
-          <button type="button" aria-label="Reply" onClick={props.onReply} className="rounded px-1.5 py-0.5 text-sm" style={{ color: "var(--color-text-muted)" }}>
-            ↩
+          <button
+            type="button"
+            aria-label="Reply"
+            title="Reply"
+            onClick={props.onReply}
+            className="icon-btn h-7 w-7"
+          >
+            <ReplyIcon />
           </button>
           {props.isOwn && (
-            <button type="button" aria-label="Edit" onClick={props.onEdit} className="rounded px-1.5 py-0.5 text-sm" style={{ color: "var(--color-text-muted)" }}>
-              ✎
+            <button
+              type="button"
+              aria-label="Edit"
+              title="Edit"
+              onClick={props.onEdit}
+              className="icon-btn h-7 w-7"
+            >
+              <PencilIcon />
             </button>
           )}
           {(props.isOwn || props.canManageMessages) && (
-            <button type="button" aria-label="Delete" onClick={handleDeleteClick} className="rounded px-1.5 py-0.5 text-sm" style={{ color: "var(--color-text-muted)" }}>
-              🗑
+            <button
+              type="button"
+              aria-label="Delete"
+              title="Delete"
+              onClick={handleDeleteClick}
+              className="icon-btn h-7 w-7 hover:text-danger-text"
+            >
+              <TrashIcon />
             </button>
           )}
         </div>
@@ -242,19 +269,19 @@ export function MessageItem(props: MessageItemProps) {
 
 export function DayDivider({ label }: { label: string }) {
   return (
-    <div className="my-2 flex items-center gap-2 px-4 text-xs" style={{ color: "var(--color-text-muted)" }}>
-      <div className="h-px flex-1" style={{ backgroundColor: "var(--color-border)" }} />
+    <div className="mx-5 mb-1 mt-5 flex items-center gap-3 text-xs font-medium text-muted">
+      <div className="h-px flex-1 bg-line" />
       {label}
-      <div className="h-px flex-1" style={{ backgroundColor: "var(--color-border)" }} />
+      <div className="h-px flex-1 bg-line" />
     </div>
   );
 }
 
 export function NewDivider() {
   return (
-    <div className="my-1 flex items-center gap-2 px-4 text-xs font-semibold" style={{ color: "var(--color-danger-text)" }}>
-      <div className="h-px flex-1" style={{ backgroundColor: "var(--color-danger)" }} />
-      New
+    <div className="mx-5 my-1 flex items-center gap-2 text-xs font-semibold text-danger-text">
+      <div className="h-px flex-1 bg-danger-text/50" />
+      <span className="rounded bg-danger-soft px-1.5 py-0.5 leading-none">New</span>
     </div>
   );
 }
@@ -275,18 +302,18 @@ export function PendingMessageRow({
   onDiscard: () => void;
 }) {
   return (
-    <div className="flex gap-3 px-4 py-1" style={{ opacity: 0.6 }}>
-      <div className="w-10 shrink-0" />
+    <div className="mx-2 flex gap-3 px-3 py-0.5" style={{ opacity: 0.6 }}>
+      <div className="w-9 shrink-0" />
       <div className="min-w-0 flex-1 text-sm">
         <MarkdownInline text={body} />
         {failed && (
-          <span className="ml-2 text-xs" style={{ color: "var(--color-danger-text)" }} role="alert">
+          <span className="ml-2 text-xs text-danger-text" role="alert">
             Not sent.{error ? ` ${error}` : ""}{" "}
-            <button type="button" onClick={onRetry} className="underline">
+            <button type="button" onClick={onRetry} className="link">
               Try again
             </button>{" "}
             /{" "}
-            <button type="button" onClick={onDiscard} className="underline">
+            <button type="button" onClick={onDiscard} className="link">
               Delete
             </button>
           </span>

@@ -37,15 +37,10 @@ export function ServerAddressPage() {
           autoFocus
           required
         />
-        <p className="mb-4 text-xs" style={{ color: "var(--color-text-muted)" }}>
+        <p className="mb-4 text-xs text-muted">
           Type the address of the web app of your server. The app restarts when it connects.
         </p>
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-full rounded px-3 py-2 text-sm font-medium"
-          style={{ backgroundColor: "var(--color-accent)", color: "white" }}
-        >
+        <button type="submit" disabled={pending} className="btn btn-primary w-full">
           {pending ? "Connecting..." : "Connect"}
         </button>
       </form>

@@ -225,8 +225,7 @@ export function VoiceSettingsDialog({ open, onClose }: { open: boolean; onClose:
     <dialog
       ref={dialogRef}
       onClose={handleClose}
-      className="w-full max-w-md rounded-lg border p-6"
-      style={{ borderColor: "var(--color-border)", backgroundColor: "var(--color-bg-sidebar)", color: "var(--color-text-primary)" }}
+      className="w-full max-w-md p-6"
       aria-label="Voice and video settings"
     >
       <h2 className="mb-4 text-lg font-semibold">Voice and video</h2>
@@ -236,15 +235,14 @@ export function VoiceSettingsDialog({ open, onClose }: { open: boolean; onClose:
           <button
             type="button"
             onClick={() => void requestMicPermission()}
-            className="rounded px-3 py-2 text-sm font-medium"
-            style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+            className="btn btn-primary"
           >
             Allow microphone access
           </button>
         </div>
       )}
       {permissionError && (
-        <p role="alert" className="mb-4 text-sm" style={{ color: "var(--color-danger-text)" }}>
+        <p role="alert" className="mb-4 text-sm text-danger-text">
           {permissionError}
         </p>
       )}
@@ -255,8 +253,7 @@ export function VoiceSettingsDialog({ open, onClose }: { open: boolean; onClose:
         </label>
         <select
           id="voice-input-device"
-          className="w-full rounded border px-2 py-1.5 text-sm"
-          style={{ borderColor: "var(--color-border)", backgroundColor: "var(--color-bg-main)" }}
+          className="field w-full px-2 py-1.5 text-sm"
           value={settings.inputDeviceId ?? ""}
           onChange={(event) => {
             const deviceId = event.target.value || null;
@@ -275,15 +272,13 @@ export function VoiceSettingsDialog({ open, onClose }: { open: boolean; onClose:
           <button
             type="button"
             onClick={() => setMicTestOn((v) => !v)}
-            className="rounded px-2 py-1 text-xs"
-            style={{ backgroundColor: "var(--color-bg-main)" }}
+            className="btn btn-secondary px-2.5 py-1 text-xs"
           >
             {micTestOn ? "Stop mic test" : "Test microphone"}
           </button>
           {micTestOn && (
             <div
-              className="h-2 flex-1 overflow-hidden rounded"
-              style={{ backgroundColor: "var(--color-bg-main)" }}
+              className="h-2 flex-1 overflow-hidden rounded-full bg-input"
               role="meter"
               aria-label="Microphone level"
               aria-valuemin={0}
@@ -291,8 +286,8 @@ export function VoiceSettingsDialog({ open, onClose }: { open: boolean; onClose:
               aria-valuenow={Math.round(micLevel * 100)}
             >
               <div
-                className="h-full rounded"
-                style={{ width: `${Math.round(micLevel * 100)}%`, backgroundColor: "#3ba55d" }}
+                className="h-full rounded-full bg-accent"
+                style={{ width: `${Math.round(micLevel * 100)}%` }}
               />
             </div>
           )}
@@ -306,8 +301,7 @@ export function VoiceSettingsDialog({ open, onClose }: { open: boolean; onClose:
           </label>
           <select
             id="voice-output-device"
-            className="w-full rounded border px-2 py-1.5 text-sm"
-            style={{ borderColor: "var(--color-border)", backgroundColor: "var(--color-bg-main)" }}
+            className="field w-full px-2 py-1.5 text-sm"
             value={settings.outputDeviceId ?? ""}
             onChange={(event) => {
               const deviceId = event.target.value || null;
@@ -324,7 +318,7 @@ export function VoiceSettingsDialog({ open, onClose }: { open: boolean; onClose:
           </select>
         </div>
       ) : (
-        <p className="mb-4 text-sm" style={{ color: "var(--color-text-muted)" }}>
+        <p className="mb-4 text-sm text-muted">
           Your browser cannot change the output device.
         </p>
       )}
@@ -335,8 +329,7 @@ export function VoiceSettingsDialog({ open, onClose }: { open: boolean; onClose:
         </label>
         <select
           id="voice-camera-device"
-          className="mb-2 w-full rounded border px-2 py-1.5 text-sm"
-          style={{ borderColor: "var(--color-border)", backgroundColor: "var(--color-bg-main)" }}
+          className="field mb-2 w-full px-2 py-1.5 text-sm"
           value={settings.cameraDeviceId ?? ""}
           onChange={(event) => {
             const deviceId = event.target.value || null;
@@ -352,8 +345,7 @@ export function VoiceSettingsDialog({ open, onClose }: { open: boolean; onClose:
           ))}
         </select>
         <div
-          className="flex aspect-video items-center justify-center overflow-hidden rounded"
-          style={{ backgroundColor: "var(--color-bg-main)" }}
+          className="flex aspect-video items-center justify-center overflow-hidden rounded-lg border border-line bg-input"
         >
           {cameraStream ? (
             <video
@@ -365,7 +357,7 @@ export function VoiceSettingsDialog({ open, onClose }: { open: boolean; onClose:
               style={{ transform: "scaleX(-1)" }}
             />
           ) : (
-            <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+            <span className="text-xs text-muted">
               No camera preview
             </span>
           )}
@@ -397,12 +389,11 @@ export function VoiceSettingsDialog({ open, onClose }: { open: boolean; onClose:
             <button
               type="button"
               onClick={() => setCapturingKey(true)}
-              className="rounded px-2 py-1 text-xs"
-              style={{ backgroundColor: "var(--color-bg-main)" }}
+              className="btn btn-secondary px-2.5 py-1 text-xs"
             >
               {capturingKey ? "Press a key…" : settings.pttKeyCode ? `Key: ${describeKeyCode(settings.pttKeyCode)}` : "Set key"}
             </button>
-            <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+            <span className="text-xs text-muted">
               {desktopFeatures()?.pushToTalkHint ?? "Push to talk works only while this window has focus."}
             </span>
           </div>
@@ -413,8 +404,7 @@ export function VoiceSettingsDialog({ open, onClose }: { open: boolean; onClose:
         <button
           type="button"
           onClick={handleClose}
-          className="rounded px-3 py-2 text-sm font-medium"
-          style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+          className="btn btn-primary"
         >
           Done
         </button>

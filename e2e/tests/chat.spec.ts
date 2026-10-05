@@ -197,7 +197,7 @@ test.describe("chat", () => {
     const replyRowOnA = messageRow(pageA, "Reply from B");
     await replyRowOnA.getByRole("button", { name: /Hello from A/ }).click();
     const originalRowOnA = messageRow(pageA, "Hello from A", "Reply from B");
-    await expect(originalRowOnA).toHaveCSS("background-color", "rgba(91, 108, 255, 0.15)");
+    await expect(originalRowOnA).toHaveCSS("background-color", "rgba(45, 212, 191, 0.15)");
 
     // 3. A edits its message; B sees the new text and "(edited)".
     await messageRow(pageA, "Hello from A", "Reply from B").hover();

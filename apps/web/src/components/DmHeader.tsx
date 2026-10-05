@@ -10,6 +10,7 @@ import { describeError } from "../lib/errors.js";
 import { rememberDm } from "../lib/dms.js";
 import { useRealtime } from "../lib/useRealtime.js";
 import { joinVoiceChannel, leaveVoice, voiceStore } from "../lib/voice.js";
+import { PencilIcon, PhoneIcon, PhoneOffIcon } from "./icons.js";
 
 function GroupNameEditor({ channel, onDone }: { channel: DmChannelJson; onDone: () => void }) {
   const [name, setName] = useState(channel.name ?? "");
@@ -27,7 +28,9 @@ function GroupNameEditor({ channel, onDone }: { channel: DmChannelJson; onDone: 
     setPending(true);
     setError(null);
     try {
-      rememberDm(await renameGroupDm(session.apiClient, channel.id, { name: parsed ? parsed.data : null }));
+      rememberDm(
+        await renameGroupDm(session.apiClient, channel.id, { name: parsed ? parsed.data : null }),
+      );
       onDone();
     } catch (err) {
       setError(describeError(err));
@@ -47,22 +50,16 @@ function GroupNameEditor({ channel, onDone }: { channel: DmChannelJson; onDone: 
         onKeyDown={(e) => {
           if (e.key === "Escape") onDone();
         }}
-        className="rounded border px-2 py-1 text-sm"
-        style={{ backgroundColor: "var(--color-bg-sidebar)", borderColor: "var(--color-border)", color: "var(--color-text-primary)" }}
+        className="field py-1"
       />
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded px-2 py-1 text-sm"
-        style={{ backgroundColor: "var(--color-accent)", color: "white" }}
-      >
+      <button type="submit" disabled={pending} className="btn btn-primary px-3 py-1">
         Save
       </button>
-      <button type="button" onClick={onDone} className="rounded px-2 py-1 text-sm">
+      <button type="button" onClick={onDone} className="btn btn-ghost px-3 py-1">
         Cancel
       </button>
       {error && (
-        <span role="alert" className="text-xs" style={{ color: "var(--color-danger-text)" }}>
+        <span role="alert" className="text-xs text-danger-text">
           {error}
         </span>
       )}
@@ -73,14 +70,17 @@ function GroupNameEditor({ channel, onDone }: { channel: DmChannelJson; onDone: 
 export function DmHeader({ channel }: { channel: DmChannelJson }) {
   const selfUserId = useRealtime((s) => s.selfUserId);
   const callSize = useRealtime((s) => Object.keys(s.voiceStatesByChannel[channel.id] ?? {}).length);
-  const connectedHere = useStore(voiceStore, (s) => s.status !== "idle" && s.channelId === channel.id);
+  const connectedHere = useStore(
+    voiceStore,
+    (s) => s.status !== "idle" && s.channelId === channel.id,
+  );
   const [editing, setEditing] = useState(false);
   const others = dmOtherRecipients(channel, selfUserId);
   const name = dmDisplayName(channel, selfUserId);
   const isGroup = channel.type === "group_dm";
 
   return (
-    <div className="flex items-center gap-2 border-b px-4 py-2" style={{ borderColor: "var(--color-border)" }}>
+    <div className="flex h-full items-center gap-2 pl-4 pr-2">
       {!isGroup && others[0] && <Avatar user={others[0]} size={24} />}
       {editing ? (
         <GroupNameEditor channel={channel} onDone={() => setEditing(false)} />
@@ -93,9 +93,9 @@ export function DmHeader({ channel }: { channel: DmChannelJson }) {
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="rounded px-2 py-1 text-xs"
-          style={{ color: "var(--color-text-muted)" }}
+          className="btn btn-ghost px-2 py-1 text-xs"
         >
+          <PencilIcon size={12} />
           Edit name
         </button>
       )}
@@ -104,18 +104,18 @@ export function DmHeader({ channel }: { channel: DmChannelJson }) {
         <button
           type="button"
           onClick={() => void leaveVoice()}
-          className="rounded px-3 py-1 text-sm font-medium"
-          style={{ backgroundColor: "var(--color-danger)", color: "white" }}
+          className="btn btn-danger px-3 py-1"
         >
+          <PhoneOffIcon size={14} />
           Leave call
         </button>
       ) : (
         <button
           type="button"
           onClick={() => void joinVoiceChannel(null, channel.id)}
-          className="rounded px-3 py-1 text-sm font-medium"
-          style={{ backgroundColor: "var(--color-success)", color: "white" }}
+          className="btn btn-success px-3 py-1"
         >
+          <PhoneIcon size={14} />
           {callSize > 0 ? "Join call" : "Start call"}
         </button>
       )}

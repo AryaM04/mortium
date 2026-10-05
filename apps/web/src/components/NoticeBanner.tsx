@@ -2,6 +2,7 @@
 // removed from this server") and cleared after a short delay or on close.
 import { useStore } from "zustand";
 import { clearNotice, noticeStore } from "../lib/notice.js";
+import { CloseIcon } from "./icons.js";
 
 export function NoticeBanner() {
   const message = useStore(noticeStore, (s) => s.message);
@@ -11,17 +12,16 @@ export function NoticeBanner() {
   return (
     <div
       role="status"
-      className="flex items-center justify-between gap-2 px-3 py-2 text-center text-sm"
-      style={{ backgroundColor: "#3a2f00", color: "#ffe0a3" }}
+      className="mx-1.5 mt-1.5 flex items-center justify-between gap-2 rounded-lg border border-accent/30 bg-[#0f2624] py-1.5 pl-3 pr-1.5 text-center text-sm text-accent-text"
     >
       <span className="flex-1">{message}</span>
       <button
         type="button"
         onClick={clearNotice}
         aria-label="Dismiss notice"
-        className="px-2 text-sm"
+        className="icon-btn h-7 w-7 text-accent-text hover:bg-accent-soft hover:text-accent-text"
       >
-        &times;
+        <CloseIcon size={14} />
       </button>
     </div>
   );

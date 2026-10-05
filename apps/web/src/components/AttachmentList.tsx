@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import { formatFileSize, isInlineImage, type FileSecrets } from "@mortium/client-core";
 import type { Attachment } from "@mortium/shared";
+import { DownloadIcon, FileIcon } from "./icons.js";
 
 const loadFiles = () => import("../lib/attachment-files.js");
 
@@ -37,16 +38,22 @@ function Lightbox({ attachment, onClose }: { attachment: Attachment; onClose: ()
       ref={ref}
       onClose={onClose}
       aria-label={attachment.name}
-      className="max-h-[90vh] max-w-[90vw] rounded p-2"
-      style={{ backgroundColor: "var(--color-bg-main)", color: "var(--color-text-primary)" }}
+      className="max-h-[90vh] max-w-[90vw] p-2"
     >
       {url ? (
-        <img src={url} alt={attachment.name} data-testid="lightbox-image" className="max-h-[80vh] max-w-[85vw] object-contain" />
+        <img
+          src={url}
+          alt={attachment.name}
+          data-testid="lightbox-image"
+          className="max-h-[80vh] max-w-[85vw] object-contain"
+        />
       ) : (
-        <p className="p-4 text-sm">{failed ? "The image cannot be shown." : "Loading the image."}</p>
+        <p className="p-4 text-sm">
+          {failed ? "The image cannot be shown." : "Loading the image."}
+        </p>
       )}
       <div className="mt-2 flex justify-end">
-        <button type="button" onClick={onClose} className="rounded px-3 py-1 text-sm">
+        <button type="button" onClick={onClose} className="btn btn-secondary px-3 py-1">
           Close
         </button>
       </div>
@@ -64,10 +71,18 @@ function ImageAttachment({ attachment }: { attachment: Attachment }) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label={`Open the image ${attachment.name}`}
-        className="block overflow-hidden rounded"
-        style={{ width: thumbnail.width, height: thumbnail.height, backgroundColor: "var(--color-bg-sidebar)" }}
+        className="block overflow-hidden rounded-lg border border-line bg-elevated"
+        style={{ width: thumbnail.width, height: thumbnail.height }}
       >
-        {url && <img src={url} alt={attachment.name} width={thumbnail.width} height={thumbnail.height} data-testid="attachment-thumbnail" />}
+        {url && (
+          <img
+            src={url}
+            alt={attachment.name}
+            width={thumbnail.width}
+            height={thumbnail.height}
+            data-testid="attachment-thumbnail"
+          />
+        )}
         {failed && <span className="p-2 text-xs">The image cannot be shown.</span>}
       </button>
       {open && <Lightbox attachment={attachment} onClose={() => setOpen(false)} />}
@@ -88,15 +103,18 @@ function FileAttachment({ attachment }: { attachment: Attachment }) {
   }
   return (
     <div
-      className="flex max-w-sm items-center gap-3 rounded border px-3 py-2"
-      style={{ borderColor: "var(--color-border)", backgroundColor: "var(--color-bg-sidebar)" }}
+      className="card flex max-w-sm items-center gap-3 rounded-lg px-3 py-2"
       data-testid="attachment-file"
     >
-      <span aria-hidden="true">📄</span>
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent-text">
+        <FileIcon size={18} />
+      </span>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium">{attachment.name}</div>
-        <div className="text-xs" style={{ color: state === "failed" ? "var(--color-danger-text)" : "var(--color-text-muted)" }}>
-          {state === "failed" ? "The file could not be downloaded." : formatFileSize(attachment.size)}
+        <div className={`text-xs ${state === "failed" ? "text-danger-text" : "text-muted"}`}>
+          {state === "failed"
+            ? "The file could not be downloaded."
+            : formatFileSize(attachment.size)}
         </div>
       </div>
       <button
@@ -104,10 +122,9 @@ function FileAttachment({ attachment }: { attachment: Attachment }) {
         onClick={() => void download()}
         disabled={state === "busy"}
         aria-label={`Download ${attachment.name}`}
-        className="rounded px-2 py-1 text-sm"
-        style={{ color: "var(--color-text-primary)" }}
+        className="icon-btn"
       >
-        ⬇
+        <DownloadIcon />
       </button>
     </div>
   );

@@ -12,7 +12,13 @@ import { encryptionSetupStore, messagesStore } from "../lib/messages.js";
 // so a module-level constant is used instead (see `MemberList.tsx`).
 const EMPTY_TYPING: Record<string, number> = {};
 
-export function TypingIndicator({ channelId, guildId }: { channelId: string; guildId: string | null }) {
+export function TypingIndicator({
+  channelId,
+  guildId,
+}: {
+  channelId: string;
+  guildId: string | null;
+}) {
   const typing = useMessages((s) => s.channels[channelId]?.typing ?? EMPTY_TYPING);
   const state = useRealtime((s) => s);
   const userIds = Object.keys(typing);
@@ -43,8 +49,7 @@ export function TypingIndicator({ channelId, guildId }: { channelId: string; gui
       role="status"
       aria-live="polite"
       aria-atomic="true"
-      className="h-5 truncate px-4 text-xs"
-      style={{ color: "var(--color-text-muted)" }}
+      className="h-5 truncate px-4 text-xs text-muted"
     >
       {text}
     </div>

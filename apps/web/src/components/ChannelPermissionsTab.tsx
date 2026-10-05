@@ -96,7 +96,9 @@ export function ChannelPermissionsTab({ channel }: { channel: ChannelJson }) {
   // The channel as the store holds it now, not as this render saw it.
   // Gateway events can change it while a request runs.
   function latestChannel(): ChannelJson {
-    return (realtimeStore.getState().channels[channel.id] as ChannelJson | undefined) ?? liveChannel;
+    return (
+      (realtimeStore.getState().channels[channel.id] as ChannelJson | undefined) ?? liveChannel
+    );
   }
 
   async function saveOverwrite(
@@ -115,15 +117,15 @@ export function ChannelPermissionsTab({ channel }: { channel: ChannelJson }) {
       });
       const current = latestChannel();
       const nextOverwrites = [
-        ...current.permissionOverwrites.filter((o) => !(o.targetId === targetId && o.targetType === targetType)),
+        ...current.permissionOverwrites.filter(
+          (o) => !(o.targetId === targetId && o.targetType === targetType),
+        ),
         { targetId, targetType, allow: allow.toString(), deny: deny.toString() },
       ];
-      realtimeStore
-        .getState()
-        .applyDispatch({
-          t: "CHANNEL_UPDATE",
-          d: { ...current, permissionOverwrites: nextOverwrites },
-        });
+      realtimeStore.getState().applyDispatch({
+        t: "CHANNEL_UPDATE",
+        d: { ...current, permissionOverwrites: nextOverwrites },
+      });
       setSelectedKey(`${targetType}:${targetId}`);
     } catch (err) {
       setError(describeError(err));
@@ -141,12 +143,10 @@ export function ChannelPermissionsTab({ channel }: { channel: ChannelJson }) {
       const nextOverwrites = current.permissionOverwrites.filter(
         (o) => !(o.targetId === targetId && o.targetType === targetType),
       );
-      realtimeStore
-        .getState()
-        .applyDispatch({
-          t: "CHANNEL_UPDATE",
-          d: { ...current, permissionOverwrites: nextOverwrites },
-        });
+      realtimeStore.getState().applyDispatch({
+        t: "CHANNEL_UPDATE",
+        d: { ...current, permissionOverwrites: nextOverwrites },
+      });
       setSelectedKey(null);
     } catch (err) {
       setError(describeError(err));
@@ -175,33 +175,21 @@ export function ChannelPermissionsTab({ channel }: { channel: ChannelJson }) {
   }
 
   if (!guild || !roles) {
-    return (
-      <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-        Loading permissions...
-      </p>
-    );
+    return <p className="text-sm text-muted">Loading permissions...</p>;
   }
 
   return (
     <div className="flex h-full min-h-0 gap-4">
       <div className="flex w-56 flex-shrink-0 flex-col gap-2 overflow-y-auto">
         {canEditChannel && (
-          <div
-            className="flex flex-col gap-1 rounded border p-2"
-            style={{ borderColor: "var(--color-border)" }}
-          >
+          <div className="flex flex-col gap-1.5 rounded-lg border border-line p-2">
             {availableRoles.length > 0 && (
               <div className="flex gap-1">
                 <select
                   aria-label="Add a role overwrite"
                   value={addingRoleId}
                   onChange={(e) => setAddingRoleId(e.target.value)}
-                  className="flex-1 rounded border px-1 py-1 text-xs"
-                  style={{
-                    backgroundColor: "var(--color-bg-main)",
-                    borderColor: "var(--color-border)",
-                    color: "var(--color-text-primary)",
-                  }}
+                  className="field min-w-0 flex-1 px-2 py-1 text-xs"
                 >
                   <option value="">Add a role...</option>
                   {availableRoles.map((role) => (
@@ -217,8 +205,7 @@ export function ChannelPermissionsTab({ channel }: { channel: ChannelJson }) {
                     if (addingRoleId) void saveOverwrite(addingRoleId, "role", 0n, 0n);
                     setAddingRoleId("");
                   }}
-                  className="rounded px-2 text-xs"
-                  style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+                  className="btn btn-primary px-2.5 py-1 text-xs"
                 >
                   Add
                 </button>
@@ -230,12 +217,7 @@ export function ChannelPermissionsTab({ channel }: { channel: ChannelJson }) {
                   aria-label="Add a member overwrite"
                   value={addingMemberId}
                   onChange={(e) => setAddingMemberId(e.target.value)}
-                  className="flex-1 rounded border px-1 py-1 text-xs"
-                  style={{
-                    backgroundColor: "var(--color-bg-main)",
-                    borderColor: "var(--color-border)",
-                    color: "var(--color-text-primary)",
-                  }}
+                  className="field min-w-0 flex-1 px-2 py-1 text-xs"
                 >
                   <option value="">Add a member...</option>
                   {availableMembers.map((member) => (
@@ -251,8 +233,7 @@ export function ChannelPermissionsTab({ channel }: { channel: ChannelJson }) {
                     if (addingMemberId) void saveOverwrite(addingMemberId, "member", 0n, 0n);
                     setAddingMemberId("");
                   }}
-                  className="rounded px-2 text-xs"
-                  style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+                  className="btn btn-primary px-2.5 py-1 text-xs"
                 >
                   Add
                 </button>
@@ -266,10 +247,11 @@ export function ChannelPermissionsTab({ channel }: { channel: ChannelJson }) {
               <button
                 type="button"
                 onClick={() => setSelectedKey(key(o))}
-                className="w-full truncate rounded px-2 py-1.5 text-left text-sm"
-                style={{
-                  backgroundColor: key(o) === selectedKey ? "var(--color-bg-main)" : "transparent",
-                }}
+                className={`w-full truncate rounded-lg px-2 py-1.5 text-left text-sm ${
+                  key(o) === selectedKey
+                    ? "bg-accent-soft text-primary"
+                    : "text-secondary hover:bg-hover"
+                }`}
               >
                 {o.targetType === "role" ? "@ " : "# "}
                 {nameOf(o.targetId, channel.guildId, roles, members)}
@@ -277,21 +259,19 @@ export function ChannelPermissionsTab({ channel }: { channel: ChannelJson }) {
             </li>
           ))}
           {overwrites.length === 0 && (
-            <li className="px-2 text-sm" style={{ color: "var(--color-text-muted)" }}>
-              No overwrites yet.
-            </li>
+            <li className="px-2 text-sm text-muted">No overwrites yet.</li>
           )}
         </ul>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pr-1">
         {error && (
-          <p role="alert" className="mb-2 text-sm" style={{ color: "var(--color-danger-text)" }}>
+          <p role="alert" className="mb-2 text-sm text-danger-text">
             {error}
           </p>
         )}
         {!selected ? (
-          <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+          <p className="text-sm text-muted">
             Select an overwrite to edit it, or add a role or member.
           </p>
         ) : (
@@ -305,33 +285,21 @@ export function ChannelPermissionsTab({ channel }: { channel: ChannelJson }) {
                   type="button"
                   disabled={pending}
                   onClick={() => void removeOverwrite(selected.targetId, selected.targetType)}
-                  className="rounded px-2 py-1 text-xs"
-                  style={{ backgroundColor: "var(--color-danger)", color: "white" }}
+                  className="btn btn-danger px-2 py-1 text-xs"
                 >
                   Remove
                 </button>
               )}
             </div>
             {!canEditChannel && (
-              <p
-                className="mb-3 rounded px-3 py-2 text-sm"
-                style={{
-                  backgroundColor: "var(--color-bg-main)",
-                  color: "var(--color-text-muted)",
-                }}
-              >
+              <p className="mb-3 rounded-lg bg-hover px-3 py-2 text-sm text-muted">
                 You need Manage Roles in this channel to edit overwrites.
               </p>
             )}
             <div className="flex flex-col gap-4">
               {CHANNEL_PERMISSION_GROUPS.map((group) => (
                 <fieldset key={group.label}>
-                  <legend
-                    className="mb-1 text-xs font-semibold uppercase"
-                    style={{ color: "var(--color-text-muted)" }}
-                  >
-                    {group.label}
-                  </legend>
+                  <legend className="eyebrow mb-1.5">{group.label}</legend>
                   <div className="flex flex-col gap-1.5">
                     {group.permissions.map((name) => {
                       const bit = Permission[name];
@@ -351,16 +319,13 @@ export function ChannelPermissionsTab({ channel }: { channel: ChannelJson }) {
                                 : PERMISSION_DESCRIPTIONS[name]
                             }
                             aria-label={`${permissionLabel(name)}: ${value}`}
-                            className="w-20 rounded px-2 py-1 text-xs font-medium"
-                            style={{
-                              backgroundColor:
-                                value === "allow"
-                                  ? "var(--color-success)"
-                                  : value === "deny"
-                                    ? "var(--color-danger)"
-                                    : "var(--color-bg-main)",
-                              color: value === "neutral" ? "var(--color-text-muted)" : "white",
-                            }}
+                            className={`w-20 rounded-md border px-2 py-1 text-xs font-medium disabled:opacity-60 ${
+                              value === "allow"
+                                ? "border-success/40 bg-success-soft text-success-text"
+                                : value === "deny"
+                                  ? "border-danger-text/40 bg-danger-soft text-danger-text"
+                                  : "border-line-strong bg-hover text-muted"
+                            }`}
                           >
                             {value === "allow" ? "Allow" : value === "deny" ? "Deny" : "Neutral"}
                           </button>

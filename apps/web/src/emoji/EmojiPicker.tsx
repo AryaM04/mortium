@@ -163,7 +163,7 @@ export function EmojiPicker({ anchorEl, onPick, onClose }: EmojiPickerProps) {
       role="dialog"
       aria-label="Choose an emoji"
       onKeyDown={handleKeyDown}
-      className="fixed z-50 flex w-72 flex-col rounded border shadow-lg"
+      className="menu fixed z-50 flex w-80 flex-col p-0"
       style={{
         // Placed off-screen until the placement effect below measures
         // the popover and moves it next to its anchor. Off-screen (not
@@ -171,8 +171,6 @@ export function EmojiPicker({ anchorEl, onPick, onClose }: EmojiPickerProps) {
         // so the search box can take focus as soon as the picker opens.
         top: style?.top ?? -9999,
         left: style?.left ?? -9999,
-        backgroundColor: "var(--color-bg-main)",
-        borderColor: "var(--color-border)",
       }}
     >
       <div className="p-2">
@@ -183,14 +181,12 @@ export function EmojiPicker({ anchorEl, onPick, onClose }: EmojiPickerProps) {
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search for an emoji"
           aria-label="Search for an emoji"
-          className="w-full rounded px-2 py-1 text-sm outline-none"
-          style={{ backgroundColor: "var(--color-bg-sidebar)", color: "var(--color-text-primary)" }}
+          className="field w-full py-1.5"
         />
       </div>
       {!searching && (
         <div
-          className="flex gap-1 overflow-x-auto border-b px-2 pb-1"
-          style={{ borderColor: "var(--color-border)" }}
+          className="flex gap-1 overflow-x-auto border-b border-line px-2 pb-1.5"
           role="tablist"
           aria-label="Emoji categories"
         >
@@ -201,22 +197,20 @@ export function EmojiPicker({ anchorEl, onPick, onClose }: EmojiPickerProps) {
               role="tab"
               aria-selected={category === tab}
               onClick={() => setCategory(tab)}
-              className="shrink-0 rounded px-1.5 py-0.5 text-xs"
-              style={{
-                backgroundColor: category === tab ? "var(--color-bg-sidebar)" : "transparent",
-                color: "var(--color-text-primary)",
-              }}
+              className={`shrink-0 rounded-md px-2 py-0.5 text-xs ${category === tab ? "bg-accent-soft text-accent-text" : "text-secondary hover:bg-hover"}`}
             >
               {categoryTabLabel(tab)}
             </button>
           ))}
         </div>
       )}
-      <div className="grid max-h-56 grid-cols-8 gap-0.5 overflow-y-auto p-2" role="group" aria-label="Emoji">
+      <div
+        className="grid max-h-56 grid-cols-8 gap-0.5 overflow-y-auto p-2"
+        role="group"
+        aria-label="Emoji"
+      >
         {items.length === 0 && (
-          <p className="col-span-8 py-4 text-center text-xs" style={{ color: "var(--color-text-muted)" }}>
-            No emoji found.
-          </p>
+          <p className="col-span-8 py-4 text-center text-xs text-muted">No emoji found.</p>
         )}
         {items.map((record, index) => (
           <button
@@ -226,18 +220,14 @@ export function EmojiPicker({ anchorEl, onPick, onClose }: EmojiPickerProps) {
             aria-label={record.n}
             onClick={() => pick(record)}
             onMouseEnter={() => setActiveIndex(index)}
-            className="flex items-center justify-center rounded text-lg"
-            style={{
-              backgroundColor: index === activeIndex ? "var(--color-bg-sidebar)" : "transparent",
-              outline: index === activeIndex ? "1px solid var(--color-accent)" : "none",
-            }}
+            className={`flex h-8 items-center justify-center rounded-md text-lg ${index === activeIndex ? "bg-active ring-1 ring-accent" : ""}`}
           >
             {record.e}
           </button>
         ))}
       </div>
       {category === RECENT_CATEGORY && !searching && recent.length === 0 && (
-        <p className="px-3 pb-2 text-xs" style={{ color: "var(--color-text-muted)" }}>
+        <p className="px-3 pb-2 text-xs text-muted">
           You have no recent emoji. They keep the last {MAX_RECENT_EMOJI} you used.
         </p>
       )}

@@ -153,20 +153,12 @@ export function GuildSettingsDialog({
       // utility on the <dialog> itself would keep it visible, and
       // clickable, even while closed. The flex layout lives on the
       // wrapper div just inside instead.
-      className="w-full max-w-3xl rounded-lg border p-0"
-      style={{
-        borderColor: "var(--color-border)",
-        backgroundColor: "var(--color-bg-sidebar)",
-        color: "var(--color-text-primary)",
-        height: "min(38rem, 85vh)",
-      }}
+      className="w-full max-w-3xl overflow-hidden p-0"
+      style={{ height: "min(38rem, 85vh)" }}
       aria-label="Server settings"
     >
       <div className="flex h-full min-h-0">
-        <nav
-          className="flex w-40 flex-shrink-0 flex-col gap-0.5 border-r p-3"
-          style={{ borderColor: "var(--color-border)" }}
-        >
+        <nav className="flex w-40 flex-shrink-0 flex-col gap-0.5 border-r p-3 border-line">
           {tabs
             .filter((t) => !t.hidden)
             .map((t) => (
@@ -175,8 +167,7 @@ export function GuildSettingsDialog({
                 type="button"
                 onClick={() => setTab(t.id)}
                 aria-current={tab === t.id ? "page" : undefined}
-                className="rounded px-2 py-1.5 text-left text-sm"
-                style={{ backgroundColor: tab === t.id ? "var(--color-bg-main)" : "transparent" }}
+                className="nav-row rounded-lg px-2.5 py-1.5 text-left text-sm"
               >
                 {t.label}
               </button>
@@ -193,16 +184,13 @@ export function GuildSettingsDialog({
                   <img
                     src={serverUrl(`/api/v1/icons/${guild.id}/${guild.iconKey}`)}
                     alt=""
-                    className="h-14 w-14 rounded-full object-cover"
+                    className="h-14 w-14 rounded-[14px] object-cover"
                   />
                 ) : (
-                  <div
-                    className="flex h-14 w-14 items-center justify-center rounded-full"
-                    style={{ backgroundColor: "var(--color-bg-main)" }}
-                  />
+                  <div className="flex h-14 w-14 items-center justify-center rounded-[14px] border border-line-strong bg-hover" />
                 )}
                 <div className="flex flex-col gap-1">
-                  <label className="cursor-pointer text-sm underline">
+                  <label className="cursor-pointer text-sm link">
                     Change icon
                     <input
                       type="file"
@@ -215,7 +203,7 @@ export function GuildSettingsDialog({
                     <button
                       type="button"
                       onClick={handleRemoveIcon}
-                      className="text-left text-sm underline"
+                      className="text-left text-sm link"
                     >
                       Remove icon
                     </button>
@@ -231,15 +219,10 @@ export function GuildSettingsDialog({
                   id="guild-settings-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="mb-4 w-full rounded border px-3 py-2 text-sm"
-                  style={{
-                    backgroundColor: "var(--color-bg-main)",
-                    borderColor: "var(--color-border)",
-                    color: "var(--color-text-primary)",
-                  }}
+                  className="field mb-4 w-full px-3 py-2 text-sm"
                 />
                 {error && (
-                  <p role="alert" className="mb-4 text-sm" style={{ color: "var(--color-danger-text)" }}>
+                  <p role="alert" className="mb-4 text-sm text-danger-text">
                     {error}
                   </p>
                 )}
@@ -248,22 +231,16 @@ export function GuildSettingsDialog({
                     <button
                       type="button"
                       onClick={() => setConfirmingDelete(true)}
-                      className="rounded px-3 py-2 text-sm"
-                      style={{ color: "var(--color-danger-text)" }}
+                      className="btn btn-danger-ghost"
                     >
                       Delete server
                     </button>
                   )}
                   <div className="ml-auto flex gap-2">
-                    <button type="button" onClick={onClose} className="rounded px-3 py-2 text-sm">
+                    <button type="button" onClick={onClose} className="btn btn-ghost">
                       Cancel
                     </button>
-                    <button
-                      type="submit"
-                      disabled={pending}
-                      className="rounded px-3 py-2 text-sm font-medium"
-                      style={{ backgroundColor: "var(--color-accent)", color: "white" }}
-                    >
+                    <button type="submit" disabled={pending} className="btn btn-primary">
                       {pending ? "Saving..." : "Save"}
                     </button>
                   </div>
@@ -271,7 +248,7 @@ export function GuildSettingsDialog({
               </form>
 
               {confirmingDelete && (
-                <div className="mt-4 border-t pt-4" style={{ borderColor: "var(--color-border)" }}>
+                <div className="mt-4 border-t border-line pt-4">
                   <p className="mb-2 text-sm">
                     Deleting this server cannot be undone. Type <strong>{guild.name}</strong> to
                     confirm.
@@ -280,18 +257,13 @@ export function GuildSettingsDialog({
                     aria-label={`Type ${guild.name} to confirm deletion`}
                     value={confirmDeleteText}
                     onChange={(e) => setConfirmDeleteText(e.target.value)}
-                    className="mb-3 w-full rounded border px-3 py-2 text-sm"
-                    style={{
-                      backgroundColor: "var(--color-bg-main)",
-                      borderColor: "var(--color-border)",
-                      color: "var(--color-text-primary)",
-                    }}
+                    className="field mb-3 w-full px-3 py-2 text-sm"
                   />
                   <div className="flex justify-end gap-2">
                     <button
                       type="button"
                       onClick={() => setConfirmingDelete(false)}
-                      className="rounded px-3 py-2 text-sm"
+                      className="btn btn-ghost"
                     >
                       Cancel
                     </button>
@@ -299,8 +271,7 @@ export function GuildSettingsDialog({
                       type="button"
                       disabled={pending || confirmDeleteText !== guild.name}
                       onClick={handleDelete}
-                      className="rounded px-3 py-2 text-sm font-medium"
-                      style={{ backgroundColor: "var(--color-danger)", color: "white" }}
+                      className="btn btn-danger"
                     >
                       {pending ? "Deleting..." : "Delete server"}
                     </button>

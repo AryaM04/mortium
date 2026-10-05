@@ -1,33 +1,431 @@
-/* Theme tokens for this app. Colors are our own brand, not Discord colors. */
+/* Theme tokens and shared styles of this app: "graphite and mint", a dark theme. */
 @import "tailwindcss";
 
-:root {
-  --color-bg-rail: #14151a;
-  --color-bg-sidebar: #1b1d24;
-  --color-bg-main: #21232c;
-  --color-bg-members: #1b1d24;
-  --color-text-primary: #e7e9ee;
-  --color-text-muted: #9a9dab;
-  --color-accent: #5363f0;
-  --color-accent-text: #8c98ff;
-  --color-danger: #c93c3c;
-  --color-danger-text: #f26a6a;
-  --color-success: #2a7f45;
-  --color-border: #2a2c37;
+/*
+ * The tokens are theme variables, so each one also gives Tailwind classes
+ * (for example "bg-elevated", "text-muted", "border-line"). "static" keeps
+ * every variable in the page, also when no class uses it.
+ * Each text and background pair passes WCAG AA. The danger fill is darker
+ * than the danger text, because white text on #f43f5e fails AA.
+ */
+@theme static {
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-canvas: #0a0c10;
+  --color-sidebar: #10131a;
+  --color-main: #12151c;
+  --color-elevated: #181c25;
+  --color-hover: #1c212b;
+  --color-active: #222835;
+  --color-input: #0d1016;
+  --color-line: #1f2430;
+  --color-line-strong: #2b3140;
+
+  --color-primary: #e6e8ee;
+  --color-secondary: #b3b8c5;
+  --color-muted: #8a90a0;
+  /* Decoration only. Do not use it for text that a person must read. */
+  --color-faint: #5d6375;
+
+  --color-accent: #2dd4bf;
+  --color-accent-hover: #5eead4;
+  --color-accent-text: #5eead4;
+  --color-accent-soft: rgba(45, 212, 191, 0.12);
+  --color-on-accent: #042f2a;
+
+  --color-danger: #e11d48;
+  --color-danger-hover: #be123c;
+  --color-danger-text: #fb7185;
+  --color-danger-soft: rgba(244, 63, 94, 0.14);
+  --color-success: #22c55e;
+  --color-success-hover: #4ade80;
+  --color-success-text: #4ade80;
+  --color-success-soft: rgba(34, 197, 94, 0.14);
+  --color-on-success: #052e16;
+  --color-warning: #f59e0b;
+  --color-warning-text: #fbbf24;
+  --color-warning-soft: rgba(245, 158, 11, 0.14);
+
+  --color-online: #22c55e;
+  --color-idle: #f59e0b;
+  --color-dnd: #f43f5e;
+  --color-offline: #6b7182;
+
+  --color-avatar: #173b38;
+  --color-avatar-text: #5eead4;
 }
 
-html,
-body,
-#root {
-  height: 100%;
-  margin: 0;
-  background-color: var(--color-bg-main);
-  color: var(--color-text-primary);
-  font-family:
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    sans-serif;
+:root {
+  color-scheme: dark;
+  /* The first token names. Some inline styles still use them. */
+  --color-bg-rail: var(--color-canvas);
+  --color-bg-sidebar: var(--color-sidebar);
+  --color-bg-main: var(--color-main);
+  --color-bg-members: var(--color-sidebar);
+  --color-bg-elevated: var(--color-elevated);
+  --color-text-primary: var(--color-primary);
+  --color-text-secondary: var(--color-secondary);
+  --color-text-muted: var(--color-muted);
+  --color-border: var(--color-line);
+  --color-border-strong: var(--color-line-strong);
+
+  --shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-large: 0 16px 48px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-primary);
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
+  }
+
+  ::selection {
+    background-color: rgba(45, 212, 191, 0.3);
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  [role="option"] {
+    transition:
+      background-color 120ms ease,
+      color 120ms ease,
+      border-color 120ms ease,
+      box-shadow 120ms ease,
+      opacity 120ms ease;
+  }
+
+  button:not(:disabled),
+  [role="button"],
+  summary {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  /* One focus ring for the full app. It shows only for keyboard focus. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="range"] {
+    accent-color: var(--color-accent);
+  }
+
+  select option {
+    background-color: var(--color-elevated);
+    color: var(--color-primary);
+  }
+
+  /* The Tailwind reset removes the browser margin that centers a modal dialog. Put it back. */
+  dialog {
+    margin: auto;
+    background-color: var(--color-elevated);
+    color: var(--color-primary);
+    border: 1px solid var(--color-line-strong);
+    border-radius: 12px;
+    box-shadow: var(--shadow-large);
+  }
+
+  dialog[open] {
+    animation: rise-in 140ms ease-out;
+  }
+
+  dialog::backdrop {
+    background-color: rgba(4, 6, 10, 0.6);
+    backdrop-filter: blur(3px);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@layer components {
+  /* Buttons. Add a size class (for example "px-2 py-1 text-xs") to change the size. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+    color: var(--color-primary);
+  }
+  .btn:disabled {
+    opacity: 0.5;
+  }
+  .btn-primary {
+    background-color: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background-color: var(--color-accent-hover);
+  }
+  .btn-secondary {
+    background-color: var(--color-hover);
+    border-color: var(--color-line-strong);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background-color: var(--color-active);
+  }
+  .btn-ghost {
+    background-color: transparent;
+    color: var(--color-secondary);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background-color: var(--color-hover);
+    color: var(--color-primary);
+  }
+  .btn-danger {
+    background-color: var(--color-danger);
+    color: #ffffff;
+  }
+  .btn-danger:hover:not(:disabled) {
+    background-color: var(--color-danger-hover);
+  }
+  .btn-danger-ghost {
+    background-color: transparent;
+    color: var(--color-danger-text);
+  }
+  .btn-danger-ghost:hover:not(:disabled) {
+    background-color: var(--color-danger-soft);
+  }
+  .btn-success {
+    background-color: var(--color-success);
+    color: var(--color-on-success);
+  }
+  .btn-success:hover:not(:disabled) {
+    background-color: var(--color-success-hover);
+  }
+
+  /* A square button with one icon. */
+  .icon-btn {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 8px;
+    color: var(--color-muted);
+  }
+  .icon-btn:hover:not(:disabled),
+  .icon-btn[aria-expanded="true"] {
+    background-color: var(--color-hover);
+    color: var(--color-primary);
+  }
+  .icon-btn:disabled {
+    opacity: 0.5;
+  }
+
+  /* A text link inside other text. The underline marks it without color. */
+  .link {
+    color: var(--color-accent-text);
+    text-decoration: underline;
+    text-decoration-color: rgba(94, 234, 212, 0.45);
+    text-underline-offset: 2px;
+  }
+  .link:hover {
+    text-decoration-color: currentColor;
+  }
+
+  /* Text fields and select boxes. */
+  .field {
+    border: 1px solid var(--color-line-strong);
+    border-radius: 8px;
+    background-color: var(--color-input);
+    color: var(--color-primary);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  .field::placeholder {
+    color: var(--color-muted);
+  }
+  .field:focus,
+  .field:focus-visible {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-soft);
+  }
+  .field:disabled {
+    opacity: 0.6;
+  }
+  .field[aria-invalid="true"] {
+    border-color: var(--color-danger-text);
+  }
+
+  /* The floating panels of the app shell, on the canvas. */
+  .panel {
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+    background-color: var(--color-sidebar);
+  }
+
+  /* An elevated card, for example a popover or the user panel. */
+  .card {
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+    background-color: var(--color-elevated);
+  }
+
+  /* Menus and popovers. */
+  .menu {
+    border: 1px solid var(--color-line-strong);
+    border-radius: 12px;
+    background-color: var(--color-elevated);
+    color: var(--color-primary);
+    box-shadow: var(--shadow-large);
+    padding: 0.25rem;
+  }
+  .menu-item {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 8px;
+    padding: 0.375rem 0.625rem;
+    text-align: left;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  .menu-item:hover:not(:disabled) {
+    background-color: var(--color-hover);
+  }
+  .menu-item:focus-visible {
+    outline-offset: -2px;
+  }
+  .menu-item:disabled {
+    opacity: 0.5;
+  }
+
+  /* A small uppercase label above a group, for example a channel category. */
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  /* A count badge, for example the mentions of a channel. */
+  .badge {
+    display: inline-flex;
+    min-width: 18px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    padding: 0 5px;
+    background-color: var(--color-danger);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  /* A row of a list that a person can select: a channel, a DM or a tab. */
+  .nav-row {
+    color: var(--color-muted);
+  }
+  .nav-row:hover {
+    background-color: var(--color-hover);
+    color: var(--color-secondary);
+  }
+  .nav-row[aria-current="page"],
+  .nav-row[aria-selected="true"],
+  .nav-row[data-active="true"] {
+    background-color: var(--color-accent-soft);
+    color: var(--color-primary);
+  }
+
+  /* The text of a message: the small markdown format. */
+  .markdown p + p,
+  .markdown pre,
+  .markdown blockquote {
+    margin-top: 0.25rem;
+  }
+  .markdown a {
+    color: var(--color-accent-text);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .markdown code {
+    border-radius: 4px;
+    background-color: var(--color-active);
+    padding: 0.1em 0.35em;
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+  }
+  .markdown pre {
+    overflow-x: auto;
+    border: 1px solid var(--color-line);
+    border-radius: 8px;
+    background-color: var(--color-input);
+    padding: 0.5rem 0.75rem;
+  }
+  .markdown pre code {
+    background: none;
+    padding: 0;
+  }
+  .markdown blockquote {
+    border-left: 3px solid var(--color-line-strong);
+    padding-left: 0.625rem;
+    color: var(--color-secondary);
+  }
+  .md-mention {
+    border-radius: 4px;
+    background-color: var(--color-accent-soft);
+    padding: 0 0.2em;
+    color: var(--color-accent-text);
+    font-weight: 500;
+  }
+  .md-mention-self {
+    background-color: var(--color-warning-soft);
+    color: var(--color-warning-text);
+  }
+  .md-spoiler {
+    border-radius: 4px;
+    background-color: var(--color-faint);
+    color: transparent;
+  }
+  .md-spoiler-revealed {
+    background-color: var(--color-active);
+    color: inherit;
+  }
 }
 
 /* Stop animations and smooth scroll for a user who asks for less motion. */

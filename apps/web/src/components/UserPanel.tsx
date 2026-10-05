@@ -11,12 +11,13 @@ import { VoiceSettingsDialogLoader } from "./VoiceSettingsDialogLoader.js";
 import { IncomingCallCards } from "./IncomingCallCards.js";
 import { useSession } from "../lib/useSession.js";
 import { chooseStatus, presenceUiStore } from "../lib/presence.js";
+import { CheckIcon, MicIcon, SettingsIcon } from "./icons.js";
 
 const STATUS_OPTIONS: Array<{ value: PresenceStatus; label: string; color: string }> = [
-  { value: "online", label: "Online", color: "#3ba55d" },
-  { value: "idle", label: "Idle", color: "#faa61a" },
-  { value: "dnd", label: "Do not disturb", color: "#ed4245" },
-  { value: "invisible", label: "Invisible", color: "#747f8d" },
+  { value: "online", label: "Online", color: "var(--color-online)" },
+  { value: "idle", label: "Idle", color: "var(--color-idle)" },
+  { value: "dnd", label: "Do not disturb", color: "var(--color-dnd)" },
+  { value: "invisible", label: "Invisible", color: "var(--color-offline)" },
 ];
 
 function StatusMenu() {
@@ -60,9 +61,13 @@ function StatusMenu() {
         aria-expanded={open}
         aria-label={`Status: ${current!.label}. Change status.`}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-4 w-4 items-center justify-center rounded-full"
+        className="flex h-4 w-4 items-center justify-center rounded-full bg-elevated"
       >
-        <span aria-hidden="true" className="h-3 w-3 rounded-full" style={{ backgroundColor: current!.color }} />
+        <span
+          aria-hidden="true"
+          className="h-2.5 w-2.5 rounded-full"
+          style={{ backgroundColor: current!.color }}
+        />
       </button>
       {open && (
         <div
@@ -70,8 +75,7 @@ function StatusMenu() {
           role="menu"
           aria-label="Set status"
           onKeyDown={onKeyDown}
-          className="absolute bottom-full left-0 z-10 mb-1 w-44 rounded border py-1 shadow-lg"
-          style={{ backgroundColor: "var(--color-bg-main)", borderColor: "var(--color-border)" }}
+          className="menu absolute bottom-full left-0 z-10 mb-2 w-48"
         >
           {STATUS_OPTIONS.map((option) => (
             <button
@@ -83,10 +87,17 @@ function StatusMenu() {
                 chooseStatus(option.value);
                 setOpen(false);
               }}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm"
+              className="menu-item"
             >
-              <span aria-hidden="true" className="h-3 w-3 rounded-full" style={{ backgroundColor: option.color }} />
-              {option.label}
+              <span
+                aria-hidden="true"
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: option.color }}
+              />
+              <span className="flex-1">{option.label}</span>
+              {option.value === chosenStatus && (
+                <CheckIcon size={14} className="text-accent-text" />
+              )}
             </button>
           ))}
         </div>
@@ -105,10 +116,7 @@ export function UserPanel() {
   return (
     <>
       <IncomingCallCards />
-      <div
-        className="flex items-center gap-2 border-t p-2"
-        style={{ borderColor: "var(--color-border)" }}
-      >
+      <div className="card m-2 mt-1 flex items-center gap-2 p-1.5 pl-2">
         <div className="relative">
           <Avatar user={user} size={32} />
           <div className="absolute -bottom-0.5 -right-0.5">
@@ -116,32 +124,34 @@ export function UserPanel() {
           </div>
         </div>
         <div className="flex-1 overflow-hidden">
-          <div className="truncate text-sm font-medium">{user.displayName}</div>
-          <div className="truncate text-xs" style={{ color: "var(--color-text-muted)" }}>
-            @{user.username}
-          </div>
+          <div className="truncate text-sm font-medium leading-tight">{user.displayName}</div>
+          <div className="truncate text-xs text-muted">@{user.username}</div>
         </div>
         <button
           type="button"
           aria-label="Open voice and video settings"
           onClick={() => setVoiceSettingsOpen(true)}
-          className="rounded px-2 py-1 text-sm"
-          style={{ color: "var(--color-text-muted)" }}
+          className="icon-btn"
           title="Voice and video"
         >
-          &#127908;
+          <MicIcon />
         </button>
         <button
           type="button"
           aria-label="Open account settings"
           onClick={() => setSettingsOpen(true)}
-          className="rounded px-2 py-1 text-sm"
-          style={{ color: "var(--color-text-muted)" }}
+          className="icon-btn"
+          title="Settings"
         >
-          Settings
+          <SettingsIcon />
         </button>
         <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-        {voiceSettingsOpen && <VoiceSettingsDialogLoader open={voiceSettingsOpen} onClose={() => setVoiceSettingsOpen(false)} />}
+        {voiceSettingsOpen && (
+          <VoiceSettingsDialogLoader
+            open={voiceSettingsOpen}
+            onClose={() => setVoiceSettingsOpen(false)}
+          />
+        )}
       </div>
     </>
   );

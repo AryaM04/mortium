@@ -31,8 +31,7 @@ export function VerifyBanner() {
   return (
     <div
       role="status"
-      className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
-      style={{ backgroundColor: "#4a3a1a", color: "#f0d9a0" }}
+      className="mx-1.5 mt-1.5 flex items-center justify-between gap-3 rounded-lg border border-warning/30 bg-[#2a2110] px-3 py-2 text-sm text-[#fcd34d]"
     >
       <span>
         {sent
@@ -40,11 +39,16 @@ export function VerifyBanner() {
           : "Your email address is not verified yet."}
       </span>
       {!sent && (
-        <button type="button" onClick={handleResend} disabled={pending} className="underline">
+        <button
+          type="button"
+          onClick={handleResend}
+          disabled={pending}
+          className="underline underline-offset-2"
+        >
           {pending ? "Sending..." : "Send the email again"}
         </button>
       )}
-      {error && <span style={{ color: "var(--color-danger-text)" }}>{error}</span>}
+      {error && <span className="text-danger-text">{error}</span>}
     </div>
   );
 }

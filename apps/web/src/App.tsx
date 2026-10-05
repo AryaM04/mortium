@@ -27,8 +27,8 @@ import "./lib/ring.js";
 
 function FullPageSpinner() {
   return (
-    <div className="flex h-full w-full items-center justify-center" style={{ backgroundColor: "var(--color-bg-main)" }}>
-      <span style={{ color: "var(--color-text-muted)" }}>Loading...</span>
+    <div className="flex h-full w-full items-center justify-center bg-canvas">
+      <span className="text-muted">Loading...</span>
     </div>
   );
 }

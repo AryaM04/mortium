@@ -5,7 +5,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
 import { applyPeerVolume } from "../lib/voice.js";
-import { getPerUserVoiceSetting, perUserVoiceStore, setUserVolumeSetting, toggleMutedForMe } from "../lib/voice-settings.js";
+import {
+  getPerUserVoiceSetting,
+  perUserVoiceStore,
+  setUserVolumeSetting,
+  toggleMutedForMe,
+} from "../lib/voice-settings.js";
 
 export function useParticipantMenu() {
   const [openForUserId, setOpenForUserId] = useState<string | null>(null);
@@ -65,16 +70,13 @@ export function ParticipantVolumeMenu({
       ref={menuRef}
       role="menu"
       aria-label="Volume for this person"
-      className="fixed z-50 w-56 rounded border p-3 shadow-lg"
-      style={{
-        left: anchor.x,
-        top: anchor.y,
-        backgroundColor: "var(--color-bg-main)",
-        borderColor: "var(--color-border)",
-        color: "var(--color-text-primary)",
-      }}
+      className="menu fixed z-50 w-56 p-3"
+      style={{ left: anchor.x, top: anchor.y }}
     >
-      <label className="mb-1 block text-xs" htmlFor={`volume-${userId}`}>
+      <label
+        className="mb-1.5 block text-xs font-medium text-secondary"
+        htmlFor={`volume-${userId}`}
+      >
         Volume: {percent}%
       </label>
       <input
@@ -95,8 +97,7 @@ export function ParticipantVolumeMenu({
         role="menuitemcheckbox"
         aria-checked={setting.mutedForMe}
         onClick={() => toggleMutedForMe(userId, applyPeerVolume)}
-        className="mt-3 w-full rounded px-2 py-1.5 text-left text-sm"
-        style={{ backgroundColor: "var(--color-bg-sidebar)" }}
+        className="btn btn-secondary mt-3 w-full justify-start px-2.5 py-1.5"
       >
         {setting.mutedForMe ? "Unmute for me" : "Mute for me"}
       </button>

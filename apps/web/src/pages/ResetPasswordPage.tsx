@@ -53,7 +53,9 @@ export function ResetPasswordPage() {
       <AuthLayout title="This link is not valid">
         <p className="text-sm">This password reset link is missing its token.</p>
         <div className="mt-4 text-sm">
-          <Link href="/forgot-password">Ask for a new link</Link>
+          <Link href="/forgot-password" className="link">
+            Ask for a new link
+          </Link>
         </div>
       </AuthLayout>
     );
@@ -62,8 +64,8 @@ export function ResetPasswordPage() {
   return (
     <AuthLayout title="Choose a new password">
       <p className="mb-4 text-sm">
-        After a password reset, your new password does not unlock your old messages. Use your recovery key or a
-        signed-in device to unlock them again.
+        After a password reset, your new password does not unlock your old messages. Use your
+        recovery key or a signed-in device to unlock them again.
       </p>
       <form onSubmit={handleSubmit} noValidate>
         <FormField
@@ -75,16 +77,11 @@ export function ResetPasswordPage() {
           error={fieldError}
         />
         {formError && (
-          <p role="alert" className="mb-4 text-sm" style={{ color: "var(--color-danger-text)" }}>
+          <p role="alert" className="mb-4 text-sm text-danger-text">
             {formError}
           </p>
         )}
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-full rounded px-3 py-2 text-sm font-medium"
-          style={{ backgroundColor: "var(--color-accent)", color: "white" }}
-        >
+        <button type="submit" disabled={pending} className="btn btn-primary w-full">
           {pending ? "Saving..." : "Set new password"}
         </button>
       </form>

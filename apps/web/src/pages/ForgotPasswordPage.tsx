@@ -46,7 +46,9 @@ export function ForgotPasswordPage() {
           If an account uses this email address, a message with a password reset link is on its way.
         </p>
         <div className="mt-4 text-sm">
-          <Link href="/login">Back to sign in</Link>
+          <Link href="/login" className="link">
+            Back to sign in
+          </Link>
         </div>
       </AuthLayout>
     );
@@ -64,21 +66,18 @@ export function ForgotPasswordPage() {
           error={fieldError}
         />
         {formError && (
-          <p role="alert" className="mb-4 text-sm" style={{ color: "var(--color-danger-text)" }}>
+          <p role="alert" className="mb-4 text-sm text-danger-text">
             {formError}
           </p>
         )}
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-full rounded px-3 py-2 text-sm font-medium"
-          style={{ backgroundColor: "var(--color-accent)", color: "white" }}
-        >
+        <button type="submit" disabled={pending} className="btn btn-primary w-full">
           {pending ? "Sending..." : "Send reset link"}
         </button>
       </form>
-      <div className="mt-4 text-sm" style={{ color: "var(--color-text-muted)" }}>
-        <Link href="/login">Back to sign in</Link>
+      <div className="mt-4 text-sm text-muted">
+        <Link href="/login" className="link">
+          Back to sign in
+        </Link>
       </div>
     </AuthLayout>
   );

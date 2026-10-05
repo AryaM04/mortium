@@ -10,12 +10,12 @@ export function SecureStoreUnavailablePage({ reason }: { reason: string }) {
         {reason}
       </p>
       <p className="mb-2 text-sm font-semibold">To correct the problem:</p>
-      <ol className="mb-4 list-decimal pl-5 text-sm" style={{ color: "var(--color-text-muted)" }}>
+      <ol className="mb-4 list-decimal pl-5 text-sm text-muted">
         <li>Install GNOME Keyring (package gnome-keyring) or KWallet.</li>
         <li>Make sure that the key ring starts with your desktop session and is unlocked.</li>
         <li>
-          On a desktop other than GNOME or KDE, start the app with --password-store=gnome-libsecret (or
-          --password-store=kwallet5).
+          On a desktop other than GNOME or KDE, start the app with --password-store=gnome-libsecret
+          (or --password-store=kwallet5).
         </li>
         <li>Quit the app from the tray menu, then start it again.</li>
       </ol>

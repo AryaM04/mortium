@@ -23,6 +23,7 @@ import { session } from "../lib/session.js";
 import { describeError } from "../lib/errors.js";
 import { realtimeStore } from "../lib/realtime.js";
 import { useRealtime } from "../lib/useRealtime.js";
+import { ChevronDownIcon, ChevronUpIcon } from "./icons.js";
 import {
   PERMISSION_GROUPS,
   PERMISSION_DESCRIPTIONS,
@@ -190,12 +191,10 @@ export function RolesTab({ guildId }: { guildId: string }) {
     for (const entry of entries) {
       const role = nextOrder.find((r) => r.id === entry.id);
       if (role) {
-        realtimeStore
-          .getState()
-          .applyDispatch({
-            t: "GUILD_ROLE_UPDATE",
-            d: { guildId, role: { ...role, position: entry.position } },
-          });
+        realtimeStore.getState().applyDispatch({
+          t: "GUILD_ROLE_UPDATE",
+          d: { guildId, role: { ...role, position: entry.position } },
+        });
       }
     }
     try {
@@ -247,11 +246,7 @@ export function RolesTab({ guildId }: { guildId: string }) {
   }
 
   if (!guild || !roles) {
-    return (
-      <p className="p-4 text-sm" style={{ color: "var(--color-text-muted)" }}>
-        Loading roles...
-      </p>
-    );
+    return <p className="p-4 text-sm text-muted">Loading roles...</p>;
   }
 
   return (
@@ -261,8 +256,7 @@ export function RolesTab({ guildId }: { guildId: string }) {
           type="button"
           onClick={() => void handleCreate()}
           disabled={roles.length >= MAX_ROLES_PER_GUILD}
-          className="mb-2 rounded px-2 py-1 text-left text-sm font-medium"
-          style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+          className="btn btn-primary mb-2 justify-start px-2.5 py-1.5"
         >
           + Create role
         </button>
@@ -281,10 +275,8 @@ export function RolesTab({ guildId }: { guildId: string }) {
                   e.preventDefault();
                   handleDrop(role.id);
                 }}
-                className="group flex items-center gap-1 rounded px-2 py-1"
-                style={{
-                  backgroundColor: role.id === selectedId ? "var(--color-bg-main)" : "transparent",
-                }}
+                data-active={role.id === selectedId}
+                className="nav-row group flex h-8 items-center gap-1 rounded-lg px-2"
               >
                 <button
                   type="button"
@@ -305,20 +297,18 @@ export function RolesTab({ guildId }: { guildId: string }) {
                       aria-label={`Move ${role.name} up`}
                       disabled={index === 0}
                       onClick={() => moveRole(role.id, "up")}
-                      className="px-1 text-xs"
-                      style={{ color: "var(--color-text-muted)" }}
+                      className="icon-btn h-6 w-6"
                     >
-                      &#9650;
+                      <ChevronUpIcon size={14} />
                     </button>
                     <button
                       type="button"
                       aria-label={`Move ${role.name} down`}
                       disabled={index >= orderedRoles.length - 2}
                       onClick={() => moveRole(role.id, "down")}
-                      className="px-1 text-xs"
-                      style={{ color: "var(--color-text-muted)" }}
+                      className="icon-btn h-6 w-6"
                     >
-                      &#9660;
+                      <ChevronDownIcon size={14} />
                     </button>
                   </span>
                 )}
@@ -330,19 +320,11 @@ export function RolesTab({ guildId }: { guildId: string }) {
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pr-1">
         {!selectedRole || !draft ? (
-          <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-            Select a role to edit it.
-          </p>
+          <p className="text-sm text-muted">Select a role to edit it.</p>
         ) : (
           <>
             {!canEditSelected && (
-              <p
-                className="mb-3 rounded px-3 py-2 text-sm"
-                style={{
-                  backgroundColor: "var(--color-bg-main)",
-                  color: "var(--color-text-muted)",
-                }}
-              >
+              <p className="mb-3 rounded-lg bg-hover px-3 py-2 text-sm text-muted">
                 Your highest role must be above this role to edit it.
               </p>
             )}
@@ -353,12 +335,7 @@ export function RolesTab({ guildId }: { guildId: string }) {
                   value={draft.name}
                   disabled={selectedRole.id === guildId || !canEditSelected}
                   onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                  className="rounded border px-3 py-2 text-sm"
-                  style={{
-                    backgroundColor: "var(--color-bg-main)",
-                    borderColor: "var(--color-border)",
-                    color: "var(--color-text-primary)",
-                  }}
+                  className="field px-3 py-2 text-sm"
                 />
               </label>
             </div>
@@ -372,11 +349,8 @@ export function RolesTab({ guildId }: { guildId: string }) {
                     type="button"
                     aria-label={`Set color ${toHex(swatch)}`}
                     onClick={() => setDraft({ ...draft, color: swatch })}
-                    className="h-6 w-6 rounded-full border"
-                    style={{
-                      backgroundColor: toHex(swatch),
-                      borderColor: draft.color === swatch ? "white" : "transparent",
-                    }}
+                    className={`h-6 w-6 rounded-full ${draft.color === swatch ? "ring-2 ring-primary ring-offset-2 ring-offset-elevated" : ""}`}
+                    style={{ backgroundColor: toHex(swatch) }}
                   />
                 ))}
               </div>
@@ -387,12 +361,7 @@ export function RolesTab({ guildId }: { guildId: string }) {
                   const parsed = fromHex(e.target.value);
                   if (parsed !== null) setDraft({ ...draft, color: parsed });
                 }}
-                className="w-28 rounded border px-2 py-1 text-sm"
-                style={{
-                  backgroundColor: "var(--color-bg-main)",
-                  borderColor: "var(--color-border)",
-                  color: "var(--color-text-primary)",
-                }}
+                className="field w-28 px-2 py-1 text-sm"
               />
             </fieldset>
 
@@ -418,12 +387,7 @@ export function RolesTab({ guildId }: { guildId: string }) {
             <div className="flex flex-col gap-4">
               {PERMISSION_GROUPS.map((group) => (
                 <fieldset key={group.label}>
-                  <legend
-                    className="mb-1 text-xs font-semibold uppercase"
-                    style={{ color: "var(--color-text-muted)" }}
-                  >
-                    {group.label}
-                  </legend>
+                  <legend className="mb-1 eyebrow">{group.label}</legend>
                   <div className="flex flex-col gap-1.5">
                     {group.permissions.map((name) => {
                       const bit = Permission[name];
@@ -449,10 +413,7 @@ export function RolesTab({ guildId }: { guildId: string }) {
                           />
                           <span>
                             <span className="font-medium">{permissionLabel(name)}</span>
-                            <span
-                              className="block text-xs"
-                              style={{ color: "var(--color-text-muted)" }}
-                            >
+                            <span className="block text-xs text-muted">
                               {PERMISSION_DESCRIPTIONS[name]}
                             </span>
                           </span>
@@ -465,19 +426,18 @@ export function RolesTab({ guildId }: { guildId: string }) {
             </div>
 
             {error && (
-              <p role="alert" className="mt-4 text-sm" style={{ color: "var(--color-danger-text)" }}>
+              <p role="alert" className="mt-4 text-sm text-danger-text">
                 {error}
               </p>
             )}
 
             {selectedRole.id !== guildId && canEditSelected && (
-              <div className="mt-4 border-t pt-4" style={{ borderColor: "var(--color-border)" }}>
+              <div className="mt-4 border-t border-line pt-4">
                 {!confirmingDelete ? (
                   <button
                     type="button"
                     onClick={() => setConfirmingDelete(true)}
-                    className="text-sm"
-                    style={{ color: "var(--color-danger-text)" }}
+                    className="text-sm text-danger-text"
                   >
                     Delete role
                   </button>
@@ -487,7 +447,7 @@ export function RolesTab({ guildId }: { guildId: string }) {
                     <button
                       type="button"
                       onClick={() => setConfirmingDelete(false)}
-                      className="rounded px-2 py-1 text-sm"
+                      className="btn btn-ghost px-3 py-1"
                     >
                       Cancel
                     </button>
@@ -495,8 +455,7 @@ export function RolesTab({ guildId }: { guildId: string }) {
                       type="button"
                       disabled={pending}
                       onClick={() => void handleDelete()}
-                      className="rounded px-2 py-1 text-sm font-medium"
-                      style={{ backgroundColor: "var(--color-danger)", color: "white" }}
+                      className="btn btn-danger px-2 py-1"
                     >
                       Delete
                     </button>
@@ -506,28 +465,17 @@ export function RolesTab({ guildId }: { guildId: string }) {
             )}
 
             {dirty && (
-              <div
-                className="sticky bottom-0 mt-4 flex items-center justify-between gap-2 rounded border px-3 py-2"
-                style={{
-                  backgroundColor: "var(--color-bg-sidebar)",
-                  borderColor: "var(--color-border)",
-                }}
-              >
+              <div className="menu sticky bottom-0 mt-4 flex items-center justify-between gap-2 px-3 py-2">
                 <span className="text-sm">Careful — you have unsaved changes.</span>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handleReset}
-                    className="rounded px-3 py-1.5 text-sm"
-                  >
+                  <button type="button" onClick={handleReset} className="btn btn-ghost">
                     Reset
                   </button>
                   <button
                     type="button"
                     disabled={pending}
                     onClick={() => void handleSave()}
-                    className="rounded px-3 py-1.5 text-sm font-medium"
-                    style={{ backgroundColor: "var(--color-accent)", color: "white" }}
+                    className="btn btn-primary px-3 py-1.5"
                   >
                     {pending ? "Saving..." : "Save changes"}
                   </button>
