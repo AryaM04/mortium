@@ -33,8 +33,7 @@ export function CryptoTabBanner() {
       <div
         role="alert"
         data-crypto-failed
-        className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
-        style={{ backgroundColor: "#5c1d1d", color: "#ffd9d9" }}
+        className="mx-1.5 mt-1.5 flex items-center justify-between gap-3 rounded-lg border border-danger/30 bg-[#2a1018] px-3 py-2 text-sm text-[#fecdd3]"
       >
         <span>
           Encryption failed: {failure}{" "}
@@ -43,7 +42,7 @@ export function CryptoTabBanner() {
             : "The app tries again."}
         </span>
         {lost && (
-          <button type="button" className="underline" onClick={() => void session.store.getState().logout()}>
+          <button type="button" className="underline underline-offset-2" onClick={() => void session.store.getState().logout()}>
             Sign out
           </button>
         )}
