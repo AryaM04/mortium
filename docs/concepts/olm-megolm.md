@@ -47,6 +47,10 @@ Not in scope: a compromised client device, a malicious web bundle from
 the server (the web client trusts the code that the server sends; the
 desktop apps do not), traffic analysis.
 
+The server never gets the account password. The client sends an auth key
+that it derives from the password. A different key from the same password
+encrypts the recovery key (the key wrap). See `password-keys.md`.
+
 ## 2. Encodings
 
 - Curve25519 keys, Ed25519 keys and signatures use **unpadded standard
@@ -175,7 +179,7 @@ devices of that user. There is no separate self-signing key.
 
 ### Signing the other devices of a user (pass 4)
 
-A new device of a user is not signed. It becomes signed in one of two
+A new device of a user is not signed. It becomes signed in one of three
 ways:
 
 1. **Verification.** The user verifies the new device from a device that
@@ -185,6 +189,9 @@ ways:
    the new device. The device decrypts the master private key from the key
    backup, checks that its public key is the master key of the user, keeps
    it, and signs itself (`POST /keys/upload` with `masterSignature`).
+3. **Password.** A sign-in with the password keeps the wrap key in memory.
+   The device opens the key wrap from the server, which gives the recovery
+   key, and continues as in 2. See `password-keys.md`.
 
 `POST /keys/signatures { deviceId, signature }` stores the master
 signature of a different device of the same user. The server checks the
@@ -196,9 +203,9 @@ and a device of a different user with 403. It sends
 
 A user who lost all signed devices and the recovery key cannot sign a new
 device. `POST /keys/master/reset` takes the body of `PUT /keys/master` and
-the account `password`:
+the `authKey` of the account password (see `password-keys.md`):
 
-- The server checks the password. A wrong password gives 401
+- The server checks the auth key. A wrong password gives 401
   `INVALID_PASSWORD`. An account without a password (OAuth only) gives 403
   `PASSWORD_REQUIRED`. The route allows 5 tries in 15 minutes.
 - It replaces the master key, removes the master signature of every other
@@ -219,11 +226,15 @@ This rule is the same for the devices of other users and for the other
 devices of the same user. A device that the server added cannot get
 keys. The UI shows an unsigned device as "Not verified". A new sign-in
 shows the blocking screen "Verify this device" in place of the app (the
-security gate, `apps/web/src/components/SecurityGate.tsx`). It has two
-ways forward: "Verify with another device" (SAS) and "Enter recovery
-key" (a restore that also imports the master key). An account without a
-key backup gets "Reset encryption" in place of the restore. There is no
-way to skip the screen.
+security gate, `apps/web/src/components/SecurityGate.tsx`). After a
+sign-in with the password, the gate first unlocks the device with the
+key wrap and shows no question ("Unlocking your messages"). When that is
+not possible, it shows the ways forward: "Unlock with your password"
+(only when the wrap key is not in memory and the server has a key wrap
+for the current backup), "Verify with another device" (SAS) and "Enter
+recovery key" (a restore that also imports the master key). An account
+without a key backup gets "Reset encryption" in place of the restore.
+There is no way to skip the screen.
 When the device becomes signed, it asks again for each key that it did
 not get, and for the settings key.
 
@@ -630,8 +641,14 @@ The code is `packages/client-core/src/crypto/key-backup.ts`,
   p = 1, a random 16-byte salt and a 32-byte output. The app still shows
   the key: it and the passphrase open the same backup. The client refuses
   parameters above m = 256 MiB, t = 10, p = 4 (the server stores them).
-- To set up a backup, the user sees the key and types its last group
-  again. Only then does the client make the backup on the server.
+- After a sign-in with a password, the client makes the backup with a
+  random recovery key by itself, and stores the key wrap (see
+  `password-keys.md`). Then it shows the key one time, with "Continue".
+  The user needs the key only after a password reset by email or for a
+  lost password.
+- Without a password (OAuth only), or when the wrap key is not in memory,
+  the user sees the key and types its last group again. Only then does
+  the client make the backup on the server.
 - The backup is necessary (CRY-09). Else a sign-out of the only device
   loses the master key. A device that holds the master key and finds no
   backup on the server shows the blocking screen "Save your recovery
@@ -860,8 +877,8 @@ Deviations and why:
 - The secrets in the backup have a signature inside the ciphertext.
   Reason: anyone can encrypt to the backup public key, so the server
   could add a settings key of its own.
-- The master key reset needs the account password. An account with only
-  OAuth sign-in must set a password first.
+- The master key reset needs the auth key of the account password. An
+  account with only OAuth sign-in must set a password first.
 - A new backup version deletes the old one. Reason: one version is
   simpler, and an old version has no use.
 

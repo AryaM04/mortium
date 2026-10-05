@@ -66,7 +66,10 @@ again on that device, but a stolen token stops working at the same time.
 
 ## Why argon2id
 
-The server never stores a password. It stores a **hash** of the password,
+The server never gets the password. The client derives an **auth key**
+from the password and sends that in place of the password (see
+`password-keys.md`). The text below says "password" for the value that
+the client sends. The server never stores it. It stores a **hash** of it,
 made with argon2id. A hash cannot be turned back into the password. When
 a user logs in, the server hashes the password they typed and compares
 the two hashes.

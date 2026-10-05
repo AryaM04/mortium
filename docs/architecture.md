@@ -40,7 +40,8 @@ The full plan is in the plan file that `CLAUDE.md` names.
   If a client sends a revoked refresh token again, the server revokes all refresh tokens of that device, because the token was possibly stolen.
 - Tokens go in the response body. The client keeps them in `platform.secureStore`. We do not use cookies, because the desktop shells use a different origin from the API.
 - The desktop app has its own origin (`http://tauri.localhost` on Windows, `tauri://localhost` on macOS, `app://mortium` on Linux). The server sends CORS headers, without credentials, only to the origins in `CORS_ALLOWED_ORIGINS`. The gateway refuses a WebSocket upgrade from an origin that is not the web origin, the same host or an allowed origin.
-- Passwords use argon2id through `@node-rs/argon2` (it has prebuilt binaries for all platforms, including Alpine).
+- The client never sends the password. It derives an auth key from the password (Argon2id and HKDF) and sends that. See `docs/concepts/password-keys.md`.
+- The server hashes the auth key with argon2id through `@node-rs/argon2` (it has prebuilt binaries for all platforms, including Alpine).
 - Auth routes have a rate limit (`@fastify/rate-limit`, in memory).
 
 ## 5. Server code

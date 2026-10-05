@@ -14,6 +14,7 @@ terms, with links to the real code.
 - `voice.md`: voice signaling, the mesh and the member cap.
 - `nat-turn.md`: why NAT traversal is hard, and how STUN and TURN help.
 - `olm-megolm.md`: the end-to-end encryption design used by this app.
+- `password-keys.md`: the auth key and the key wrap that come from the password.
 - `desktop-shells.md`: the Tauri and Electron apps, updates and releases.
 
 For the design decisions, see `docs/adr`.
