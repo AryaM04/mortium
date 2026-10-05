@@ -13,9 +13,14 @@ export interface NewRecoveryKeyState {
   saving: boolean;
   /** The problem of the last automatic backup, or null. */
   error: string | null;
+  /**
+   * True when this tab made the key backup. The crypto layer can learn of
+   * the new backup some seconds later. Until then the gate uses this value.
+   */
+  backupMade: boolean;
 }
 
-export const newRecoveryKeyStore = createStore<NewRecoveryKeyState>(() => ({ recoveryKey: null, saving: false, error: null }));
+export const newRecoveryKeyStore = createStore<NewRecoveryKeyState>(() => ({ recoveryKey: null, saving: false, error: null, backupMade: false }));
 
 /**
  * The number of restores that run now. A restore signs this device before it
@@ -42,7 +47,7 @@ let backupRuns = false;
 session.store.subscribe((state, previous) => {
   if (state.status === "signedOut" && previous.status !== "signedOut") {
     unlockTry = null;
-    newRecoveryKeyStore.setState({ recoveryKey: null, saving: false, error: null });
+    newRecoveryKeyStore.setState({ recoveryKey: null, saving: false, error: null, backupMade: false });
   }
 });
 
@@ -91,6 +96,7 @@ export async function createBackupWithPassword(): Promise<void> {
     const { recoveryKey, create } = await crypto.security.setUpBackup();
     newRecoveryKeyStore.setState({ recoveryKey, saving: true, error: null });
     await create();
+    newRecoveryKeyStore.setState({ backupMade: true });
     await saveKeyWrap(recoveryKey);
     newRecoveryKeyStore.setState({ saving: false });
   } catch (error) {

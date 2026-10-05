@@ -140,7 +140,10 @@ export function AppShell() {
   // state says "no backup", so ask the server when the answer matters.
   const needCheck = useStore(securityStore, (s) => s.ready && s.backup?.version == null && (!s.deviceVerified || s.holdsMasterKey));
   const keyToShow = useStore(newRecoveryKeyStore, (s) => s.recoveryKey !== null);
-  const gate = useStore(securityStore, (s) => gateScreen(s, check, keyToShow));
+  // A backup that this tab made exists, also before the crypto layer reads it.
+  const backupMade = useStore(newRecoveryKeyStore, (s) => s.backupMade);
+  const knownCheck: BackupCheck = backupMade ? "yes" : check;
+  const gate = useStore(securityStore, (s) => gateScreen(s, knownCheck, keyToShow));
   // A restore verifies this device before it ends. Keep the verify screen until the restore is complete.
   const restoring = useStore(restoreBusyStore, (s) => s.count > 0);
   const lastScreen = useRef<GateScreen>("none");
@@ -148,7 +151,7 @@ export function AppShell() {
   useEffect(() => {
     lastScreen.current = screen;
   }, [screen]);
-  const hasBackup = useStore(securityStore, (s) => backupExists(s, check));
+  const hasBackup = useStore(securityStore, (s) => backupExists(s, knownCheck));
 
   useEffect(() => {
     if (!needCheck) {

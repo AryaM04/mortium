@@ -8,7 +8,7 @@ import { useStore } from "zustand";
 import type { OwnDevice } from "@mortium/client-core/crypto";
 import { currentCrypto, securityStore } from "../lib/crypto.js";
 import { describeError } from "../lib/errors.js";
-import { saveKeyWrap, whileRestoring } from "../lib/password-unlock.js";
+import { newRecoveryKeyStore, saveKeyWrap, whileRestoring } from "../lib/password-unlock.js";
 import { session } from "../lib/session.js";
 
 const button = "rounded px-3 py-2 text-sm";
@@ -89,6 +89,7 @@ export function BackupSetup({ required = false }: { required?: boolean }) {
     setPending(true);
     try {
       await create();
+      newRecoveryKeyStore.setState({ backupMade: true });
       await saveKeyWrap(recoveryKey);
       setState({ step: "done" });
     } catch (err) {
