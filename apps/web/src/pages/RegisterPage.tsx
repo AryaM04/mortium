@@ -1,7 +1,7 @@
 // The registration page.
 import { useState, type FormEvent } from "react";
 import { Link, useLocation } from "wouter";
-import { registerRequestSchema } from "@mortium/shared";
+import { registerFormSchema } from "@mortium/shared";
 import { AuthLayout } from "../components/AuthLayout.js";
 import { DownloadLink } from "../components/DownloadLink.js";
 import { FormField } from "../components/FormField.js";
@@ -23,7 +23,7 @@ export function RegisterPage() {
     event.preventDefault();
     setFormError(null);
 
-    const parsed = registerRequestSchema.safeParse({
+    const parsed = registerFormSchema.safeParse({
       email,
       username,
       password,

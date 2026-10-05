@@ -8,6 +8,8 @@ import { useStore } from "zustand";
 import type { OwnDevice } from "@mortium/client-core/crypto";
 import { currentCrypto, securityStore } from "../lib/crypto.js";
 import { describeError } from "../lib/errors.js";
+import { saveKeyWrap } from "../lib/password-unlock.js";
+import { session } from "../lib/session.js";
 
 const button = "rounded px-3 py-2 text-sm";
 const primary = { backgroundColor: "var(--color-accent)", color: "white" };
@@ -37,7 +39,7 @@ function Problem({ text }: { text: string | null }) {
 type SetupStep = { step: "idle" } | { step: "passphrase" } | { step: "show"; recoveryKey: string; create: () => Promise<void> } | { step: "done" };
 
 /** Save the recovery key as a text file. */
-function downloadKey(recoveryKey: string): void {
+export function downloadKey(recoveryKey: string): void {
   const url = URL.createObjectURL(new Blob([`Mortium recovery key
 ${recoveryKey}
 `], { type: "text/plain" }));
@@ -87,6 +89,7 @@ export function BackupSetup({ required = false }: { required?: boolean }) {
     setPending(true);
     try {
       await create();
+      await saveKeyWrap(recoveryKey);
       setState({ step: "done" });
     } catch (err) {
       setError(describeError(err));
@@ -180,6 +183,10 @@ export function Restore() {
       const result = await currentCrypto()!.security.restoreBackup(input, (entry) =>
         setProgress(`${entry.imported} message keys restored.`),
       );
+      if (!usePassphrase) {
+        // The password can unlock the next new device with this key.
+        await saveKeyWrap(value);
+      }
       setValue("");
       setProgress(
         `The restore is complete: ${result.imported} message keys.` +
@@ -234,7 +241,8 @@ export function ResetIdentity() {
     setPending(true);
     setError(null);
     try {
-      await currentCrypto()!.security.resetIdentity(password);
+      // The server gets the auth key of the password, never the password.
+      await session.keys.withAuthKey(password, (authKey) => currentCrypto()!.security.resetIdentity(authKey));
       setPassword("");
       setDone(true);
     } catch (err) {

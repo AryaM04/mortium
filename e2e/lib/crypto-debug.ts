@@ -12,6 +12,7 @@ declare global {
       received(): Array<{ fromUserId: string; fromDeviceId: string; text: string }>;
       hasMegolmSession(sessionId: string): Promise<boolean>;
       seedMessages(channelId: string, bodies: string[]): Promise<void>;
+      security(): { ready: boolean; deviceVerified: boolean };
     };
   }
 }

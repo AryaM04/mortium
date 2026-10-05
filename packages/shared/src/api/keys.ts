@@ -1,6 +1,7 @@
 // Request and response schemas for the key server and the to-device queue.
 // See docs/concepts/olm-megolm.md sections 3, 4 and 6.
 import { z } from "zod";
+import { authKeySchema } from "./auth.js";
 import { idSchema } from "./common.js";
 import { base64UrlSchema } from "./messages.js";
 
@@ -165,9 +166,9 @@ export const uploadSignatureRequestSchema = z.object({
 });
 export type UploadSignatureRequest = z.infer<typeof uploadSignatureRequestSchema>;
 
-/** Replace the master key of the user. The password of the account is necessary. */
+/** Replace the master key of the user. The auth key of the account password is necessary. */
 export const resetMasterKeyRequestSchema = putMasterKeyRequestSchema.extend({
-  password: z.string().min(1).max(256),
+  authKey: authKeySchema,
 });
 export type ResetMasterKeyRequest = z.infer<typeof resetMasterKeyRequestSchema>;
 

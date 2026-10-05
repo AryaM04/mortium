@@ -1,16 +1,19 @@
 // End-to-end tests of the key backup and of SAS device verification. The
-// first device of a new account must save a recovery key. A new sign-in of
-// the same user sees the "Verify this device" screen in place of the app.
-// It reads the old messages after a restore with the recovery key, or
-// after a SAS verification from the first device.
+// first device of a new account makes the key backup and shows the
+// recovery key. A new sign-in with the password unlocks itself with the key
+// wrap and reads the old messages. Without the key wrap, a new sign-in sees
+// the "Verify this device" screen in place of the app. It reads the old
+// messages after a restore with the recovery key, after a SAS verification
+// from the first device, or (after a reload) with the password.
 //
 // Needs a real Postgres (see auth.spec.ts): skips itself when it is not
 // reachable.
 import postgres from "postgres";
 import { expect, test, type APIRequestContext, type Browser, type Page } from "@playwright/test";
-import { saveRecoveryKey } from "../lib/recovery-key.js";
+import { saveRecoveryKey, waitForPasswordUnlock } from "../lib/recovery-key.js";
 import { waitForCrypto } from "../lib/crypto-debug.js";
 import { E2E_DATABASE_NAME } from "../lib/ensure-e2e-db.js";
+import { registerBody } from "../lib/accounts.js";
 
 const WEB_ORIGIN = "http://localhost:5173";
 
@@ -63,27 +66,58 @@ function messageRow(page: Page, text: string) {
   return page.locator("[data-message-id]", { hasText: text });
 }
 
-async function backupSessionCount(userId: string): Promise<number> {
+/** Run one function with a connection to the e2e database. */
+async function withDb<T>(action: (sql: postgres.Sql) => Promise<T>): Promise<T> {
   const user = process.env.POSTGRES_USER ?? "mortium";
   const password = encodeURIComponent(process.env.POSTGRES_PASSWORD ?? "");
   const host = process.env.POSTGRES_HOST ?? "localhost";
   const port = process.env.POSTGRES_PORT ?? "5432";
   const sql = postgres(`postgres://${user}:${password}@${host}:${port}/${E2E_DATABASE_NAME}`, { max: 1 });
   try {
-    const [row] = await sql<Array<{ count: string }>>`select count(*)::text as count from key_backup_sessions where user_id = ${userId}`;
-    return Number(row?.count ?? 0);
+    return await action(sql);
   } finally {
     await sql.end();
   }
 }
 
+async function backupSessionCount(userId: string): Promise<number> {
+  return withDb(async (sql) => {
+    const [row] = await sql<Array<{ count: string }>>`select count(*)::text as count from key_backup_sessions where user_id = ${userId}`;
+    return Number(row?.count ?? 0);
+  });
+}
+
+interface StoredKeyWrap {
+  key_wrap: string | null;
+  key_wrap_version: number | null;
+}
+
+async function readKeyWrap(userId: string): Promise<StoredKeyWrap> {
+  return withDb(async (sql) => {
+    const [row] = await sql<StoredKeyWrap[]>`select key_wrap, key_wrap_version from users where id = ${userId}`;
+    return row!;
+  });
+}
+
+/** Read the key wrap of a user, and remove it. Then a new sign-in cannot unlock itself with the password. */
+async function takeKeyWrap(userId: string): Promise<StoredKeyWrap> {
+  const wrap = await readKeyWrap(userId);
+  await withDb((sql) => sql`update users set key_wrap = null, key_wrap_version = null where id = ${userId}`);
+  return wrap;
+}
+
+async function putKeyWrap(userId: string, wrap: StoredKeyWrap): Promise<void> {
+  await withDb((sql) => sql`update users set key_wrap = ${wrap.key_wrap}, key_wrap_version = ${wrap.key_wrap_version} where id = ${userId}`);
+}
+
 /**
  * One user with a guild, signed in on a first browser device that made the
- * master key. The device must save a recovery key before it shows the app.
+ * master key. The device makes the backup and shows the recovery key before
+ * it shows the app.
  */
 async function firstDevice(browser: Browser, request: APIRequestContext) {
   const user = uniqueUser("A");
-  const registered = await api(request, "/auth/register", undefined, user);
+  const registered = await api(request, "/auth/register", undefined, await registerBody(user));
   const guild = await api(request, "/guilds", registered.accessToken, { name: "Backup Guild" });
   const channel = guild.channels.find((entry: { type: string }) => entry.type === "text");
   const page = await (await browser.newContext()).newPage();
@@ -93,10 +127,23 @@ async function firstDevice(browser: Browser, request: APIRequestContext) {
   expect(recoveryKey).toMatch(/^([1-9A-HJ-NP-Za-km-z]{4} )+[1-9A-HJ-NP-Za-km-z]{1,4}$/);
   const channelUrl = `${WEB_ORIGIN}/app/${guild.id}/${channel.id}`;
   await page.goto(channelUrl);
-  return { user, userId: registered.user.id as string, page, channelUrl, recoveryKey };
+  const userId = registered.user.id as string;
+  // The backup has a key wrap, so the password can unlock a new device.
+  expect((await readKeyWrap(userId)).key_wrap).not.toBeNull();
+  return { user, userId, page, channelUrl, recoveryKey };
 }
 
-/** A second sign-in of the same user. It shows the "Verify this device" screen in place of the app. */
+/** One message from the first device, and the wait until the key backup has its key. */
+async function sendBackedUp(first: Page, userId: string, text: string): Promise<void> {
+  await sendMessage(first, text);
+  await expect(messageRow(first, text)).toBeVisible();
+  await expect.poll(() => backupSessionCount(userId), { timeout: 20_000 }).toBeGreaterThanOrEqual(1);
+}
+
+/**
+ * A second sign-in of the same user without the key wrap. It shows the
+ * "Verify this device" screen in place of the app.
+ */
 async function newDevice(browser: Browser, user: TestUser): Promise<Page> {
   const page = await (await browser.newContext()).newPage();
   await loginThroughUi(page, user);
@@ -105,14 +152,31 @@ async function newDevice(browser: Browser, user: TestUser): Promise<Page> {
   return page;
 }
 
-test("a new device restores the history with the recovery key", async ({ browser, request }) => {
+test("a new device that signs in with the password reads the history with no recovery key step", async ({ browser, request }) => {
+  test.setTimeout(120_000);
+  const { user, userId, page: first, channelUrl } = await firstDevice(browser, request);
+  const secret = `password secret ${Date.now()}`;
+  await sendBackedUp(first, userId, secret);
+
+  const second = await (await browser.newContext()).newPage();
+  await loginThroughUi(second, user);
+  await waitForPasswordUnlock(second);
+  await second.goto(channelUrl);
+  await expect(messageRow(second, secret)).toBeVisible({ timeout: 20_000 });
+
+  // The unlocked device is signed, so the first device shares new keys with it at once.
+  const after = `after the unlock ${Date.now()}`;
+  await sendMessage(first, after);
+  await expect(messageRow(second, after)).toBeVisible({ timeout: 20_000 });
+});
+
+test("a new device restores the history with the recovery key, and the app stores the key wrap again", async ({ browser, request }) => {
   test.setTimeout(120_000);
   const { user, userId, page: first, channelUrl, recoveryKey } = await firstDevice(browser, request);
   const secret = `backed up secret ${Date.now()}`;
-  await sendMessage(first, secret);
-  await expect(messageRow(first, secret)).toBeVisible();
   // The backup from the sign-up gets the new key in the background.
-  await expect.poll(() => backupSessionCount(userId), { timeout: 20_000 }).toBeGreaterThanOrEqual(1);
+  await sendBackedUp(first, userId, secret);
+  await takeKeyWrap(userId);
 
   // A second browser: a new device. A wrong key is rejected. The right key restores the history and verifies the device.
   const second = await newDevice(browser, user);
@@ -124,6 +188,8 @@ test("a new device restores the history with the recovery key", async ({ browser
   await expect(second.getByRole("heading", { name: "Verify this device" })).toHaveCount(0, { timeout: 30_000 });
   await second.goto(channelUrl);
   await expect(messageRow(second, secret)).toBeVisible({ timeout: 20_000 });
+  // This device held the recovery key and the wrap key, so it stored a new key wrap.
+  await expect.poll(async () => (await readKeyWrap(userId)).key_wrap !== null, { timeout: 10_000 }).toBe(true);
 
   // The restored device is signed, so the first device shares new keys with it at once.
   const after = `after the restore ${Date.now()}`;
@@ -133,7 +199,9 @@ test("a new device restores the history with the recovery key", async ({ browser
 
 test("the first device verifies a new device with SAS, and the new device reads the history", async ({ browser, request }) => {
   test.setTimeout(120_000);
-  const { user, page: first, channelUrl } = await firstDevice(browser, request);
+  const { user, userId, page: first, channelUrl } = await firstDevice(browser, request);
+  // Without the key wrap, the new device cannot unlock itself with the password.
+  await takeKeyWrap(userId);
   const secret = `sas secret ${Date.now()}`;
   await sendMessage(first, secret);
   await expect(messageRow(first, secret)).toBeVisible();
@@ -163,4 +231,25 @@ test("the first device verifies a new device with SAS, and the new device reads 
   await expect(second.getByRole("heading", { name: "Verify this device" })).toHaveCount(0);
   await second.goto(channelUrl);
   await expect(messageRow(second, secret)).toBeVisible({ timeout: 30_000 });
+});
+
+test("after a reload, the password unlocks a new device", async ({ browser, request }) => {
+  test.setTimeout(120_000);
+  const { user, userId, page: first, channelUrl } = await firstDevice(browser, request);
+  const secret = `reload secret ${Date.now()}`;
+  await sendBackedUp(first, userId, secret);
+  const wrap = await takeKeyWrap(userId);
+
+  // The sign-in finds no key wrap. Then the key wrap comes back, but a reload removed the wrap key from memory.
+  const second = await newDevice(browser, user);
+  await putKeyWrap(userId, wrap);
+  await second.reload();
+  await second.getByLabel("Your password").fill("not-the-right-password", { timeout: 30_000 });
+  await second.getByRole("button", { name: "Unlock with your password" }).click();
+  await expect(second.getByRole("alert")).toHaveText("This password does not unlock your encryption keys.", { timeout: 20_000 });
+  await second.getByLabel("Your password").fill(user.password);
+  await second.getByRole("button", { name: "Unlock with your password" }).click();
+  await expect(second.getByRole("heading", { name: "Verify this device" })).toHaveCount(0, { timeout: 30_000 });
+  await second.goto(channelUrl);
+  await expect(messageRow(second, secret)).toBeVisible({ timeout: 20_000 });
 });

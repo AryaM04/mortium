@@ -1,9 +1,25 @@
 // Tests for the session store. A sign-in must store the tokens before the
 // status becomes "signedIn": the gateway and the crypto layer start on that
 // status and read the tokens at once.
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { createSession } from "./session.js";
 import type { Platform } from "./platform.js";
+import { initWasmForTests } from "./crypto/test/fake-server.js";
+
+// The sign-in derives the auth key from the password with the crypto WASM.
+beforeAll(() => {
+  initWasmForTests();
+});
+
+const PRELOGIN = { kdf: "argon2id-v1", salt: "c2FsdC1mb3ItYS10ZXN0IQ", memoryKib: 65536, iterations: 3, parallelism: 1 };
+
+/** A fake server: the prelogin answer for /auth/prelogin, and `body` for every other request. */
+function fakeServer(body: unknown) {
+  return async (input: RequestInfo | URL) => {
+    const json = String(input).endsWith("/auth/prelogin") ? PRELOGIN : body;
+    return new Response(JSON.stringify(json), { status: 200, headers: { "content-type": "application/json" } });
+  };
+}
 
 const AUTH_RESULT = {
   user: {
@@ -43,11 +59,8 @@ afterEach(() => {
 
 describe("session sign-in", () => {
   it.each(["register", "login"] as const)("%s stores the tokens before the status becomes signedIn", async (action) => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(
-      async () =>
-        new Response(JSON.stringify(AUTH_RESULT), { status: 200, headers: { "content-type": "application/json" } }),
-    );
-    const { store, apiClient } = createSession({ baseUrl: "/api/v1", platform: slowPlatform() });
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(fakeServer(AUTH_RESULT));
+    const { store, apiClient, keys } = createSession({ baseUrl: "/api/v1", platform: slowPlatform() });
 
     let tokenAtSignIn: Promise<string> | null = null;
     store.subscribe((state, previous) => {
@@ -62,16 +75,19 @@ describe("session sign-in", () => {
     expect(store.getState().status).toBe("signedIn");
     expect(tokenAtSignIn).not.toBeNull();
     await expect(tokenAtSignIn!).resolves.toBe("access");
+
+    // The password never goes to the server. The tab keeps the wrap key.
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(String(init?.body ?? "")).not.toContain(input.password);
+    }
+    expect(keys.hasWrapKey()).toBe(true);
   });
 });
 
 describe("session start", () => {
   it("keeps the tokens after a network error and tries again", async () => {
     const platform = slowPlatform();
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(
-      async () =>
-        new Response(JSON.stringify(AUTH_RESULT), { status: 200, headers: { "content-type": "application/json" } }),
-    );
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(fakeServer(AUTH_RESULT));
     const first = createSession({ baseUrl: "/api/v1", platform });
     await first.store.getState().login({ email: "alice@example.test", password: "correct-horse-battery-staple" });
 

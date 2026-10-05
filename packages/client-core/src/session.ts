@@ -1,6 +1,8 @@
 // The session store: who is signed in, and every action that changes
 // that. It is a vanilla zustand store, so both the web app (with the
 // React binding) and a future desktop shell can use it the same way.
+// The password never goes to the server: the client sends an auth key
+// that it derives from the password (see docs/concepts/password-keys.md).
 import { createStore, type StoreApi } from "zustand/vanilla";
 import {
   authResultSchema,
@@ -8,12 +10,20 @@ import {
   oauthProvidersResultSchema,
   userSchema,
   type AuthResult,
-  type LoginRequest,
+  type LoginForm,
   type OAuthProvidersResult,
-  type RegisterRequest,
+  type RegisterForm,
   type UpdateMeRequest,
   type User,
 } from "@mortium/shared";
+import {
+  createAccountKeys,
+  derivePasswordKeys,
+  newPasswordKeys,
+  prelogin,
+  upgradeLegacyPassword,
+  type AccountKeys,
+} from "./account-keys.js";
 import { ApiError, createApiClient, type ApiClient, type TokenSet } from "./api.js";
 import type { Platform } from "./platform.js";
 
@@ -27,8 +37,8 @@ export interface SessionState {
 
 export interface SessionActions {
   init(): Promise<void>;
-  register(input: RegisterRequest): Promise<void>;
-  login(input: LoginRequest): Promise<void>;
+  register(input: RegisterForm): Promise<void>;
+  login(input: LoginForm): Promise<void>;
   logout(): Promise<void>;
   completeOAuth(code: string): Promise<void>;
   updateProfile(input: UpdateMeRequest): Promise<void>;
@@ -55,6 +65,8 @@ export interface CreateSessionOptions {
 export interface Session {
   store: StoreApi<SessionStore>;
   apiClient: ApiClient;
+  /** The keys of the account password in this tab. */
+  keys: AccountKeys;
 }
 
 /** Build the session store and the API client it uses, wired together. */
@@ -71,7 +83,16 @@ export function createSession(options: CreateSessionOptions): Session {
     onSignedOut: () => handleSignedOut(),
   });
 
-  async function applyAuthResult(result: AuthResult, set: (partial: Partial<SessionState>) => void): Promise<void> {
+  /**
+   * Store the tokens and sign in. `prepare` runs after the tokens are stored
+   * and before the status becomes "signedIn": a call that needs the new
+   * session can go there.
+   */
+  async function applyAuthResult(
+    result: AuthResult,
+    set: (partial: Partial<SessionState>) => void,
+    prepare?: () => Promise<void>,
+  ): Promise<void> {
     const tokens: TokenSet = {
       accessToken: result.accessToken,
       accessTokenExpiresAt: result.accessTokenExpiresAt,
@@ -82,6 +103,7 @@ export function createSession(options: CreateSessionOptions): Session {
     // "signedIn" and read the tokens at once. Another tab reads them on
     // "signed-in".
     await apiClient.setTokens(tokens);
+    await prepare?.();
     set({ status: "signedIn", user: result.user, deviceId: result.deviceId });
     channel?.postMessage({ type: "signed-in" } satisfies BroadcastMessage);
   }
@@ -89,6 +111,9 @@ export function createSession(options: CreateSessionOptions): Session {
   // The wait times, in ms, between the tries to load the user.
   // The last time repeats.
   const RETRY_DELAYS = [1_000, 2_000, 5_000, 10_000, 30_000];
+
+  // The store exists only after this call, so the keys read the user through a function.
+  const keys = createAccountKeys(apiClient, () => store.getState().user);
 
   const store = createStore<SessionStore>((set, get) => {
     // The number of the latest restore. A newer restore stops the older one.
@@ -101,6 +126,7 @@ export function createSession(options: CreateSessionOptions): Session {
 
     async function clearSession(): Promise<void> {
       restoreCount++;
+      keys.hold(null);
       await apiClient.setTokens(null);
       set({ status: "signedOut", user: null, deviceId: null });
       channel?.postMessage({ type: "signed-out" } satisfies BroadcastMessage);
@@ -130,6 +156,7 @@ export function createSession(options: CreateSessionOptions): Session {
     channel?.addEventListener("message", (event: MessageEvent<BroadcastMessage>) => {
       if (event.data.type === "signed-out" && get().status !== "signedOut") {
         restoreCount++;
+        keys.hold(null);
         set({ status: "signedOut", user: null, deviceId: null });
       } else if (event.data.type === "signed-in" && get().status !== "signedIn") {
         void apiClient.getTokens().then((tokens) => tokens && restore(tokens.deviceId));
@@ -150,21 +177,43 @@ export function createSession(options: CreateSessionOptions): Session {
         await restore(tokens.deviceId);
       },
 
-      async register(input) {
+      async register({ password, ...input }) {
+        const passwordKeys = await newPasswordKeys(password);
         const result = await apiClient.request<AuthResult>("POST", "/auth/register", {
-          body: input,
+          body: { ...input, authKey: passwordKeys.authKey, kdfSalt: passwordKeys.kdfSalt, kdfVersion: 1 },
           schema: authResultSchema,
           skipAuth: true,
         });
+        keys.hold(passwordKeys);
         await applyAuthResult(result, set);
       },
 
-      async login(input) {
+      async login({ email, password }) {
+        const answer = await prelogin(apiClient, email);
+        if (answer.kdf === "legacy") {
+          // An account from before the password keys: send the password one
+          // time, then give the account a password key.
+          const result = await apiClient.request<AuthResult>("POST", "/auth/login", {
+            body: { email, password },
+            schema: authResultSchema,
+            skipAuth: true,
+          });
+          await applyAuthResult(result, set, async () => {
+            try {
+              keys.hold(await upgradeLegacyPassword(apiClient, password));
+            } catch {
+              // The sign-in is complete. The next sign-in tries the change again.
+            }
+          });
+          return;
+        }
+        const passwordKeys = await derivePasswordKeys(password, answer.salt);
         const result = await apiClient.request<AuthResult>("POST", "/auth/login", {
-          body: input,
+          body: { email, authKey: passwordKeys.authKey },
           schema: authResultSchema,
           skipAuth: true,
         });
+        keys.hold(passwordKeys);
         await applyAuthResult(result, set);
       },
 
@@ -229,8 +278,9 @@ export function createSession(options: CreateSessionOptions): Session {
       },
 
       async resetPassword(token, password) {
+        const passwordKeys = await newPasswordKeys(password);
         await apiClient.request("POST", "/auth/reset-password", {
-          body: { token, password },
+          body: { token, authKey: passwordKeys.authKey, kdfSalt: passwordKeys.kdfSalt, kdfVersion: 1 },
           skipAuth: true,
         });
       },
@@ -245,9 +295,10 @@ export function createSession(options: CreateSessionOptions): Session {
   });
 
   handleSignedOut = () => {
+    keys.hold(null);
     store.setState({ status: "signedOut", user: null, deviceId: null });
     channel?.postMessage({ type: "signed-out" } satisfies BroadcastMessage);
   };
 
-  return { store, apiClient };
+  return { store, apiClient, keys };
 }

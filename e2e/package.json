@@ -10,6 +10,8 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
+    "@mortium/client-core": "workspace:*",
+    "@mortium/crypto-wasm": "workspace:*",
     "@mortium/server": "workspace:*",
     "@mortium/shared": "workspace:*",
     "@playwright/test": "^1.49.0",

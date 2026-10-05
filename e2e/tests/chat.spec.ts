@@ -13,8 +13,9 @@
 // Needs a real Postgres (see auth.spec.ts): skips itself when it is not
 // reachable.
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
-import { enterRecoveryKey, saveRecoveryKey } from "../lib/recovery-key.js";
+import { saveRecoveryKey, waitForPasswordUnlock } from "../lib/recovery-key.js";
 import { seedMessages } from "../lib/crypto-debug.js";
+import { registerBody } from "../lib/accounts.js";
 
 const WEB_ORIGIN = "http://localhost:5173";
 
@@ -55,7 +56,7 @@ function uniqueUser(label: string): TestUser {
 
 async function registerApi(request: APIRequestContext, user: TestUser): Promise<ApiSession> {
   const response = await request.post(`${WEB_ORIGIN}/api/v1/auth/register`, {
-    data: { email: user.email, username: user.username, password: user.password, displayName: user.displayName },
+    data: await registerBody(user),
   });
   if (!response.ok()) {
     throw new Error(`register failed: ${response.status()} ${await response.text()}`);
@@ -174,7 +175,7 @@ test.describe("chat", () => {
       throw new Error(`Unexpected dialog on page B: ${dialog.message()}`);
     });
 
-    const recoveryKeyA = await loginThroughUi(pageA, userA);
+    await loginThroughUi(pageA, userA);
     await loginThroughUi(pageB, userB);
 
     const generalUrl = `${WEB_ORIGIN}/app/${guild.id}/${general.id}`;
@@ -311,9 +312,8 @@ test.describe("chat", () => {
 
     // 10. Regression for Task 1: sign out, sign back in, the channel
     // shows its messages again (it must not render empty on first paint).
-    // The new sign-in is a new device that the owner did not verify. The
-    // security gate blocks the app until the recovery key verifies it
-    // (docs/concepts/olm-megolm.md section 4).
+    // The new sign-in is a new device. The password unlocks the key backup,
+    // and the device verifies itself (docs/concepts/password-keys.md).
     await pageA.goto(generalUrl);
     await pageA.getByRole("button", { name: "Open account settings" }).click();
     await pageA.getByRole("button", { name: "Sign out" }).click();
@@ -323,8 +323,7 @@ test.describe("chat", () => {
     await pageA.getByLabel("Password").fill(userA.password);
     await pageA.getByRole("button", { name: "Sign in" }).click();
     await expect(pageA).toHaveURL(/\/app(\/|$)/);
-    await expect(pageA.getByRole("heading", { name: "Verify this device" })).toBeVisible({ timeout: 20_000 });
-    await enterRecoveryKey(pageA, recoveryKeyA);
+    await waitForPasswordUnlock(pageA);
 
     await pageA.goto(generalUrl);
     await expect(pageA.locator("[data-message-id]").first()).toBeVisible({ timeout: 10_000 });

@@ -22,8 +22,8 @@ import { startCrypto, type CryptoHandle, type CryptoTransport, type StartCryptoO
 // The crypto store uses the global IDBKeyRange, as in a browser.
 globalThis.IDBKeyRange ??= IDBKeyRange;
 
-/** The password that the fake server accepts for a master key reset. */
-export const TEST_PASSWORD = "correct-password";
+/** The auth key that the fake server accepts for a master key reset. */
+export const TEST_AUTH_KEY = "correct-auth-key";
 
 function codeError(code: string, status = 400): Error {
   return Object.assign(new Error(code), { code, status });
@@ -154,8 +154,8 @@ export class FakeServer {
         device.masterSignature = signature;
         this.broadcast("DEVICE_LIST_UPDATE", { userId });
       },
-      resetMasterKey: async ({ password, publicKey, deviceSignature, masterSignature }) => {
-        if (password !== TEST_PASSWORD) {
+      resetMasterKey: async ({ authKey, publicKey, deviceSignature, masterSignature }) => {
+        if (authKey !== TEST_AUTH_KEY) {
           throw codeError("INVALID_PASSWORD", 401);
         }
         this.masters.set(userId, { publicKey, deviceId, deviceSignature });

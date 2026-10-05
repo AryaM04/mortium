@@ -2,7 +2,7 @@
 // never in the path or query string, so it never reaches a server log).
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useLocation } from "wouter";
-import { resetPasswordRequestSchema } from "@mortium/shared";
+import { passwordSchema } from "@mortium/shared";
 import { AuthLayout } from "../components/AuthLayout.js";
 import { FormField } from "../components/FormField.js";
 import { describeError } from "../lib/errors.js";
@@ -30,16 +30,16 @@ export function ResetPasswordPage() {
       return;
     }
 
-    const parsed = resetPasswordRequestSchema.safeParse({ token, password });
+    const parsed = passwordSchema.safeParse(password);
     if (!parsed.success) {
-      setFieldError(parsed.error.issues.find((issue) => issue.path[0] === "password")?.message);
+      setFieldError(parsed.error.issues[0]?.message);
       return;
     }
     setFieldError(undefined);
 
     setPending(true);
     try {
-      await session.store.getState().resetPassword(parsed.data.token, parsed.data.password);
+      await session.store.getState().resetPassword(token, parsed.data);
       navigate("/login");
     } catch (error) {
       setFormError(describeError(error));
@@ -61,6 +61,10 @@ export function ResetPasswordPage() {
 
   return (
     <AuthLayout title="Choose a new password">
+      <p className="mb-4 text-sm">
+        After a password reset, your new password does not unlock your old messages. Use your recovery key or a
+        signed-in device to unlock them again.
+      </p>
       <form onSubmit={handleSubmit} noValidate>
         <FormField
           label="New password"

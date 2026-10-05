@@ -78,6 +78,13 @@
       "when": 1790685415479,
       "tag": "0010_m6_key_backup_secrets",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791161536390,
+      "tag": "0011_password_keys",
+      "breakpoints": true
     }
   ]
 }

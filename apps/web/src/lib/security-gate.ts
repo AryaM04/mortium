@@ -6,11 +6,14 @@ import type { SecuritySnapshot } from "./crypto.js";
 /** The result of the check of the key backup on the server. It stays "pending" after an error. */
 export type BackupCheck = "pending" | "yes" | "no";
 
-/** "save-key": make the backup. "verify": verify this device. */
-export type GateScreen = "none" | "save-key" | "verify";
+/** "save-key": make the backup. "show-key": show the recovery key of a new backup one time. "verify": verify this device. */
+export type GateScreen = "none" | "save-key" | "show-key" | "verify";
 
-/** The screen that blocks the app, or "none". */
-export function gateScreen(security: SecuritySnapshot, check: BackupCheck): GateScreen {
+/** The screen that blocks the app, or "none". `keyToShow`: a new recovery key waits for the user. */
+export function gateScreen(security: SecuritySnapshot, check: BackupCheck, keyToShow = false): GateScreen {
+  if (keyToShow) {
+    return "show-key";
+  }
   if (!security.ready) {
     return "none";
   }

@@ -225,10 +225,10 @@ export class DeviceManager {
 
   /**
    * Make a new master key for a user who lost the old one. The server
-   * needs the account password. The other devices of the user lose their
+   * needs the auth key of the account password. The other devices of the user lose their
    * signature, and other users see an identity change.
    */
-  async resetMasterKey(password: string): Promise<void> {
+  async resetMasterKey(authKey: string): Promise<void> {
     const { wasm, store, transport, account, deviceList, pickleKey, userId, deviceId } = this.deps;
     const master = new wasm.SigningKey();
     try {
@@ -237,7 +237,7 @@ export class DeviceManager {
         publicKey,
         deviceSignature: account.sign(masterKeySignedText(userId, publicKey)),
         masterSignature: master.sign(deviceKeysSignedText(userId, deviceId, account.curve25519, account.ed25519)),
-        password,
+        authKey,
       });
       await store.commit({ values: { [MASTER_KEY_VALUE]: master.pickle(pickleKey) } });
       await deviceList.trustOwnMasterKey(userId, publicKey);

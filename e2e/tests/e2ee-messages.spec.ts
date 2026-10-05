@@ -9,6 +9,7 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
 import { saveRecoveryKey } from "../lib/recovery-key.js";
 import { waitForCrypto } from "../lib/crypto-debug.js";
 import { E2E_DATABASE_NAME } from "../lib/ensure-e2e-db.js";
+import { registerBody } from "../lib/accounts.js";
 
 const WEB_ORIGIN = "http://localhost:5173";
 
@@ -88,9 +89,9 @@ test("messages are encrypted, a new member reads the history, a kicked member ge
   const userA = uniqueUser("A");
   const userB = uniqueUser("B");
   const userC = uniqueUser("C");
-  const a = await api(request, "POST", "/auth/register", undefined, userA);
-  const b = await api(request, "POST", "/auth/register", undefined, userB);
-  const c = await api(request, "POST", "/auth/register", undefined, userC);
+  const a = await api(request, "POST", "/auth/register", undefined, await registerBody(userA));
+  const b = await api(request, "POST", "/auth/register", undefined, await registerBody(userB));
+  const c = await api(request, "POST", "/auth/register", undefined, await registerBody(userC));
   const guild = await api(request, "POST", "/guilds", a.accessToken, { name: "Megolm Guild" });
   const channel = guild.channels.find((entry: { type: string; name: string }) => entry.type === "text");
   const invite = await api(request, "POST", `/channels/${channel.id}/invites`, a.accessToken);

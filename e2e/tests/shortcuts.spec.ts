@@ -5,6 +5,7 @@
 // reachable.
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import { saveRecoveryKey } from "../lib/recovery-key.js";
+import { registerBody } from "../lib/accounts.js";
 
 const WEB_ORIGIN = "http://localhost:5173";
 
@@ -33,7 +34,7 @@ test("the quick switcher, the channel keys and the help dialog work", async ({ p
     password: "correct-horse-battery-staple",
     displayName: `Keys ${stamp}`.slice(0, 32),
   };
-  const a = await api(request, "/auth/register", undefined, user);
+  const a = await api(request, "/auth/register", undefined, await registerBody(user));
   const guild = await api(request, "/guilds", a.accessToken, { name: "Keys Guild" });
   const general = guild.channels.find((entry: { type: string }) => entry.type === "text");
   const random = await api(request, `/guilds/${guild.id}/channels`, a.accessToken, { name: "random", type: "text" });

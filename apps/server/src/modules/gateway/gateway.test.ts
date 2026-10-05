@@ -13,7 +13,7 @@ import {
 import { buildApp } from "../../app.js";
 import { createFakeMailer } from "../../mailer.js";
 import { createTestDb, describeWithDb, type TestDb } from "../../../test/db.js";
-import { buildTestConfig, mkTempDataDir } from "../../../test/helpers.js";
+import { buildTestConfig, mkTempDataDir, passwordFields } from "../../../test/helpers.js";
 import { GatewayService } from "./service.js";
 
 // Under a busy CI machine, several dispatches in a row can take a moment
@@ -107,7 +107,7 @@ async function registerUser(): Promise<{ accessToken: string; deviceId: string; 
     payload: {
       email: `gw-user${userCounter}@example.com`,
       username: `gwuser${userCounter}`,
-      password: "correct-password",
+      ...passwordFields(),
     },
   });
   const body = response.json() as { accessToken: string; deviceId: string; user: { id: string } };
@@ -410,7 +410,7 @@ describeWithDb("gateway", () => {
       payload: {
         email: `gw-expire${userCounter}@example.com`,
         username: `gwexpire${userCounter}`,
-        password: "correct-password",
+        ...passwordFields(),
       },
     });
     const user = response.json() as { accessToken: string; deviceId: string };

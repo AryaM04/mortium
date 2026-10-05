@@ -21,6 +21,7 @@ import { showNotice } from "../lib/notice.js";
 import { securityStore } from "../lib/crypto.js";
 import { session } from "../lib/session.js";
 import { backupExists, gateScreen, type BackupCheck } from "../lib/security-gate.js";
+import { newRecoveryKeyStore } from "../lib/password-unlock.js";
 
 // Load the diagnostics panel only when a person opens the page with
 // "?diag" in a dev build. The lazy import keeps it out of the normal
@@ -138,7 +139,8 @@ export function AppShell() {
   // The crypto layer reads the backup in the background. Until then its
   // state says "no backup", so ask the server when the answer matters.
   const needCheck = useStore(securityStore, (s) => s.ready && s.backup?.version == null && (!s.deviceVerified || s.holdsMasterKey));
-  const screen = useStore(securityStore, (s) => gateScreen(s, check));
+  const keyToShow = useStore(newRecoveryKeyStore, (s) => s.recoveryKey !== null);
+  const screen = useStore(securityStore, (s) => gateScreen(s, check, keyToShow));
   const hasBackup = useStore(securityStore, (s) => backupExists(s, check));
 
   useEffect(() => {

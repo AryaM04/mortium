@@ -10,7 +10,7 @@ import { buildApp } from "../../app.js";
 import { permissionOverwrites } from "../../db/schema.js";
 import { createFakeMailer } from "../../mailer.js";
 import { createTestDb, describeWithDb, type TestDb } from "../../../test/db.js";
-import { buildTestConfig, mkTempDataDir } from "../../../test/helpers.js";
+import { buildTestConfig, mkTempDataDir, passwordFields, testAuthKey } from "../../../test/helpers.js";
 import { GatewayService } from "../gateway/service.js";
 
 vi.setConfig({ testTimeout: 10_000 });
@@ -108,7 +108,7 @@ async function registerUser(): Promise<{ accessToken: string; deviceId: string; 
   const response = await app.inject({
     method: "POST",
     url: "/api/v1/auth/register",
-    payload: { email, username: `msggwuser${userCounter}`, password: "correct-password" },
+    payload: { email, username: `msggwuser${userCounter}`, ...passwordFields() },
   });
   const body = response.json() as { accessToken: string; deviceId: string; user: { id: string } };
   return { accessToken: body.accessToken, deviceId: body.deviceId, userId: body.user.id, email };
@@ -345,7 +345,7 @@ describeWithDb("messages gateway", () => {
     const loginResponse = await app.inject({
       method: "POST",
       url: "/api/v1/auth/login",
-      payload: { email: owner.email, password: "correct-password" },
+      payload: { email: owner.email, authKey: testAuthKey() },
     });
     const secondDevice = loginResponse.json() as { accessToken: string; deviceId: string };
     const ws2 = await connectRaw();

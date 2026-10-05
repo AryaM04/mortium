@@ -268,7 +268,7 @@ export async function uploadSignature(deps: KeysDeps, userId: bigint, input: Upl
 
 /**
  * Replace the master key of a user who lost it (no signed device and no
- * recovery key). The account password is necessary. The signatures of the
+ * recovery key). The auth key of the account password is necessary. The signatures of the
  * old key and the key backup are deleted, because the old master key made
  * them. Other users see the new key as an identity change.
  */
@@ -282,7 +282,7 @@ export async function resetMasterKey(
   if (!user?.passwordHash) {
     throw new AppError(403, "PASSWORD_REQUIRED", "Set a password for this account first. Then reset the identity.");
   }
-  if (!(await verifyPassword(user.passwordHash, input.password))) {
+  if (!(await verifyPassword(user.passwordHash, input.authKey))) {
     throw new AppError(401, "INVALID_PASSWORD", "The password is not correct.");
   }
   const userText = userId.toString();

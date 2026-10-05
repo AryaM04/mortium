@@ -2,6 +2,7 @@
 export * from "./platform.js";
 export * from "./api.js";
 export * from "./session.js";
+export * from "./account-keys.js";
 export * from "./gateway.js";
 export * from "./realtime-store.js";
 export * from "./permissions.js";

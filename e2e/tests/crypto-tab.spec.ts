@@ -9,6 +9,7 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { saveRecoveryKey } from "../lib/recovery-key.js";
 import { waitForCrypto } from "../lib/crypto-debug.js";
+import { registerBody } from "../lib/accounts.js";
 
 const WEB_ORIGIN = "http://localhost:5173";
 
@@ -47,8 +48,8 @@ async function api(request: APIRequestContext, path: string, token?: string, dat
 async function setUp(request: APIRequestContext) {
   const userA = uniqueUser("a");
   const userB = uniqueUser("b");
-  const a = await api(request, "/auth/register", undefined, userA);
-  const b = await api(request, "/auth/register", undefined, userB);
+  const a = await api(request, "/auth/register", undefined, await registerBody(userA));
+  const b = await api(request, "/auth/register", undefined, await registerBody(userB));
   const guild = await api(request, "/guilds", a.accessToken, { name: "Tab Guild" });
   const channel = guild.channels.find((entry: { type: string }) => entry.type === "text");
   const invite = await api(request, `/channels/${channel.id}/invites`, a.accessToken);

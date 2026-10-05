@@ -8,6 +8,7 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { saveRecoveryKey } from "../lib/recovery-key.js";
 import { waitForCrypto } from "../lib/crypto-debug.js";
+import { registerBody } from "../lib/accounts.js";
 
 const WEB_ORIGIN = "http://localhost:5173";
 
@@ -54,8 +55,8 @@ async function loginThroughUi(page: Page, user: TestUser): Promise<void> {
 test("two users exchange an Olm to-device message through the key server", async ({ browser, request }) => {
   const userA = uniqueUser("A");
   const userB = uniqueUser("B");
-  const a = await api(request, "/auth/register", undefined, userA);
-  const b = await api(request, "/auth/register", undefined, userB);
+  const a = await api(request, "/auth/register", undefined, await registerBody(userA));
+  const b = await api(request, "/auth/register", undefined, await registerBody(userB));
   const guild = await api(request, "/guilds", a.accessToken, { name: "E2EE Guild" });
   const channel = guild.channels.find((c: { type: string }) => c.type === "text");
   const invite = await api(request, `/channels/${channel.id}/invites`, a.accessToken);

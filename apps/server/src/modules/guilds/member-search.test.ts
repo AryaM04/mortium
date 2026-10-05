@@ -7,7 +7,7 @@ import { buildApp } from "../../app.js";
 import { guildMembers } from "../../db/schema.js";
 import { createFakeMailer } from "../../mailer.js";
 import { createTestDb, describeWithDb, type TestDb } from "../../../test/db.js";
-import { buildTestConfig, mkTempDataDir } from "../../../test/helpers.js";
+import { buildTestConfig, mkTempDataDir, passwordFields } from "../../../test/helpers.js";
 
 let testDb: TestDb;
 let app: FastifyInstance;
@@ -19,7 +19,7 @@ async function registerUser(username: string, displayName?: string) {
   const response = await app.inject({
     method: "POST",
     url: "/api/v1/auth/register",
-    payload: { email, username, password: "correct-password", displayName },
+    payload: { email, username, ...passwordFields(), displayName },
   });
   return response.json() as { accessToken: string; user: { id: string } };
 }

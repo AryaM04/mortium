@@ -1,14 +1,15 @@
 // End-to-end account flows: register, reload keeps the session, sign out
 // and back in, forgot/reset password through a real email, verify email
-// through a real email, and a wrong-password error. A new account saves
-// its recovery key first. A new sign-in enters it to verify the device.
+// through a real email, and a wrong-password error. A new account shows
+// its recovery key first. A new sign-in with the password unlocks the
+// device by itself. After a reset by email, the recovery key is necessary.
 //
 // These tests need a real Postgres and a real Mailpit. playwright.config.ts
 // checks both are reachable and sets E2E_AUTH_AVAILABLE; when they are not,
 // every test here skips with a clear message instead of failing.
 import { expect, test } from "@playwright/test";
 import { createMailpitClient } from "../lib/mailpit.js";
-import { enterRecoveryKey, saveRecoveryKey } from "../lib/recovery-key.js";
+import { enterRecoveryKey, saveRecoveryKey, waitForPasswordUnlock } from "../lib/recovery-key.js";
 
 const WEB_ORIGIN = "http://localhost:5173";
 const MAILPIT_UI_PORT = process.env.MAILPIT_UI_PORT ?? "8025";
@@ -54,13 +55,13 @@ test.describe("accounts", () => {
     await page.getByRole("button", { name: "Sign out" }).click();
     await expect(page).toHaveURL(`${WEB_ORIGIN}/login`);
 
-    // Sign back in. This is a new device: it must enter the recovery key before it shows the app.
+    // Sign back in. This is a new device: the password unlocks it, with no recovery key step.
+    expect(recoveryKey).not.toBe("");
     await page.getByLabel("Email").fill(user.email);
     await page.getByLabel("Password").fill(user.password);
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(`${WEB_ORIGIN}/app`);
-    await expect(page.getByRole("heading", { name: "Verify this device" })).toBeVisible({ timeout: 30_000 });
-    await enterRecoveryKey(page, recoveryKey);
+    await waitForPasswordUnlock(page);
     await expect(page.getByText(user.displayName)).toBeVisible();
   });
 
@@ -87,7 +88,7 @@ test.describe("accounts", () => {
     await expect(page).toHaveURL(`${WEB_ORIGIN}/login`);
   });
 
-  test("forgot password: reset through the Mailpit link, then sign in with the new password", async ({ page }) => {
+  test("forgot password: reset through the Mailpit link, then sign in with the new password and the recovery key", async ({ page }) => {
     const user = uniqueUser();
 
     await page.goto(`${WEB_ORIGIN}/register`);
@@ -96,6 +97,7 @@ test.describe("accounts", () => {
     await page.getByLabel("Password").fill(user.password);
     await page.getByRole("button", { name: "Create account" }).click();
     await expect(page).toHaveURL(`${WEB_ORIGIN}/app`);
+    const recoveryKey = await saveRecoveryKey(page);
 
     await page.goto(`${WEB_ORIGIN}/forgot-password`);
     await page.getByLabel("Email").fill(user.email);
@@ -114,6 +116,21 @@ test.describe("accounts", () => {
     await page.getByLabel("Password").fill(newPassword);
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(`${WEB_ORIGIN}/app`);
+
+    // The reset removed the key wrap. The recovery key verifies the device, and the app stores a new key wrap.
+    await expect(page.getByRole("heading", { name: "Verify this device" })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("button", { name: "Unlock with your password" })).toHaveCount(0);
+    await enterRecoveryKey(page, recoveryKey);
+
+    // Now the new password unlocks a new device again.
+    await page.getByRole("button", { name: "Open account settings" }).click();
+    await page.getByRole("button", { name: "Sign out" }).click();
+    await expect(page).toHaveURL(`${WEB_ORIGIN}/login`);
+    await page.getByLabel("Email").fill(user.email);
+    await page.getByLabel("Password").fill(newPassword);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page).toHaveURL(`${WEB_ORIGIN}/app`);
+    await waitForPasswordUnlock(page);
   });
 
   test("verify email through the Mailpit link", async ({ page }) => {

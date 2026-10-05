@@ -11,7 +11,7 @@ import { buildApp } from "../../app.js";
 import { permissionOverwrites } from "../../db/schema.js";
 import { createFakeMailer } from "../../mailer.js";
 import { createTestDb, describeWithDb, type TestDb } from "../../../test/db.js";
-import { buildTestConfig, mkTempDataDir } from "../../../test/helpers.js";
+import { buildTestConfig, mkTempDataDir, passwordFields, testAuthKey } from "../../../test/helpers.js";
 import { GatewayService } from "../gateway/service.js";
 import { VoiceService } from "./service.js";
 
@@ -123,7 +123,7 @@ async function registerUser(): Promise<{ accessToken: string; deviceId: string; 
   const response = await app.inject({
     method: "POST",
     url: "/api/v1/auth/register",
-    payload: { email, username: `voiceuser${userCounter}`, password: "correct-password" },
+    payload: { email, username: `voiceuser${userCounter}`, ...passwordFields() },
   });
   const body = response.json() as { accessToken: string; deviceId: string; user: { id: string } };
   return { accessToken: body.accessToken, deviceId: body.deviceId, userId: body.user.id, email };
@@ -133,7 +133,7 @@ async function loginNewDevice(email: string): Promise<{ accessToken: string; dev
   const response = await app.inject({
     method: "POST",
     url: "/api/v1/auth/login",
-    payload: { email, password: "correct-password" },
+    payload: { email, authKey: testAuthKey() },
   });
   const body = response.json() as { accessToken: string; deviceId: string };
   return { accessToken: body.accessToken, deviceId: body.deviceId };

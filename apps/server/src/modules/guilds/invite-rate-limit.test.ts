@@ -5,7 +5,7 @@ import { afterAll, beforeAll, expect, it } from "vitest";
 import { buildApp } from "../../app.js";
 import { createFakeMailer } from "../../mailer.js";
 import { createTestDb, describeWithDb, type TestDb } from "../../../test/db.js";
-import { buildTestConfig } from "../../../test/helpers.js";
+import { buildTestConfig, passwordFields } from "../../../test/helpers.js";
 
 let testDb: TestDb;
 let app: FastifyInstance;
@@ -25,7 +25,7 @@ describeWithDb("invite rate limit", () => {
     const registered = await app.inject({
       method: "POST",
       url: "/api/v1/auth/register",
-      payload: { email: "guesser@example.com", username: "guesser", password: "password-123" },
+      payload: { email: "guesser@example.com", username: "guesser", ...passwordFields("password-123") },
     });
     const headers = { authorization: `Bearer ${registered.json().accessToken}` };
 

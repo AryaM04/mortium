@@ -10,7 +10,7 @@ import { GatewayService } from "../src/modules/gateway/service.js";
 import { CallRinger } from "../src/modules/voice/calls.js";
 import { VoiceService } from "../src/modules/voice/service.js";
 import { createTestDb, type TestDb } from "./db.js";
-import { buildTestConfig, mkTempDataDir } from "./helpers.js";
+import { buildTestConfig, mkTempDataDir, passwordFields, testAuthKey } from "./helpers.js";
 
 export interface TestServer {
   app: FastifyInstance;
@@ -79,7 +79,7 @@ export async function registerUser(server: TestServer, prefix = "user"): Promise
   const response = await server.app.inject({
     method: "POST",
     url: "/api/v1/auth/register",
-    payload: { email, username, password: "correct-password" },
+    payload: { email, username, ...passwordFields() },
   });
   const body = response.json() as { accessToken: string; deviceId: string; user: { id: string } };
   return { userId: body.user.id, username, email, accessToken: body.accessToken, deviceId: body.deviceId };
@@ -90,7 +90,7 @@ export async function loginNewDevice(server: TestServer, user: TestUser): Promis
   const response = await server.app.inject({
     method: "POST",
     url: "/api/v1/auth/login",
-    payload: { email: user.email, password: "correct-password" },
+    payload: { email: user.email, authKey: testAuthKey() },
   });
   const body = response.json() as { accessToken: string; deviceId: string };
   return { ...user, accessToken: body.accessToken, deviceId: body.deviceId };

@@ -1,22 +1,29 @@
 // The blocking security screens before the app (CRY-09). "save-key": a
-// device that holds the master key makes the key backup and saves the
-// recovery key. "verify": a new device verifies with a different device,
-// or restores with the recovery key. An account without a backup can reset
+// device that holds the master key makes the key backup. After a sign-in
+// with a password, the app makes the backup itself and "show-key" shows the
+// recovery key one time. Without a password (OAuth), the user makes the
+// backup and confirms the key. "verify": a new device unlocks itself with
+// the password (the key wrap), or verifies with a different device, or
+// restores with the recovery key. An account without a backup can reset
 // the identity, and then makes the backup. There is no way to skip. It
-// loads only when it shows. See docs/concepts/olm-megolm.md sections 9 and 10.
-import { Suspense, lazy, useState } from "react";
+// loads only when it shows. See docs/concepts/olm-megolm.md sections 9 and
+// 10, and docs/concepts/password-keys.md.
+import { Suspense, lazy, useEffect, useState } from "react";
 import { useStore } from "zustand";
 import { currentCrypto, securityStore } from "../lib/crypto.js";
 import { describeError } from "../lib/errors.js";
+import { createBackupWithPassword, newRecoveryKeyStore, unlockWithWrapKey } from "../lib/password-unlock.js";
 import { session } from "../lib/session.js";
 import type { GateScreen } from "../lib/security-gate.js";
 import { AuthLayout } from "./AuthLayout.js";
-import { BackupSetup, ResetIdentity, Restore } from "./SecurityDialog.js";
+import { BackupSetup, ResetIdentity, Restore, downloadKey } from "./SecurityDialog.js";
 
 const VerificationDialog = lazy(() => import("./VerificationDialog.js"));
 
 const button = "rounded px-3 py-2 text-sm";
 const primary = { backgroundColor: "var(--color-accent)", color: "white" };
+const field = "w-full rounded border px-2 py-1 text-sm";
+const fieldStyle = { backgroundColor: "var(--color-bg-main)", borderColor: "var(--color-border)", color: "var(--color-text-primary)" };
 
 function Part({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -29,8 +36,87 @@ function Part({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
-function VerifyScreen({ hasBackup }: { hasBackup: boolean }) {
+function Problem({ text }: { text: string | null }) {
+  return text ? (
+    <p role="alert" className="mt-2 text-sm" style={{ color: "var(--color-danger-text)" }}>
+      {text}
+    </p>
+  ) : null;
+}
+
+function SignOut() {
+  return (
+    <button type="button" className="text-sm underline" onClick={() => void session.store.getState().logout()}>
+      Sign out
+    </button>
+  );
+}
+
+/** Open the key wrap with the password, after a reload removed the wrap key from memory. */
+function PasswordUnlock() {
+  const [password, setPassword] = useState("");
+  const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function unlock() {
+    setPending(true);
+    setError(null);
+    try {
+      const recoveryKey = await session.keys.unlockWithPassword(password);
+      const result = await currentCrypto()!.security.restoreBackup({ recoveryKey });
+      setPassword("");
+      if (!result.signed) {
+        setError("The backup did not verify this device. Verify it with a different device.");
+      }
+    } catch (err) {
+      setError(describeError(err));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <input
+        type="password"
+        aria-label="Your password"
+        placeholder="Your password"
+        autoComplete="current-password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        className={field}
+        style={fieldStyle}
+      />
+      <div className="flex justify-end">
+        <button type="button" className={button} style={primary} disabled={pending || password === ""} onClick={() => void unlock()}>
+          {pending ? "Unlocking..." : "Unlock with your password"}
+        </button>
+      </div>
+      <Problem text={error} />
+    </div>
+  );
+}
+
+function VerifyScreen({ hasBackup }: { hasBackup: boolean }) {
+  // With the wrap key in memory, the app first tries to unlock this device without a question.
+  const [automatic, setAutomatic] = useState(() => session.keys.hasWrapKey());
+  const [passwordWorks, setPasswordWorks] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    if (automatic) {
+      void unlockWithWrapKey().then((verified) => alive && !verified && setAutomatic(false));
+    } else if (hasBackup) {
+      void session.keys
+        .hasCurrentKeyWrap()
+        .then((exists) => alive && setPasswordWorks(exists))
+        .catch(() => undefined);
+    }
+    return () => {
+      alive = false;
+    };
+  }, [automatic, hasBackup]);
 
   async function verify() {
     setError(null);
@@ -41,21 +127,33 @@ function VerifyScreen({ hasBackup }: { hasBackup: boolean }) {
     }
   }
 
+  if (automatic) {
+    return (
+      <AuthLayout title="Unlocking your messages">
+        <p role="status" className="mb-4 text-sm">
+          The app unlocks your encryption keys with your password. This can take some seconds.
+        </p>
+        <SignOut />
+      </AuthLayout>
+    );
+  }
+
   return (
     <AuthLayout title="Verify this device">
       <p className="mb-4 text-sm">
         Your messages are encrypted. Verify this device before you continue. Until then, it cannot read your messages.
       </p>
+      {passwordWorks && (
+        <Part title="Unlock with your password">
+          <PasswordUnlock />
+        </Part>
+      )}
       <Part title="Verify with another device">
         <p className="mb-2 text-sm">Use a device where you are signed in. Compare the emojis on both devices.</p>
         <button type="button" className={button} style={primary} onClick={() => void verify()}>
           Verify with another device
         </button>
-        {error && (
-          <p role="alert" className="mt-2 text-sm" style={{ color: "var(--color-danger-text)" }}>
-            {error}
-          </p>
-        )}
+        <Problem text={error} />
       </Part>
       {hasBackup ? (
         <>
@@ -78,21 +176,76 @@ function VerifyScreen({ hasBackup }: { hasBackup: boolean }) {
           <ResetIdentity />
         </Part>
       )}
-      <button type="button" className="text-sm underline" onClick={() => void session.store.getState().logout()}>
-        Sign out
-      </button>
+      <SignOut />
     </AuthLayout>
   );
 }
 
 function SaveKeyScreen() {
+  const automatic = session.keys.hasWrapKey();
+  const error = useStore(newRecoveryKeyStore, (s) => s.error);
+
+  useEffect(() => {
+    if (automatic) {
+      void createBackupWithPassword();
+    }
+  }, [automatic]);
+
+  if (automatic && !error) {
+    return (
+      <AuthLayout title="Save your recovery key">
+        <p role="status" className="text-sm">
+          The app makes your recovery key...
+        </p>
+      </AuthLayout>
+    );
+  }
   return (
     <AuthLayout title="Save your recovery key">
       <p className="mb-4 text-sm">
         Your messages are encrypted. The recovery key lets a new device read them. If you lose this device and the
         recovery key, you cannot read your old messages. Make the key before you continue.
       </p>
+      <Problem text={error} />
       <BackupSetup required />
+    </AuthLayout>
+  );
+}
+
+/** The recovery key of the automatic backup, one time. The password unlocks a new device, so the user need not type the key back. */
+function ShowKeyScreen() {
+  const { recoveryKey, saving } = useStore(newRecoveryKeyStore);
+  if (!recoveryKey) {
+    return null;
+  }
+  return (
+    <AuthLayout title="Save your recovery key">
+      <p className="mb-4 text-sm">
+        Your password unlocks your encrypted messages on a new device. You need this recovery key only if you forget
+        your password or reset it by email. Keep it in a safe place.
+      </p>
+      <code data-testid="recovery-key" className="mb-2 block rounded p-2 text-center font-mono text-sm" style={{ backgroundColor: "var(--color-bg-main)" }}>
+        {recoveryKey}
+      </code>
+      <div className="mb-4 flex gap-3 text-sm">
+        <button type="button" className="underline" onClick={() => void navigator.clipboard?.writeText(recoveryKey)}>
+          Copy
+        </button>
+        <button type="button" className="underline" onClick={() => downloadKey(recoveryKey)}>
+          Download
+        </button>
+      </div>
+      <div className="flex justify-end">
+        <button
+          type="button"
+          className={button}
+          style={primary}
+          disabled={saving}
+          onClick={() => newRecoveryKeyStore.setState({ recoveryKey: null })}
+        >
+          {saving ? "Saving..." : "Continue"}
+        </button>
+      </div>
     </AuthLayout>
   );
 }
@@ -101,7 +254,13 @@ export default function SecurityGate({ screen, hasBackup }: { screen: GateScreen
   const openFlow = useStore(securityStore, (s) => s.verifications.length > 0);
   return (
     <>
-      {screen === "verify" ? <VerifyScreen hasBackup={hasBackup} /> : <SaveKeyScreen />}
+      {screen === "verify" ? (
+        <VerifyScreen hasBackup={hasBackup} />
+      ) : screen === "show-key" ? (
+        <ShowKeyScreen />
+      ) : (
+        <SaveKeyScreen />
+      )}
       {openFlow && (
         <Suspense fallback={null}>
           <VerificationDialog />

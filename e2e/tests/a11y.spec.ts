@@ -7,6 +7,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { seedMessages, waitForCrypto } from "../lib/crypto-debug.js";
 import { saveRecoveryKey } from "../lib/recovery-key.js";
+import { registerBody } from "../lib/accounts.js";
 
 const WEB_ORIGIN = "http://localhost:5173";
 
@@ -59,8 +60,8 @@ test("the main screens have no serious accessibility violation", async ({ page, 
 
   const user = uniqueUser("a");
   const friend = uniqueUser("b");
-  const a = await api(request, "/auth/register", undefined, user);
-  const b = await api(request, "/auth/register", undefined, friend);
+  const a = await api(request, "/auth/register", undefined, await registerBody(user));
+  const b = await api(request, "/auth/register", undefined, await registerBody(friend));
   const guild = await api(request, "/guilds", a.accessToken, { name: "Access Guild" });
   const general = guild.channels.find((entry: { type: string }) => entry.type === "text");
   await api(request, `/guilds/${guild.id}/channels`, a.accessToken, { name: "second", type: "text" });

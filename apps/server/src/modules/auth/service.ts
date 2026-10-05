@@ -1,7 +1,21 @@
 // Auth logic and database access. Routes stay thin and call these functions.
+// The client never sends the password. It sends an auth key that it derives
+// from the password. See docs/concepts/password-keys.md.
+import { createHmac } from "node:crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { hash, verify } from "@node-rs/argon2";
-import type { AuthResult, RefreshResult } from "@mortium/shared";
+import {
+  PASSWORD_KDF_V1,
+  encodeBase64Url,
+  type AuthResult,
+  type ChangePasswordRequest,
+  type GetKeyWrapResponse,
+  type LoginRequest,
+  type PreloginResponse,
+  type PutKeyWrapRequest,
+  type RefreshResult,
+  type UpgradePasswordRequest,
+} from "@mortium/shared";
 import type { AppConfig } from "../../config.js";
 import { isUniqueViolation, type DbClient } from "../../db/client.js";
 import { devices, emailTokens, refreshTokens, users } from "../../db/schema.js";
@@ -148,7 +162,8 @@ async function sendVerificationEmail(deps: AuthDeps, userId: bigint, email: stri
 export interface RegisterInput {
   email: string;
   username: string;
-  password: string;
+  authKey: string;
+  kdfSalt: string;
   displayName?: string;
 }
 
@@ -174,7 +189,7 @@ export async function registerUser(
     throw new AppError(409, "USERNAME_TAKEN", "This username is already in use.");
   }
 
-  const passwordHash = await hash(input.password);
+  const passwordHash = await hash(input.authKey);
   const id = nextId();
   const displayName = input.displayName ?? input.username;
 
@@ -185,6 +200,8 @@ export async function registerUser(
       displayName,
       email: input.email,
       passwordHash,
+      kdfSalt: input.kdfSalt,
+      kdfVersion: 1,
       emailVerified: false,
     });
   } catch (error) {
@@ -210,27 +227,114 @@ export async function registerUser(
   return toAuthResult(user, session);
 }
 
-export interface LoginInput {
-  email: string;
-  password: string;
+/**
+ * The salt for an email address without a password key: a stable value from
+ * the server secret. Thus the answer for an unknown account looks like the
+ * answer for a real account.
+ */
+function fakeSalt(secret: string, email: string): string {
+  const digest = createHmac("sha256", secret).update(`mortium:prelogin-salt:v1|${email}`).digest();
+  return encodeBase64Url(new Uint8Array(digest.subarray(0, 16)));
+}
+
+/** The values that the client needs to derive the auth key of an account. */
+export async function prelogin(deps: AuthDeps, email: string): Promise<PreloginResponse> {
+  const user = await findUserByEmail(deps.db, email);
+  if (user?.passwordHash && user.kdfVersion === null) {
+    return { kdf: "legacy" };
+  }
+  const salt = user?.passwordHash && user.kdfSalt ? user.kdfSalt : fakeSalt(deps.config.jwtSecret, email);
+  return { kdf: "argon2id-v1", salt, ...PASSWORD_KDF_V1 };
 }
 
 export async function loginUser(
   deps: AuthDeps,
-  input: LoginInput,
+  input: LoginRequest,
   deviceName?: string,
 ): Promise<AuthResult> {
   const { db } = deps;
   const user = await findUserByEmail(db, input.email);
   const hashToCheck = user?.passwordHash ?? (await getDummyHash());
-  const passwordOk = await verify(hashToCheck, input.password);
+  const sentAuthKey = "authKey" in input;
+  const passwordOk = await verify(hashToCheck, sentAuthKey ? input.authKey : input.password);
+  // A legacy account accepts only the password. An account with a password key accepts only the auth key.
+  const rightKind = sentAuthKey === (user?.kdfVersion != null);
 
-  if (!user || !user.passwordHash || !passwordOk) {
+  if (!user || !user.passwordHash || !passwordOk || !rightKind) {
     throw new AppError(401, "INVALID_CREDENTIALS", "The email or password is not correct.");
   }
 
   const session = await createSession(db, deps.config, user.id, deviceName);
   return toAuthResult(user, session);
+}
+
+/** Give a legacy account a password key. The password proves the account again. */
+export async function upgradePassword(deps: AuthDeps, userId: bigint, input: UpgradePasswordRequest): Promise<void> {
+  const user = await findUserById(deps.db, userId);
+  if (!user?.passwordHash || user.kdfVersion !== null) {
+    throw new AppError(409, "PASSWORD_KEY_EXISTS", "This account does not use an old password hash.");
+  }
+  if (!(await verify(user.passwordHash, input.password))) {
+    throw new AppError(401, "INVALID_PASSWORD", "The password is not correct.");
+  }
+  const passwordHash = await hash(input.authKey);
+  // One conditional UPDATE: a parallel change of the password makes it fail.
+  const rows = await deps.db
+    .update(users)
+    .set({ passwordHash, kdfSalt: input.kdfSalt, kdfVersion: 1, keyWrap: null, keyWrapVersion: null })
+    .where(and(eq(users.id, userId), eq(users.passwordHash, user.passwordHash), isNull(users.kdfVersion)))
+    .returning({ id: users.id });
+  if (rows.length === 0) {
+    throw new AppError(409, "PASSWORD_CHANGED", "The password changed at the same time. Try again.");
+  }
+}
+
+/** Change the password. The other sessions stay signed in. */
+export async function changePassword(deps: AuthDeps, userId: bigint, input: ChangePasswordRequest): Promise<void> {
+  const user = await findUserById(deps.db, userId);
+  if (!user?.passwordHash) {
+    throw new AppError(403, "PASSWORD_REQUIRED", "This account has no password. Set one with the reset link first.");
+  }
+  if (user.kdfVersion === null || !(await verify(user.passwordHash, input.currentAuthKey))) {
+    throw new AppError(401, "INVALID_PASSWORD", "The current password is not correct.");
+  }
+  const passwordHash = await hash(input.authKey);
+  // One conditional UPDATE: the hash, the salt and the key wrap change together.
+  const rows = await deps.db
+    .update(users)
+    .set({
+      passwordHash,
+      kdfSalt: input.kdfSalt,
+      kdfVersion: 1,
+      keyWrap: input.keyWrap?.data ?? null,
+      keyWrapVersion: input.keyWrap?.version ?? null,
+    })
+    .where(and(eq(users.id, userId), eq(users.passwordHash, user.passwordHash)))
+    .returning({ id: users.id });
+  if (rows.length === 0) {
+    throw new AppError(409, "PASSWORD_CHANGED", "The password changed at the same time. Try again.");
+  }
+}
+
+/** The recovery key, encrypted with the wrap key of the password. The server cannot open it. */
+export async function getKeyWrap(deps: AuthDeps, userId: bigint): Promise<GetKeyWrapResponse> {
+  const user = await findUserById(deps.db, userId);
+  if (!user?.keyWrap || user.keyWrapVersion === null) {
+    return { keyWrap: null };
+  }
+  return { keyWrap: { version: user.keyWrapVersion, data: user.keyWrap } };
+}
+
+/** Store a key wrap. The salt must be the salt of the current password, else the wrap is of an old password. */
+export async function putKeyWrap(deps: AuthDeps, userId: bigint, input: PutKeyWrapRequest): Promise<void> {
+  const rows = await deps.db
+    .update(users)
+    .set({ keyWrap: input.data, keyWrapVersion: input.version })
+    .where(and(eq(users.id, userId), eq(users.kdfSalt, input.kdfSalt)))
+    .returning({ id: users.id });
+  if (rows.length === 0) {
+    throw new AppError(409, "PASSWORD_CHANGED", "The password of the account changed. Sign in again.");
+  }
 }
 
 export async function refreshSession(deps: AuthDeps, refreshToken: string): Promise<RefreshResult> {
@@ -476,7 +580,15 @@ export async function forgotPassword(deps: AuthDeps, email: string): Promise<voi
   );
 }
 
-export async function resetPassword(deps: AuthDeps, token: string, newPassword: string): Promise<void> {
+/**
+ * Set a new password from a reset link. The server cannot encrypt the
+ * recovery key with the new password, so it removes the key wrap.
+ */
+export async function resetPassword(
+  deps: AuthDeps,
+  token: string,
+  input: { authKey: string; kdfSalt: string },
+): Promise<void> {
   const { db } = deps;
   const tokenHash = hashOpaqueToken(token);
   const now = new Date();
@@ -500,8 +612,11 @@ export async function resetPassword(deps: AuthDeps, token: string, newPassword: 
   }
 
   const userId = row.userId;
-  const passwordHash = await hash(newPassword);
-  await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
+  const passwordHash = await hash(input.authKey);
+  await db
+    .update(users)
+    .set({ passwordHash, kdfSalt: input.kdfSalt, kdfVersion: 1, keyWrap: null, keyWrapVersion: null })
+    .where(eq(users.id, userId));
   // Other reset links of this user stop working too. An old link in the
   // mailbox must not change the new password.
   await db

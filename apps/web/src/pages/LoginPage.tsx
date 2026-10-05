@@ -1,7 +1,7 @@
 // The sign-in page.
 import { useState, type FormEvent } from "react";
 import { Link, useLocation } from "wouter";
-import { loginRequestSchema } from "@mortium/shared";
+import { loginFormSchema } from "@mortium/shared";
 import { AuthLayout } from "../components/AuthLayout.js";
 import { FormField } from "../components/FormField.js";
 import { DownloadLink } from "../components/DownloadLink.js";
@@ -21,7 +21,7 @@ export function LoginPage() {
     event.preventDefault();
     setFormError(null);
 
-    const parsed = loginRequestSchema.safeParse({ email, password });
+    const parsed = loginFormSchema.safeParse({ email, password });
     if (!parsed.success) {
       const errors: Record<string, string> = {};
       for (const issue of parsed.error.issues) {

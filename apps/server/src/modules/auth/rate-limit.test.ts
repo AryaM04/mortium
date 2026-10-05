@@ -6,7 +6,7 @@ import { afterAll, beforeAll, expect, it } from "vitest";
 import { buildApp } from "../../app.js";
 import { createFakeMailer } from "../../mailer.js";
 import { createTestDb, describeWithDb, type TestDb } from "../../../test/db.js";
-import { buildTestConfig } from "../../../test/helpers.js";
+import { buildTestConfig, passwordFields, testAuthKey } from "../../../test/helpers.js";
 
 let testDb: TestDb;
 let app: FastifyInstance;
@@ -34,7 +34,7 @@ describeWithDb("auth rate limits", () => {
       app.inject({
         method: "POST",
         url: "/api/v1/auth/login",
-        payload: { email: "nobody@example.com", password: "wrong-password" },
+        payload: { email: "nobody@example.com", authKey: testAuthKey("wrong-password") },
       });
 
     const responses = [];
@@ -53,7 +53,7 @@ describeWithDb("auth rate limits", () => {
         method: "POST",
         url: "/api/v1/auth/login",
         remoteAddress,
-        payload: { email, password: "wrong-password" },
+        payload: { email, authKey: testAuthKey("wrong-password") },
       });
 
     for (let i = 1; i <= 10; i += 1) {
@@ -74,7 +74,7 @@ describeWithDb("auth rate limits", () => {
         method: "POST",
         url: "/api/v1/auth/login",
         headers: { "x-forwarded-for": forwardedFor },
-        payload: { email: `spoof-${i}@example.com`, password: "wrong-password" },
+        payload: { email: `spoof-${i}@example.com`, authKey: testAuthKey("wrong-password") },
       });
 
     for (let i = 1; i <= 10; i += 1) {
@@ -93,7 +93,7 @@ describeWithDb("auth rate limits", () => {
           method: "POST",
           url,
           remoteAddress: "198.51.100.200",
-          payload: { token: "not-a-real-token", password: "new-password-456" },
+          payload: { token: "not-a-real-token", ...passwordFields("new-password-456") },
         });
       for (let i = 0; i < 10; i += 1) {
         expect((await attempt()).statusCode).toBe(400);

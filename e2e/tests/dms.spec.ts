@@ -6,6 +6,7 @@
 // Needs a real Postgres (see auth.spec.ts): skips itself when it is not reachable.
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { saveRecoveryKey } from "../lib/recovery-key.js";
+import { registerBody } from "../lib/accounts.js";
 
 const WEB_ORIGIN = "http://localhost:5173";
 
@@ -42,7 +43,7 @@ function auth(token: string) {
 
 async function registerApi(request: APIRequestContext, user: TestUser): Promise<ApiSession> {
   const response = await request.post(`${WEB_ORIGIN}/api/v1/auth/register`, {
-    data: { email: user.email, username: user.username, password: user.password, displayName: user.displayName },
+    data: await registerBody(user),
   });
   if (!response.ok()) {
     throw new Error(`register failed: ${response.status()} ${await response.text()}`);

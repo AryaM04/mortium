@@ -2,13 +2,17 @@
 // and replies. The logic lives in service.ts and oauth.ts.
 import type { FastifyInstance } from "fastify";
 import {
+  changePasswordRequestSchema,
   forgotPasswordRequestSchema,
   loginRequestSchema,
   oauthExchangeRequestSchema,
   oauthProviderSchema,
+  preloginRequestSchema,
+  putKeyWrapRequestSchema,
   refreshRequestSchema,
   registerRequestSchema,
   resetPasswordRequestSchema,
+  upgradePasswordRequestSchema,
   verifyEmailRequestSchema,
   type OAuthProvider,
 } from "@mortium/shared";
@@ -20,15 +24,20 @@ import { createLoginFailureGuard } from "./login-guard.js";
 import { consumeOAuthCode, storeOAuthCode } from "./oauth-codes.js";
 import { createOAuthClients, completeOAuthLogin, fetchGitHubProfile, fetchGoogleProfile } from "./oauth.js";
 import {
+  changePassword,
   forgotPassword,
+  getKeyWrap,
   loginUser,
   logoutDevice,
+  prelogin,
+  putKeyWrap,
   refreshSession,
   registerUser,
   resendVerification,
   resetPassword,
   toAuthResult,
   createSession,
+  upgradePassword,
   verifyEmail,
 } from "./service.js";
 
@@ -66,6 +75,7 @@ export async function registerAuthRoutes(app: FastifyInstance, deps: AppDeps): P
     deps.rateLimit === false ? null : createLoginFailureGuard(limits.loginFailuresPerAccount, LOGIN_FAILURE_WINDOW_MS);
   const emailLinkLimit = { rateLimit: { max: limits.emailLink, timeWindow: "1 minute" } };
   const oauthLimit = { rateLimit: { max: limits.oauth, timeWindow: "1 minute" } };
+  const loginLimit = { rateLimit: { max: limits.login, timeWindow: "1 minute" } };
 
   app.post(
     "/register",
@@ -77,9 +87,14 @@ export async function registerAuthRoutes(app: FastifyInstance, deps: AppDeps): P
     },
   );
 
+  app.post("/prelogin", { config: loginLimit }, async (request, reply) => {
+    const input = preloginRequestSchema.parse(request.body);
+    return reply.send(await prelogin(authDeps, input.email));
+  });
+
   app.post(
     "/login",
-    { config: { rateLimit: { max: deps.config.authRateLimit.login, timeWindow: "1 minute" } } },
+    { config: loginLimit },
     async (request, reply) => {
       const input = loginRequestSchema.parse(request.body);
       if (loginGuard?.isLocked(input.email)) {
@@ -96,6 +111,29 @@ export async function registerAuthRoutes(app: FastifyInstance, deps: AppDeps): P
       }
     },
   );
+
+  // A password check is slow on purpose, so these routes have the limit of the sign-in.
+  app.post("/password/upgrade", { preHandler: app.authenticate, config: loginLimit }, async (request, reply) => {
+    const input = upgradePasswordRequestSchema.parse(request.body);
+    await upgradePassword(authDeps, request.auth!.userId, input);
+    return reply.status(204).send();
+  });
+
+  app.post("/password/change", { preHandler: app.authenticate, config: loginLimit }, async (request, reply) => {
+    const input = changePasswordRequestSchema.parse(request.body);
+    await changePassword(authDeps, request.auth!.userId, input);
+    return reply.status(204).send();
+  });
+
+  app.get("/key-wrap", { preHandler: app.authenticate }, async (request, reply) => {
+    return reply.send(await getKeyWrap(authDeps, request.auth!.userId));
+  });
+
+  app.put("/key-wrap", { preHandler: app.authenticate }, async (request, reply) => {
+    const input = putKeyWrapRequestSchema.parse(request.body);
+    await putKeyWrap(authDeps, request.auth!.userId, input);
+    return reply.status(204).send();
+  });
 
   app.post(
     "/refresh",
@@ -142,7 +180,7 @@ export async function registerAuthRoutes(app: FastifyInstance, deps: AppDeps): P
 
   app.post("/reset-password", { config: emailLinkLimit }, async (request, reply) => {
     const input = resetPasswordRequestSchema.parse(request.body);
-    await resetPassword(authDeps, input.token, input.password);
+    await resetPassword(authDeps, input.token, input);
     return reply.status(204).send();
   });
 

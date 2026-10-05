@@ -11,6 +11,7 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
 import { saveRecoveryKey } from "../lib/recovery-key.js";
 import { waitForCrypto } from "../lib/crypto-debug.js";
 import { E2E_DATABASE_NAME } from "../lib/ensure-e2e-db.js";
+import { registerBody } from "../lib/accounts.js";
 
 const WEB_ORIGIN = "http://localhost:5173";
 
@@ -69,8 +70,8 @@ test("an encrypted image and file go from A to B, and the server stores only cip
   test.setTimeout(120_000);
   const userA = uniqueUser("A");
   const userB = uniqueUser("B");
-  const a = await api(request, "/auth/register", undefined, userA);
-  const b = await api(request, "/auth/register", undefined, userB);
+  const a = await api(request, "/auth/register", undefined, await registerBody(userA));
+  const b = await api(request, "/auth/register", undefined, await registerBody(userB));
   const guild = await api(request, "/guilds", a.accessToken, { name: "Files Guild" });
   const channel = guild.channels.find((entry: { type: string }) => entry.type === "text");
   const invite = await api(request, `/channels/${channel.id}/invites`, a.accessToken);

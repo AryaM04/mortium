@@ -6,7 +6,7 @@ import { WrongRecoveryKeyError } from "./key-backup.js";
 import { decodeRecoveryKey, encodeRecoveryKey } from "./recovery-key.js";
 import {
   FakeServer,
-  TEST_PASSWORD,
+  TEST_AUTH_KEY,
   initWasmForTests,
   newClient,
   settleClients,
@@ -287,12 +287,12 @@ describe("identity changes", () => {
     await settleClients([a1, b1]);
     expect(await read(b1, before)).toBe("before the reset");
 
-    // User 2 lost everything: a new device resets the identity with the password.
+    // User 2 lost everything: a new device resets the identity with the auth key of the password.
     server.stop(b1);
     const b2 = newClient("2", "B2");
     await server.start(b2);
     await expect(b2.handle!.security.resetIdentity("wrong")).rejects.toMatchObject({ code: "INVALID_PASSWORD" });
-    await b2.handle!.security.resetIdentity(TEST_PASSWORD);
+    await b2.handle!.security.resetIdentity(TEST_AUTH_KEY);
     expect(await isVerified(b2)).toBe(true);
 
     const changed: string[] = [];

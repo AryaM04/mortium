@@ -15,7 +15,7 @@ import { buildApp } from "../../app.js";
 import { attachments, permissionOverwrites } from "../../db/schema.js";
 import { createFakeMailer } from "../../mailer.js";
 import { createTestDb, describeWithDb, type TestDb } from "../../../test/db.js";
-import { buildTestConfig, mkTempDataDir } from "../../../test/helpers.js";
+import { buildTestConfig, mkTempDataDir, passwordFields } from "../../../test/helpers.js";
 import { attachmentDir, cleanUpAttachments, UNCLAIMED_TTL_MS } from "./service.js";
 
 const MAX_BYTES = 21 * 1024 * 1024;
@@ -39,7 +39,7 @@ async function registerUser(): Promise<User> {
   const response = await app.inject({
     method: "POST",
     url: "/api/v1/auth/register",
-    payload: { email: `${username}@example.com`, username, password: "correct-password" },
+    payload: { email: `${username}@example.com`, username, ...passwordFields() },
   });
   const body = response.json() as { accessToken: string; user: { id: string } };
   return { userId: body.user.id, username, token: body.accessToken };

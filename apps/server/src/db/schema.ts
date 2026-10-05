@@ -35,7 +35,16 @@ export const users = pgTable(
     displayName: text("display_name").notNull(),
     email: text("email").notNull().unique(),
     emailVerified: boolean("email_verified").notNull().default(false),
+    /** The argon2id hash of the auth key, or of the password itself when kdf_version is null. */
     passwordHash: text("password_hash"),
+    /** The salt of the password key (base64url). The client derives the auth key with it. */
+    kdfSalt: text("kdf_salt"),
+    /** The version of the password key derivation. Null: a legacy account, the hash is of the password. */
+    kdfVersion: integer("kdf_version"),
+    /** The recovery key, encrypted with the wrap key of the password (base64url). The server cannot open it. */
+    keyWrap: text("key_wrap"),
+    /** The key backup version that the recovery key in key_wrap opens. */
+    keyWrapVersion: integer("key_wrap_version"),
     avatarKey: text("avatar_key"),
     statusText: text("status_text"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

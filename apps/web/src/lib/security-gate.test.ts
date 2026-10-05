@@ -27,6 +27,11 @@ describe("gateScreen", () => {
     expect(gateScreen(snapshot({}, 3), "no")).toBe("none");
   });
 
+  it("shows a new recovery key until the user continues, also after the backup exists", () => {
+    expect(gateScreen(snapshot({}, 3), "yes", true)).toBe("show-key");
+    expect(gateScreen(snapshot({}, 3), "yes", false)).toBe("none");
+  });
+
   it("does not ask a verified device without the master key for a backup", () => {
     expect(gateScreen(snapshot({ holdsMasterKey: false }), "no")).toBe("none");
   });

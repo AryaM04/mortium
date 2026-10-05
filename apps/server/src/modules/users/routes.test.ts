@@ -4,7 +4,7 @@ import { afterAll, beforeAll, expect, it } from "vitest";
 import { buildApp } from "../../app.js";
 import { createFakeMailer } from "../../mailer.js";
 import { createTestDb, describeWithDb, type TestDb } from "../../../test/db.js";
-import { buildTestConfig, mkTempDataDir } from "../../../test/helpers.js";
+import { buildTestConfig, mkTempDataDir, passwordFields, testAuthKey } from "../../../test/helpers.js";
 
 const PNG_BYTES = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -17,7 +17,7 @@ async function registerUser(email: string, username: string) {
   const response = await app.inject({
     method: "POST",
     url: "/api/v1/auth/register",
-    payload: { email, username, password: "correct-password" },
+    payload: { email, username, ...passwordFields() },
   });
   return response.json() as { accessToken: string; deviceId: string; user: { id: string } };
 }
@@ -27,7 +27,7 @@ async function loginUser(email: string, userAgent?: string) {
     method: "POST",
     url: "/api/v1/auth/login",
     headers: userAgent ? { "user-agent": userAgent } : {},
-    payload: { email, password: "correct-password" },
+    payload: { email, authKey: testAuthKey() },
   });
   return response.json() as { accessToken: string; deviceId: string; user: { id: string } };
 }

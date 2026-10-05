@@ -1,5 +1,6 @@
 // Small shared helpers for integration tests: a full AppConfig with safe
 // test defaults, and a fresh temp directory for file storage (avatars).
+import { createHash } from "node:crypto";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -41,6 +42,23 @@ export function buildTestConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     releasesRepo: "AryaM04/mortium",
     ...overrides,
   };
+}
+
+/**
+ * A stand-in auth key for a test password. A real client derives the auth
+ * key with Argon2id and HKDF. The server treats the auth key as a password,
+ * so a SHA-256 hash of the test password is sufficient here.
+ */
+export function testAuthKey(password = "correct-password"): string {
+  return createHash("sha256").update(password).digest("base64url");
+}
+
+/** A fixed salt of 16 bytes as base64url. */
+export const TEST_KDF_SALT = "c2FsdC1mb3ItYS10ZXN0IQ";
+
+/** The fields of a sign-up or a new password, for a test password. */
+export function passwordFields(password = "correct-password", kdfSalt = TEST_KDF_SALT) {
+  return { authKey: testAuthKey(password), kdfSalt, kdfVersion: 1 as const };
 }
 
 export async function mkTempDataDir(): Promise<string> {

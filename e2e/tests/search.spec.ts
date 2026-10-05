@@ -7,6 +7,7 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { seedMessages, waitForCrypto } from "../lib/crypto-debug.js";
 import { saveRecoveryKey } from "../lib/recovery-key.js";
+import { registerBody } from "../lib/accounts.js";
 
 const WEB_ORIGIN = "http://localhost:5173";
 
@@ -49,7 +50,7 @@ async function search(page: Page, query: string) {
 test("search finds a message, the filters work, and a click shows the message", async ({ page, request }) => {
   test.setTimeout(180_000);
   const user = uniqueUser("A");
-  const a = await api(request, "/auth/register", undefined, user);
+  const a = await api(request, "/auth/register", undefined, await registerBody(user));
   const guild = await api(request, "/guilds", a.accessToken, { name: "Search Guild" });
   const general = guild.channels.find((entry: { type: string }) => entry.type === "text");
   const random = await api(request, `/guilds/${guild.id}/channels`, a.accessToken, { name: "random", type: "text" });
@@ -105,7 +106,7 @@ test("a jump keeps the message on the screen when the next page loads", async ({
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1280, height: 1100 });
   const user = uniqueUser("B");
-  const a = await api(request, "/auth/register", undefined, user);
+  const a = await api(request, "/auth/register", undefined, await registerBody(user));
   const guild = await api(request, "/guilds", a.accessToken, { name: "Jump Guild" });
   const general = guild.channels.find((entry: { type: string }) => entry.type === "text");
   const random = await api(request, `/guilds/${guild.id}/channels`, a.accessToken, { name: "random", type: "text" });

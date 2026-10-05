@@ -245,7 +245,7 @@ export function connectCryptoWorker(options: CryptoWorkerOptions): CryptoWorkerC
       },
       restoreBackup: (input, onProgress) => call("security.restoreBackup", [input], onProgress),
       deleteBackup: () => call("security.deleteBackup", []),
-      resetIdentity: (password) => call("security.resetIdentity", [password]),
+      resetIdentity: (authKey) => call("security.resetIdentity", [authKey]),
     },
     verification: {
       list: () => verifications,

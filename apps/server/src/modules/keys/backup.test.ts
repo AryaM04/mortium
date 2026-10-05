@@ -15,6 +15,7 @@ import {
   type TestServer,
   type TestUser,
 } from "../../../test/social.js";
+import { testAuthKey } from "../../../test/helpers.js";
 
 let server: TestServer;
 
@@ -184,7 +185,7 @@ describeWithDb("key backup and master key routes", () => {
     watcher.close();
   });
 
-  it("resets the master key only with the password, and clears the old signatures and the backup", async () => {
+  it("resets the master key only with the auth key of the password, and clears the old signatures and the backup", async () => {
     const erin = await registerUser(server, "reset");
     const first = await new TestDeviceKeys(erin).upload(server);
     const oldMaster = new TestSigner();
@@ -196,15 +197,15 @@ describeWithDb("key backup and master key routes", () => {
     const secondKeys = await new TestDeviceKeys(second).upload(server);
     const newMaster = new TestSigner();
     const api = apiFor(server, second);
-    const wrong = await api.post("/keys/master/reset", { ...secondKeys.masterBody(newMaster), password: "wrong-password" });
+    const wrong = await api.post("/keys/master/reset", { ...secondKeys.masterBody(newMaster), authKey: testAuthKey("wrong-password") });
     expect(wrong.status).toBe(401);
     expect(wrong.body.error.code).toBe("INVALID_PASSWORD");
-    const badSignature = { ...secondKeys.masterBody(newMaster), masterSignature: oldMaster.sign("x"), password: "correct-password" };
+    const badSignature = { ...secondKeys.masterBody(newMaster), masterSignature: oldMaster.sign("x"), authKey: testAuthKey() };
     expect((await api.post("/keys/master/reset", badSignature)).body.error.code).toBe("INVALID_SIGNATURE");
     // PUT /keys/master never replaces a key.
     expect((await api.put("/keys/master", secondKeys.masterBody(newMaster))).body.error.code).toBe("MASTER_KEY_EXISTS");
 
-    const reset = await api.post("/keys/master/reset", { ...secondKeys.masterBody(newMaster), password: "correct-password" });
+    const reset = await api.post("/keys/master/reset", { ...secondKeys.masterBody(newMaster), authKey: testAuthKey() });
     expect(reset.status).toBe(204);
     const [entry] = (await api.post("/keys/query", { userIds: [erin.userId] })).body.users;
     expect(entry.masterKey.publicKey).toBe(newMaster.publicKey);

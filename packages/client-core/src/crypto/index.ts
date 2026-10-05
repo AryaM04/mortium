@@ -126,8 +126,8 @@ export interface SecurityApi {
     onProgress?: (progress: RestoreProgress) => void,
   ): Promise<RestoreResult>;
   deleteBackup(): Promise<void>;
-  /** Make a new master key after the old one is lost. The account password is necessary. */
-  resetIdentity(password: string): Promise<void>;
+  /** Make a new master key after the old one is lost. The auth key of the account password is necessary. */
+  resetIdentity(authKey: string): Promise<void>;
 }
 
 export interface VerificationApi {
@@ -585,8 +585,8 @@ export async function startCrypto(options: StartCryptoOptions): Promise<CryptoHa
       return result;
     },
     deleteBackup: () => backup.delete(),
-    async resetIdentity(password) {
-      await manager.resetMasterKey(password);
+    async resetIdentity(authKey) {
+      await manager.resetMasterKey(authKey);
       selfVerified = await isSelfVerified();
       await backup.refresh().catch((error: unknown) => log(`The key backup could not be checked: ${String(error)}`));
       securityChanged();

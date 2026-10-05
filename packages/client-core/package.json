@@ -22,6 +22,10 @@
       "types": "./src/crypto/client.ts",
       "default": "./src/crypto/client.ts"
     },
+    "./password-keys": {
+      "types": "./src/crypto/password-keys.ts",
+      "default": "./src/crypto/password-keys.ts"
+    },
     "./search": {
       "types": "./src/search/index.ts",
       "default": "./src/search/index.ts"

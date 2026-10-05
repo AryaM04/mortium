@@ -1,4 +1,4 @@
-// The account settings dialog: display name, status text, avatar, the
+// The account settings dialog: display name, status text, avatar, the password, the
 // security settings (encryption), and sign out. Uses the native <dialog> element, which gives us a modal,
 // focus trapping and Escape-to-close for free.
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
@@ -9,6 +9,7 @@ import { Avatar } from "./Avatar.js";
 import { describeError } from "../lib/errors.js";
 import { useSession } from "../lib/useSession.js";
 import { session } from "../lib/session.js";
+import { ChangePassword } from "./ChangePassword.js";
 import { DownloadLink } from "./DownloadLink.js";
 import { desktopFeatures } from "../lib/platform.js";
 
@@ -156,6 +157,8 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
       <div className="mb-4 text-sm">
         <DownloadLink onNavigate={onClose} />
       </div>
+
+      <ChangePassword />
 
       <button type="button" onClick={() => setSecurityOpen(true)} className="mb-4 text-sm underline">
         Security: devices and secure backup
