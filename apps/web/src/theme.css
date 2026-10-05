@@ -140,7 +140,9 @@
     color: var(--color-primary);
   }
 
+  /* The Tailwind reset removes the browser margin that centers a modal dialog. Put it back. */
   dialog {
+    margin: auto;
     background-color: var(--color-elevated);
     color: var(--color-primary);
     border: 1px solid var(--color-line-strong);

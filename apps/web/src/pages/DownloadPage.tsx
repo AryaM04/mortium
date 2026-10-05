@@ -80,7 +80,7 @@ export default function DownloadPage() {
           {error}
         </p>
       )}
-      {!release && !error && <p className="text-muted">Loading...</p>}
+      {!release && !error && <p className="mb-4 text-sm text-muted">Loading...</p>}
       {release && (
         <>
           <p className="mb-4 text-sm text-muted">

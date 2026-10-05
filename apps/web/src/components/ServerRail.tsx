@@ -178,7 +178,7 @@ export function ServerRail({ activeGuildId }: { activeGuildId?: string }) {
       className="flex w-[64px] shrink-0 flex-col items-center gap-2.5 overflow-y-auto py-1"
     >
       <HomeButton active={activeGuildId === undefined || activeGuildId === "@me"} />
-      <div className="h-px w-6 shrink-0 bg-line-strong" />
+      <div className="my-0.5 h-px w-6 shrink-0 bg-line-strong" />
       {guildList.map((guild) => {
         const summary = aggregateGuildUnread(
           messageChannels,

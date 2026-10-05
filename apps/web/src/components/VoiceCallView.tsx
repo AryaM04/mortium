@@ -292,11 +292,11 @@ export function VoiceCallView({
         />
       )}
       <div
-        className={screenTile ? "flex gap-2 overflow-x-auto" : "grid gap-3"}
+        className={screenTile ? "flex gap-2 overflow-x-auto" : "grid justify-center gap-3"}
         style={
           screenTile
             ? { flexShrink: 0 }
-            : { gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }
+            : { gridTemplateColumns: "repeat(auto-fit, minmax(180px, 280px))" }
         }
       >
         {tiles.map((tile) => (
