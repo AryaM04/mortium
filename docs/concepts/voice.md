@@ -129,7 +129,8 @@ never fires against a peer that already left on its own.
 ## Caps and cleanup
 
 A voice channel holds at most 10 peers; the 11th `VOICE_JOIN` gets
-`CHANNEL_FULL`. When a voice channel is deleted, every peer in it is
+`CHANNEL_FULL`. The old voice state of the user who joins does not count,
+so a rejoin into a full channel is possible. When a voice channel is deleted, every peer in it is
 removed and told to leave. When a member leaves a guild, is removed
 from it, or loses `VIEW_CHANNEL` or `CONNECT`
 through a permission change, the same cleanup runs: the server calls

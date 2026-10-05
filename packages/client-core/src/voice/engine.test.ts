@@ -168,6 +168,9 @@ class FakePeerConnection {
   getSenders(): FakeSender[] {
     return this.senders;
   }
+  getTransceivers(): FakeTransceiver[] {
+    return this.transceivers;
+  }
   addTransceiver(track: FakeTrack, init?: { direction?: string; streams?: FakeMediaStream[] }): FakeTransceiver {
     const transceiver = new FakeTransceiver(track, init?.direction ?? "sendrecv");
     this.transceivers.push(transceiver);
@@ -189,6 +192,15 @@ class FakePeerConnection {
     }
     this.localDescription = description ?? null;
     this.signalingState = description?.type === "offer" ? "have-local-offer" : "stable";
+    if (description?.type === "offer") {
+      // An offer of our own gives a mid to each transceiver that has none.
+      for (const transceiver of this.transceivers) {
+        if (transceiver.mid === null) {
+          transceiverMidCounter += 1;
+          transceiver.mid = `mid-${transceiverMidCounter}`;
+        }
+      }
+    }
   }
   async setRemoteDescription(description: RTCSessionDescriptionInit): Promise<void> {
     this.remoteDescription = description;
@@ -233,8 +245,12 @@ class FakeAudioContext {
   closed = false;
   destination = new FakeAudioNode();
   lastAnalyser: FakeAnalyser | null = null;
+  /** Each gain node in the order of creation. The first one is the master gain of the call. */
+  gains: FakeGainNode[] = [];
   createGain(): FakeGainNode {
-    return new FakeGainNode();
+    const gain = new FakeGainNode();
+    this.gains.push(gain);
+    return gain;
   }
   createMediaStreamSource(_stream: unknown): FakeAudioNode {
     return new FakeAudioNode();
@@ -776,12 +792,33 @@ describe("setCamera", () => {
     expect(deps.sendVoiceState).toHaveBeenCalledWith({ selfVideo: false });
     expect(cameraStream.getVideoTracks()[0]!.stopped).toBe(true);
   });
+
+  it("offers again after the answer to a later peer when the camera transceiver got no mid", async () => {
+    const peerB: PeerKey = { userId: "b", deviceId: "d1" };
+    const { deps, pcs, transport } = makeDeps();
+    const engine = createVoiceEngine(deps);
+    await joinAndConfirm(engine, deps, "guild-1", "channel-1");
+    await engine.setCamera(true);
+
+    engine.onPeerVoiceState({ ...selfJoinUpdate(deps, "guild-1", "channel-1"), ...peerB });
+    await vi.waitFor(() => expect(pcs[0]?.transceivers).toHaveLength(1));
+    const pc = pcs[0]!;
+    // The camera transceiver was added before the offer of the peer arrived, so the offer cannot match it.
+    pc.transceivers[0]!.mid = null;
+
+    transport.emit(peerB, { kind: "description", description: { type: "offer", sdp: OPUS_SDP } });
+    await vi.waitFor(() => expect(pc.offerCount).toBe(1));
+    expect(pc.answerCount).toBe(1);
+    const offers = transport.sent.filter((s) => s.payload.kind === "description" && s.payload.description.type === "offer");
+    expect(offers).toHaveLength(1);
+    expect(pc.transceivers[0]!.mid).not.toBeNull();
+  });
 });
 
 // ---- screen share ----------------------------------------------------------------
 
 describe("setScreenShare", () => {
-  it("waits for the server's confirmation before it captures the screen", async () => {
+  it("shows the picker first, then waits for the server's confirmation", async () => {
     const { deps } = makeDeps();
     const getDisplayMedia = vi.fn(deps.getDisplayMedia);
     const engine = createVoiceEngine({ ...deps, getDisplayMedia });
@@ -789,7 +826,8 @@ describe("setScreenShare", () => {
 
     const sharePromise = engine.setScreenShare(true);
     await vi.waitFor(() => expect(deps.sendVoiceState).toHaveBeenCalledWith({ selfStream: true }));
-    expect(getDisplayMedia).not.toHaveBeenCalled(); // no capture before the server confirms
+    expect(getDisplayMedia).toHaveBeenCalledTimes(1); // the picker opens at once, in the user action
+    expect(engine.screenOn).toBe(false); // the share starts only when the server confirms
 
     engine.onPeerVoiceState({
       guildId: "guild-1",
@@ -810,10 +848,9 @@ describe("setScreenShare", () => {
     expect(engine.screenOn).toBe(true);
   });
 
-  it("does not capture the screen on STREAM_IN_USE", async () => {
-    const { deps } = makeDeps();
-    const getDisplayMedia = vi.fn(deps.getDisplayMedia);
-    const engine = createVoiceEngine({ ...deps, getDisplayMedia });
+  it("stops the capture on STREAM_IN_USE", async () => {
+    const { deps, streams } = makeDeps();
+    const engine = createVoiceEngine(deps);
     const errors: string[] = [];
     engine.on("error", (e) => errors.push(e.kind));
     await joinAndConfirm(engine, deps, "guild-1", "channel-1");
@@ -823,7 +860,8 @@ describe("setScreenShare", () => {
     engine.handleVoiceError({ code: "STREAM_IN_USE", message: "Someone else is already sharing." });
     await sharePromise;
 
-    expect(getDisplayMedia).not.toHaveBeenCalled();
+    const screenStream = streams.find((s) => s.getVideoTracks().length > 0)!;
+    expect(screenStream.getTracks().every((t) => t.stopped)).toBe(true);
     expect(engine.screenOn).toBe(false);
     expect(errors).toContain("voice-error");
   });
@@ -858,7 +896,7 @@ describe("setScreenShare", () => {
     expect(engine.screenOn).toBe(false);
   });
 
-  it("rolls back selfStream when the browser denies screen capture", async () => {
+  it("does not ask the server for the slot when the browser denies screen capture", async () => {
     const { deps } = makeDeps({
       getDisplayMedia: async () => {
         throw new Error("denied");
@@ -869,24 +907,9 @@ describe("setScreenShare", () => {
     engine.on("error", (e) => errors.push(e.kind));
     await joinAndConfirm(engine, deps, "guild-1", "channel-1");
 
-    const sharePromise = engine.setScreenShare(true);
-    await vi.waitFor(() => expect(deps.sendVoiceState).toHaveBeenCalledWith({ selfStream: true }));
-    engine.onPeerVoiceState({
-      guildId: "guild-1",
-      channelId: "channel-1",
-      userId: "a",
-      deviceId: "d1",
-      selfMute: false,
-      selfDeaf: false,
-      selfVideo: false,
-      selfStream: true,
-      serverMute: false,
-      serverDeaf: false,
-      joinedAt: new Date().toISOString(),
-    });
-    await sharePromise;
+    await engine.setScreenShare(true);
 
-    expect(deps.sendVoiceState).toHaveBeenCalledWith({ selfStream: false });
+    expect(deps.sendVoiceState).not.toHaveBeenCalledWith({ selfStream: true });
     expect(engine.screenOn).toBe(false);
     expect(errors).toContain("screen-permission-denied");
   });
@@ -1273,5 +1296,53 @@ describe("the mic gate", () => {
     gum.pending[0]!.resolve();
     await vi.waitFor(() => expect(gum.pending[0]!.stream.getAudioTracks()[0]!.stopped).toBe(true));
     expect(engine.isLocalTrackEnabled()).toBeNull();
+  });
+});
+
+// ---- server mute and deafen -----------------------------------------------------
+
+describe("server mute and deafen", () => {
+  it("turns the local track off for a server mute and the output off for a server deafen", async () => {
+    const { deps, audioContexts } = makeDeps();
+    const engine = createVoiceEngine(deps);
+    const forced: boolean[] = [];
+    engine.on("forcedMute", (value) => forced.push(value));
+    await joinAndConfirm(engine, deps, "guild-1", "channel-1");
+    const masterGain = audioContexts[0]!.gains[0]!;
+    expect(engine.isLocalTrackEnabled()).toBe(true);
+
+    engine.onPeerVoiceState({ ...selfJoinUpdate(deps, "guild-1", "channel-1"), serverMute: true, serverDeaf: true });
+    expect(engine.isLocalTrackEnabled()).toBe(false);
+    expect(masterGain.gain.value).toBe(0);
+    engine.setMute(false); // For example, the push-to-talk key.
+    expect(engine.isLocalTrackEnabled()).toBe(false);
+
+    // The server refuses the unmute: the engine mutes itself.
+    engine.handleVoiceError({ code: "NO_PERMISSION", message: "A moderator muted you. You cannot unmute yourself." });
+    expect(forced).toEqual([true]);
+
+    engine.onPeerVoiceState({ ...selfJoinUpdate(deps, "guild-1", "channel-1"), selfMute: true });
+    expect(masterGain.gain.value).toBe(1);
+    expect(engine.isLocalTrackEnabled()).toBe(false); // The refused unmute stays undone.
+  });
+});
+
+// ---- a join that the server refuses ------------------------------------------------
+
+describe("a refused join", () => {
+  it("rejects the join and sends a leave when a VOICE_ERROR arrives during the wait", async () => {
+    const { deps, pcs, transport } = makeDeps({ getInitialPeers: () => [{ userId: "b", deviceId: "d1" }] });
+    const engine = createVoiceEngine(deps);
+
+    const joinPromise = engine.join("guild-1", "channel-1");
+    await vi.waitFor(() => expect(deps.sendVoiceJoin).toHaveBeenCalled());
+    engine.handleVoiceError({ code: "CHANNEL_FULL", message: "This voice channel already has the most members it can hold." });
+
+    await expect(joinPromise).rejects.toThrow("most members");
+    expect(engine.channelId).toBeNull();
+    expect(engine.isLocalTrackEnabled()).toBeNull();
+    expect(transport.closed).toBe(true);
+    expect(pcs).toHaveLength(0);
+    expect(deps.sendVoiceLeave).toHaveBeenCalled(); // A channel change keeps the old voice state on the server.
   });
 });

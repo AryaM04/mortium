@@ -16,16 +16,15 @@ import { desktopFeatures } from "../lib/platform.js";
 import { updateVoiceDeviceSettings, voiceDeviceSettingsStore, type VoiceInputMode } from "../lib/voice-settings.js";
 
 // The Audio Output Devices API adds `setSinkId` to `AudioContext`, not yet
-// in TypeScript's DOM lib. Feature-detect it the same way the engine
-// checks the `<audio>` element's own `setSinkId` in `engine.ts`.
+// in TypeScript's DOM lib. The engine plays the call audio through an
+// `AudioContext`, so only its `setSinkId` can change the output device.
 interface AudioContextWithSinkId {
   setSinkId?(deviceId: string): Promise<void>;
 }
 
 const outputDeviceSelectSupported =
   typeof AudioContext !== "undefined" &&
-  Boolean((AudioContext.prototype as unknown as AudioContextWithSinkId).setSinkId) ||
-  (typeof HTMLMediaElement !== "undefined" && Boolean((HTMLMediaElement.prototype as unknown as AudioContextWithSinkId).setSinkId));
+  Boolean((AudioContext.prototype as unknown as AudioContextWithSinkId).setSinkId);
 
 interface DeviceLists {
   inputs: MediaDeviceInfo[];
@@ -262,7 +261,7 @@ export function VoiceSettingsDialog({ open, onClose }: { open: boolean; onClose:
           onChange={(event) => {
             const deviceId = event.target.value || null;
             updateVoiceDeviceSettings({ inputDeviceId: deviceId });
-            if (deviceId) applyInputDeviceLive(deviceId);
+            applyInputDeviceLive(deviceId);
           }}
         >
           <option value="">Default microphone</option>
@@ -313,7 +312,7 @@ export function VoiceSettingsDialog({ open, onClose }: { open: boolean; onClose:
             onChange={(event) => {
               const deviceId = event.target.value || null;
               updateVoiceDeviceSettings({ outputDeviceId: deviceId });
-              if (deviceId) applyOutputDeviceLive(deviceId);
+              applyOutputDeviceLive(deviceId);
             }}
           >
             <option value="">Default speaker</option>
@@ -342,7 +341,7 @@ export function VoiceSettingsDialog({ open, onClose }: { open: boolean; onClose:
           onChange={(event) => {
             const deviceId = event.target.value || null;
             updateVoiceDeviceSettings({ cameraDeviceId: deviceId });
-            if (deviceId) applyCameraDeviceLive(deviceId);
+            applyCameraDeviceLive(deviceId);
           }}
         >
           <option value="">Default camera</option>

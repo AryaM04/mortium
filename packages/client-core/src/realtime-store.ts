@@ -168,6 +168,7 @@ export function applyDispatch(state: RealtimeState, event: GatewayDispatch): Rea
         relationships?: RelationshipJson[];
         privateChannels?: DmChannelJson[];
         privateVoiceStates?: VoiceStateJson[];
+        incomingCalls?: Array<{ channelId: string; userId: string }>;
       };
       const next = createInitialRealtimeState();
       next.selfUserId = payload.user.id;
@@ -200,6 +201,9 @@ export function applyDispatch(state: RealtimeState, event: GatewayDispatch): Rea
         next.privateChannels[channel.id] = channel;
       }
       next.voiceStatesByChannel = withVoiceStates(next.voiceStatesByChannel, payload.privateVoiceStates);
+      for (const ring of payload.incomingCalls ?? []) {
+        next.incomingCalls[ring.channelId] = ring;
+      }
       return next;
     }
 

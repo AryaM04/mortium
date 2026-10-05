@@ -14,7 +14,9 @@ export interface PeerKey {
 export type SignalPayload =
   | { kind: "description"; description: RTCSessionDescriptionInit }
   | { kind: "candidate"; candidate: RTCIceCandidateInit }
-  | { kind: "media"; streams: { camera?: string; screen?: string } };
+  | { kind: "media"; streams: { camera?: string; screen?: string } }
+  // The sender closed its connection to the receiver after a failure, and makes a new one.
+  | { kind: "rebuild" };
 
 export interface SignalTransport {
   /** The random id of the join that this transport belongs to, when it has one. */
@@ -78,6 +80,8 @@ function isSignalPayload(value: unknown): value is SignalPayload {
       return isRecord(value.candidate);
     case "media":
       return isRecord(value.streams);
+    case "rebuild":
+      return true;
     default:
       return false;
   }

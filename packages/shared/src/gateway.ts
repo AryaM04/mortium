@@ -9,7 +9,7 @@ import { z } from "zod";
 import { banSchema, guildMemberSchema, guildViewSchema, roleSchema } from "./api/guilds.js";
 import { eventSchema, readStateSchema } from "./api/messages.js";
 import { idSchema } from "./api/common.js";
-import { dmChannelSchema } from "./api/dms.js";
+import { callRingPayloadSchema, dmChannelSchema } from "./api/dms.js";
 import { relationshipSchema } from "./api/friends.js";
 import { voiceStateSchema } from "./api/voice.js";
 
@@ -115,6 +115,8 @@ export const readyPayloadSchema = z.object({
   privateChannels: z.array(dmChannelSchema).default([]),
   /** The current voice state of every peer in a DM call of the caller. */
   privateVoiceStates: z.array(voiceStateSchema).default([]),
+  /** Each DM call that rings for the caller now, so that a reload keeps the call card. */
+  incomingCalls: z.array(callRingPayloadSchema).default([]),
   /** How many one-time keys the server has for this device. */
   oneTimeKeyCount: z.number().int().nonnegative().default(0),
   /** True when this device has no fallback key, or a claim used it. */

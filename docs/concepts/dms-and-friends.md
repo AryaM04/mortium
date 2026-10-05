@@ -81,8 +81,9 @@ history or the deletion of an own event.
 | `CALL_RING_STOP` | The people who were ringing | `{ channelId }` |
 | `USER_SETTINGS_UPDATE` | Other devices of the user | `{ version }` |
 
-`READY` has three new fields: `relationships`, `privateChannels` and
-`privateVoiceStates` (the people in DM calls). Event, typing and read
+`READY` has four new fields: `relationships`, `privateChannels`,
+`privateVoiceStates` (the people in DM calls) and `incomingCalls` (the
+calls that ring for the user now, as `CALL_RING` payloads). Event, typing and read
 dispatches for a DM go to the recipients. The server finds them with one
 query on `channel_recipients`.
 
