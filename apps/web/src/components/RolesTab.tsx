@@ -191,12 +191,10 @@ export function RolesTab({ guildId }: { guildId: string }) {
     for (const entry of entries) {
       const role = nextOrder.find((r) => r.id === entry.id);
       if (role) {
-        realtimeStore
-          .getState()
-          .applyDispatch({
-            t: "GUILD_ROLE_UPDATE",
-            d: { guildId, role: { ...role, position: entry.position } },
-          });
+        realtimeStore.getState().applyDispatch({
+          t: "GUILD_ROLE_UPDATE",
+          d: { guildId, role: { ...role, position: entry.position } },
+        });
       }
     }
     try {
@@ -248,11 +246,7 @@ export function RolesTab({ guildId }: { guildId: string }) {
   }
 
   if (!guild || !roles) {
-    return (
-      <p className="p-4 text-sm text-muted">
-        Loading roles...
-      </p>
-    );
+    return <p className="p-4 text-sm text-muted">Loading roles...</p>;
   }
 
   return (
@@ -326,9 +320,7 @@ export function RolesTab({ guildId }: { guildId: string }) {
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pr-1">
         {!selectedRole || !draft ? (
-          <p className="text-sm text-muted">
-            Select a role to edit it.
-          </p>
+          <p className="text-sm text-muted">Select a role to edit it.</p>
         ) : (
           <>
             {!canEditSelected && (
@@ -395,9 +387,7 @@ export function RolesTab({ guildId }: { guildId: string }) {
             <div className="flex flex-col gap-4">
               {PERMISSION_GROUPS.map((group) => (
                 <fieldset key={group.label}>
-                  <legend className="mb-1 eyebrow">
-                    {group.label}
-                  </legend>
+                  <legend className="mb-1 eyebrow">{group.label}</legend>
                   <div className="flex flex-col gap-1.5">
                     {group.permissions.map((name) => {
                       const bit = Permission[name];
@@ -478,11 +468,7 @@ export function RolesTab({ guildId }: { guildId: string }) {
               <div className="menu sticky bottom-0 mt-4 flex items-center justify-between gap-2 px-3 py-2">
                 <span className="text-sm">Careful — you have unsaved changes.</span>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handleReset}
-                    className="btn btn-ghost"
-                  >
+                  <button type="button" onClick={handleReset} className="btn btn-ghost">
                     Reset
                   </button>
                   <button

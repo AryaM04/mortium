@@ -5,7 +5,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
 import { applyPeerVolume } from "../lib/voice.js";
-import { getPerUserVoiceSetting, perUserVoiceStore, setUserVolumeSetting, toggleMutedForMe } from "../lib/voice-settings.js";
+import {
+  getPerUserVoiceSetting,
+  perUserVoiceStore,
+  setUserVolumeSetting,
+  toggleMutedForMe,
+} from "../lib/voice-settings.js";
 
 export function useParticipantMenu() {
   const [openForUserId, setOpenForUserId] = useState<string | null>(null);
@@ -68,7 +73,10 @@ export function ParticipantVolumeMenu({
       className="menu fixed z-50 w-56 p-3"
       style={{ left: anchor.x, top: anchor.y }}
     >
-      <label className="mb-1.5 block text-xs font-medium text-secondary" htmlFor={`volume-${userId}`}>
+      <label
+        className="mb-1.5 block text-xs font-medium text-secondary"
+        htmlFor={`volume-${userId}`}
+      >
         Volume: {percent}%
       </label>
       <input

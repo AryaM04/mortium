@@ -20,7 +20,8 @@ export function CardPage({ children, wide = false }: { children: ReactNode; wide
     <main
       className="flex h-full w-full justify-center overflow-y-auto bg-canvas p-4"
       style={{
-        backgroundImage: "radial-gradient(ellipse 60% 45% at 50% 0%, rgba(45, 212, 191, 0.10), transparent 70%)",
+        backgroundImage:
+          "radial-gradient(ellipse 60% 45% at 50% 0%, rgba(45, 212, 191, 0.10), transparent 70%)",
       }}
     >
       <div className={`my-auto w-full py-8 ${wide ? "max-w-lg" : "max-w-sm"}`}>

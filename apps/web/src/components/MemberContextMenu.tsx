@@ -3,12 +3,7 @@
 // voice — server mute, server deafen, move and disconnect. Every action
 // is shown only when the caller is permitted, per docs/concepts/permissions.md.
 import { useEffect, useRef, useState } from "react";
-import {
-  hasPermission,
-  Permission,
-  type GuildMemberJson,
-  type RoleJson,
-} from "@mortium/shared";
+import { hasPermission, Permission, type GuildMemberJson, type RoleJson } from "@mortium/shared";
 import {
   addMemberRole,
   applyVoiceModeration,
@@ -51,11 +46,27 @@ function IdentityRow({ userId }: { userId: string }) {
   }
   return (
     <div className="flex items-center justify-between px-2.5 py-1.5 text-sm">
-      <span className={trust.verified ? "text-success-text" : trust.changed ? "text-danger-text" : "text-muted"}>
-        {trust.changed ? "Identity changed" : trust.verified ? "Identity verified" : "Identity not verified"}
+      <span
+        className={
+          trust.verified ? "text-success-text" : trust.changed ? "text-danger-text" : "text-muted"
+        }
+      >
+        {trust.changed
+          ? "Identity changed"
+          : trust.verified
+            ? "Identity verified"
+            : "Identity not verified"}
       </span>
       {!trust.verified && (
-        <button type="button" className="link" onClick={() => void currentCrypto()?.verification.requestUser(userId).catch(() => undefined)}>
+        <button
+          type="button"
+          className="link"
+          onClick={() =>
+            void currentCrypto()
+              ?.verification.requestUser(userId)
+              .catch(() => undefined)
+          }
+        >
           Verify
         </button>
       )}
@@ -226,7 +237,11 @@ export function MemberContextMenu({
               void run(async () => {
                 const result = await sendFriendRequest(session.apiClient, member.user!.username);
                 realtimeStore.getState().applyDispatch({ t: "RELATIONSHIP_ADD", d: result });
-                setNotice(result.status === "accepted" ? "You are now friends." : "You sent a friend request.");
+                setNotice(
+                  result.status === "accepted"
+                    ? "You are now friends."
+                    : "You sent a friend request.",
+                );
               })
             }
             className="menu-item"
@@ -241,11 +256,7 @@ export function MemberContextMenu({
         )}
         {!isSelf && <IdentityRow userId={member.userId} />}
         {canChangeNickname && !editingNickname && (
-          <button
-            type="button"
-            onClick={() => setEditingNickname(true)}
-            className="menu-item"
-          >
+          <button type="button" onClick={() => setEditingNickname(true)} className="menu-item">
             Change nickname
           </button>
         )}
@@ -280,11 +291,7 @@ export function MemberContextMenu({
         )}
 
         {manageableRoles.length > 0 && !managingRoles && (
-          <button
-            type="button"
-            onClick={() => setManagingRoles(true)}
-            className="menu-item"
-          >
+          <button type="button" onClick={() => setManagingRoles(true)} className="menu-item">
             Manage roles
           </button>
         )}
@@ -415,12 +422,10 @@ export function MemberContextMenu({
             onClick={() =>
               void run(async () => {
                 await kickMember(session.apiClient, guildId, member.userId);
-                realtimeStore
-                  .getState()
-                  .applyDispatch({
-                    t: "GUILD_MEMBER_REMOVE",
-                    d: { guildId, userId: member.userId },
-                  });
+                realtimeStore.getState().applyDispatch({
+                  t: "GUILD_MEMBER_REMOVE",
+                  d: { guildId, userId: member.userId },
+                });
                 onClose();
               })
             }
@@ -465,12 +470,10 @@ export function MemberContextMenu({
                       reason: banReason || undefined,
                       deleteMessageSeconds: 0,
                     });
-                    realtimeStore
-                      .getState()
-                      .applyDispatch({
-                        t: "GUILD_MEMBER_REMOVE",
-                        d: { guildId, userId: member.userId },
-                      });
+                    realtimeStore.getState().applyDispatch({
+                      t: "GUILD_MEMBER_REMOVE",
+                      d: { guildId, userId: member.userId },
+                    });
                     onClose();
                   })
                 }

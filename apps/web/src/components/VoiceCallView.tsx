@@ -14,6 +14,7 @@ import { useRealtime } from "../lib/useRealtime.js";
 import { voiceStore } from "../lib/voice.js";
 import { avatarUrlOf, displayNameOf, memberUser } from "../lib/members.js";
 import { ParticipantVolumeMenu, useParticipantMenu } from "./ParticipantVolumeMenu.js";
+import { MaximizeIcon } from "./icons.js";
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).slice(0, 2);
@@ -109,10 +110,11 @@ function VideoTile({
             }
           : undefined
       }
-      className="relative flex items-center justify-center overflow-hidden rounded"
+      className="relative flex items-center justify-center overflow-hidden rounded-xl border border-line bg-elevated"
       style={{
-        backgroundColor: "var(--color-bg-sidebar)",
-        boxShadow: speaking ? "0 0 0 3px #3ba55d" : undefined,
+        boxShadow: speaking
+          ? "0 0 0 2px var(--color-success), 0 0 18px rgba(34, 197, 94, 0.25)"
+          : undefined,
         aspectRatio: large ? "16 / 9" : "4 / 3",
         minHeight: large ? "240px" : "120px",
         cursor: onClick ? "pointer" : undefined,
@@ -129,10 +131,8 @@ function VideoTile({
         />
       ) : (
         <div
-          className="flex items-center justify-center rounded-full font-semibold"
+          className="flex items-center justify-center rounded-full bg-avatar font-semibold text-avatar-text"
           style={{
-            backgroundColor: "var(--color-accent)",
-            color: "white",
             width: large ? "96px" : "56px",
             height: large ? "96px" : "56px",
             fontSize: large ? "28px" : "18px",
@@ -146,10 +146,7 @@ function VideoTile({
           )}
         </div>
       )}
-      <span
-        className="absolute bottom-1 left-1 rounded px-1.5 py-0.5 text-xs"
-        style={{ backgroundColor: "rgba(0,0,0,0.55)", color: "white" }}
-      >
+      <span className="absolute bottom-2 left-2 rounded-md bg-black/70 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
         {name}
       </span>
       {stream && canFullscreen && (
@@ -157,10 +154,9 @@ function VideoTile({
           type="button"
           aria-label="Full screen"
           onClick={goFullscreen}
-          className="absolute right-1 top-1 rounded px-1.5 py-0.5 text-xs"
-          style={{ backgroundColor: "rgba(0,0,0,0.55)", color: "white" }}
+          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-md bg-black/70 text-white hover:bg-black/85"
         >
-          &#9974;
+          <MaximizeIcon size={14} />
         </button>
       )}
     </div>
@@ -168,7 +164,13 @@ function VideoTile({
 }
 
 /** The call view of a guild voice channel, or of a DM call (guild id null). */
-export function VoiceCallView({ guildId, channelId }: { guildId: string | null; channelId: string }) {
+export function VoiceCallView({
+  guildId,
+  channelId,
+}: {
+  guildId: string | null;
+  channelId: string;
+}) {
   const states = useRealtime((s) => s.voiceStatesByChannel[channelId]);
   const selfUserId = useRealtime((s) => s.selfUserId);
   const realtimeState = useRealtime((s) => s);
@@ -225,7 +227,14 @@ export function VoiceCallView({ guildId, channelId }: { guildId: string | null; 
     return Boolean(voicePeers.find((p) => p.userId === state.userId)?.screenStream);
   })?.userId;
 
-  const screenTile: { key: string; name: string; stream: MediaStream | null; avatarUrl?: string; speaking: boolean; mirrored: boolean } | null = screenOn
+  const screenTile: {
+    key: string;
+    name: string;
+    stream: MediaStream | null;
+    avatarUrl?: string;
+    speaking: boolean;
+    mirrored: boolean;
+  } | null = screenOn
     ? {
         key: "screen:self",
         name: `${nameOf(selfUserId ?? "").name} (you) is sharing their screen`,
@@ -244,13 +253,14 @@ export function VoiceCallView({ guildId, channelId }: { guildId: string | null; 
       : null;
 
   const focused =
-    focusedKey === screenTile?.key
-      ? screenTile
-      : (tiles.find((t) => t.key === focusedKey) ?? null);
+    focusedKey === screenTile?.key ? screenTile : (tiles.find((t) => t.key === focusedKey) ?? null);
 
   if (focused) {
     return (
-      <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-3" data-voice-call-view={channelId}>
+      <div
+        className="flex flex-1 flex-col gap-3 overflow-y-auto p-3"
+        data-voice-call-view={channelId}
+      >
         <VideoTile
           stream={focused.stream}
           name={focused.name}
@@ -266,7 +276,10 @@ export function VoiceCallView({ guildId, channelId }: { guildId: string | null; 
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-3" data-voice-call-view={channelId}>
+    <div
+      className="flex flex-1 flex-col gap-3 overflow-y-auto p-3"
+      data-voice-call-view={channelId}
+    >
       {screenTile && (
         <VideoTile
           stream={screenTile.stream}

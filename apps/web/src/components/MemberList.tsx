@@ -86,7 +86,10 @@ function MemberRow({
             style={{ backgroundColor: PRESENCE_COLOR[status] ?? PRESENCE_COLOR.offline }}
           />
         </div>
-        <span className={`truncate text-sm ${status === "offline" ? "text-muted" : "text-secondary"}`} style={{ color: nameColor }}>
+        <span
+          className={`truncate text-sm ${status === "offline" ? "text-muted" : "text-secondary"}`}
+          style={{ color: nameColor }}
+        >
           {name}
         </span>
         <span className="sr-only">{PRESENCE_LABEL[status] ?? "Offline"}</span>
@@ -225,17 +228,12 @@ export function MemberList({ guildId }: { guildId: string }) {
   }
 
   return (
-    <aside
-      aria-label="Members"
-      className="panel flex w-60 shrink-0 flex-col overflow-y-auto p-2"
-    >
+    <aside aria-label="Members" className="panel flex w-60 shrink-0 flex-col overflow-y-auto p-2">
       {grouped.map(
         (section) =>
           section.members.length > 0 && (
             <div key={section.label}>
-              <div className="eyebrow mb-1 mt-3 px-2">
-                {section.label}
-              </div>
+              <div className="eyebrow mb-1 mt-3 px-2">{section.label}</div>
               <ul>
                 {section.members.map((member) => {
                   const memberRoles = roles.filter((r) => member.roles.includes(r.id));

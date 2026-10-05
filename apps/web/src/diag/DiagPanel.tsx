@@ -63,7 +63,9 @@ function TestButton({ name, onRun }: { name: string; onRun: () => Promise<CheckR
       <button onClick={handleClick} disabled={busy}>
         {busy ? "Testing..." : name}
       </button>
-      {typeof state === "string" && <p style={{ color: "var(--color-danger-text)" }}>Error: {state}</p>}
+      {typeof state === "string" && (
+        <p style={{ color: "var(--color-danger-text)" }}>Error: {state}</p>
+      )}
       {state !== null && typeof state !== "string" && (
         <p>
           Track kind: {state.kind}. Label: {state.label}. Settings: {state.settings}
@@ -86,9 +88,9 @@ export default function DiagPanel() {
         right: "1rem",
         maxWidth: "24rem",
         padding: "1rem",
-        background: "#1b1d24",
-        color: "#e7e9ee",
-        border: "1px solid #2a2c37",
+        background: "var(--color-elevated)",
+        color: "var(--color-primary)",
+        border: "1px solid var(--color-line-strong)",
         borderRadius: "0.5rem",
         fontSize: "0.85rem",
         zIndex: 9999,

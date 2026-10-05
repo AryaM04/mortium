@@ -133,7 +133,12 @@ function HomeButton({ active }: { active: boolean }) {
       >
         <MessageIcon size={18} />
       </Link>
-      {unread > 0 && <UnreadBadge count={unread} label={unread === 1 ? "unread direct message" : "unread direct messages"} />}
+      {unread > 0 && (
+        <UnreadBadge
+          count={unread}
+          label={unread === 1 ? "unread direct message" : "unread direct messages"}
+        />
+      )}
     </div>
   );
 }
@@ -145,7 +150,9 @@ export function ServerRail({ activeGuildId }: { activeGuildId?: string }) {
   const messageChannels = useMessages((s) => s.channels);
   const selfUserId = useMessages((s) => s.selfUserId);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [menu, setMenu] = useState<{ guildId: string; position: { x: number; y: number } } | null>(null);
+  const [menu, setMenu] = useState<{ guildId: string; position: { x: number; y: number } } | null>(
+    null,
+  );
 
   const guildList = Object.values(guilds).sort((a, b) => (BigInt(a.id) < BigInt(b.id) ? -1 : 1));
 
@@ -173,7 +180,11 @@ export function ServerRail({ activeGuildId }: { activeGuildId?: string }) {
       <HomeButton active={activeGuildId === undefined || activeGuildId === "@me"} />
       <div className="h-px w-6 shrink-0 bg-line-strong" />
       {guildList.map((guild) => {
-        const summary = aggregateGuildUnread(messageChannels, viewableTextChannelIds(guild.id), selfUserId);
+        const summary = aggregateGuildUnread(
+          messageChannels,
+          viewableTextChannelIds(guild.id),
+          selfUserId,
+        );
         return (
           <GuildIcon
             key={guild.id}

@@ -46,7 +46,9 @@ export function ForgotPasswordPage() {
           If an account uses this email address, a message with a password reset link is on its way.
         </p>
         <div className="mt-4 text-sm">
-          <Link href="/login">Back to sign in</Link>
+          <Link href="/login" className="link">
+            Back to sign in
+          </Link>
         </div>
       </AuthLayout>
     );
@@ -68,16 +70,14 @@ export function ForgotPasswordPage() {
             {formError}
           </p>
         )}
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-primary w-full"
-        >
+        <button type="submit" disabled={pending} className="btn btn-primary w-full">
           {pending ? "Sending..." : "Send reset link"}
         </button>
       </form>
       <div className="mt-4 text-sm text-muted">
-        <Link href="/login">Back to sign in</Link>
+        <Link href="/login" className="link">
+          Back to sign in
+        </Link>
       </div>
     </AuthLayout>
   );

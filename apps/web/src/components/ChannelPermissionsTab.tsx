@@ -96,7 +96,9 @@ export function ChannelPermissionsTab({ channel }: { channel: ChannelJson }) {
   // The channel as the store holds it now, not as this render saw it.
   // Gateway events can change it while a request runs.
   function latestChannel(): ChannelJson {
-    return (realtimeStore.getState().channels[channel.id] as ChannelJson | undefined) ?? liveChannel;
+    return (
+      (realtimeStore.getState().channels[channel.id] as ChannelJson | undefined) ?? liveChannel
+    );
   }
 
   async function saveOverwrite(
@@ -115,15 +117,15 @@ export function ChannelPermissionsTab({ channel }: { channel: ChannelJson }) {
       });
       const current = latestChannel();
       const nextOverwrites = [
-        ...current.permissionOverwrites.filter((o) => !(o.targetId === targetId && o.targetType === targetType)),
+        ...current.permissionOverwrites.filter(
+          (o) => !(o.targetId === targetId && o.targetType === targetType),
+        ),
         { targetId, targetType, allow: allow.toString(), deny: deny.toString() },
       ];
-      realtimeStore
-        .getState()
-        .applyDispatch({
-          t: "CHANNEL_UPDATE",
-          d: { ...current, permissionOverwrites: nextOverwrites },
-        });
+      realtimeStore.getState().applyDispatch({
+        t: "CHANNEL_UPDATE",
+        d: { ...current, permissionOverwrites: nextOverwrites },
+      });
       setSelectedKey(`${targetType}:${targetId}`);
     } catch (err) {
       setError(describeError(err));
@@ -141,12 +143,10 @@ export function ChannelPermissionsTab({ channel }: { channel: ChannelJson }) {
       const nextOverwrites = current.permissionOverwrites.filter(
         (o) => !(o.targetId === targetId && o.targetType === targetType),
       );
-      realtimeStore
-        .getState()
-        .applyDispatch({
-          t: "CHANNEL_UPDATE",
-          d: { ...current, permissionOverwrites: nextOverwrites },
-        });
+      realtimeStore.getState().applyDispatch({
+        t: "CHANNEL_UPDATE",
+        d: { ...current, permissionOverwrites: nextOverwrites },
+      });
       setSelectedKey(null);
     } catch (err) {
       setError(describeError(err));
@@ -175,11 +175,7 @@ export function ChannelPermissionsTab({ channel }: { channel: ChannelJson }) {
   }
 
   if (!guild || !roles) {
-    return (
-      <p className="text-sm text-muted">
-        Loading permissions...
-      </p>
-    );
+    return <p className="text-sm text-muted">Loading permissions...</p>;
   }
 
   return (
@@ -252,7 +248,9 @@ export function ChannelPermissionsTab({ channel }: { channel: ChannelJson }) {
                 type="button"
                 onClick={() => setSelectedKey(key(o))}
                 className={`w-full truncate rounded-lg px-2 py-1.5 text-left text-sm ${
-                  key(o) === selectedKey ? "bg-accent-soft text-primary" : "text-secondary hover:bg-hover"
+                  key(o) === selectedKey
+                    ? "bg-accent-soft text-primary"
+                    : "text-secondary hover:bg-hover"
                 }`}
               >
                 {o.targetType === "role" ? "@ " : "# "}
@@ -261,9 +259,7 @@ export function ChannelPermissionsTab({ channel }: { channel: ChannelJson }) {
             </li>
           ))}
           {overwrites.length === 0 && (
-            <li className="px-2 text-sm text-muted">
-              No overwrites yet.
-            </li>
+            <li className="px-2 text-sm text-muted">No overwrites yet.</li>
           )}
         </ul>
       </div>
@@ -303,9 +299,7 @@ export function ChannelPermissionsTab({ channel }: { channel: ChannelJson }) {
             <div className="flex flex-col gap-4">
               {CHANNEL_PERMISSION_GROUPS.map((group) => (
                 <fieldset key={group.label}>
-                  <legend className="eyebrow mb-1.5">
-                    {group.label}
-                  </legend>
+                  <legend className="eyebrow mb-1.5">{group.label}</legend>
                   <div className="flex flex-col gap-1.5">
                     {group.permissions.map((name) => {
                       const bit = Permission[name];

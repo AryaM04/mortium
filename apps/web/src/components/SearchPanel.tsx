@@ -5,7 +5,13 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { dmDisplayName, type RealtimeState } from "@mortium/client-core";
-import { foldText, isEmptyQuery, makeSnippet, parseSearchQuery, type IndexResult } from "@mortium/client-core/search";
+import {
+  foldText,
+  isEmptyQuery,
+  makeSnippet,
+  parseSearchQuery,
+  type IndexResult,
+} from "@mortium/client-core/search";
 import { realtimeStore } from "../lib/realtime.js";
 import { displayNameOf } from "../lib/members.js";
 import { dmPath } from "../lib/dms.js";
@@ -36,7 +42,9 @@ function usersNamed(state: RealtimeState, name: string): string[] {
 
 /** The ids of the channels named `name`: first in the current guild, else in any guild. */
 function channelsNamed(state: RealtimeState, guildId: string | null, name: string): string[] {
-  const all = Object.values(state.channels).filter((channel) => channel.name && foldText(channel.name) === name);
+  const all = Object.values(state.channels).filter(
+    (channel) => channel.name && foldText(channel.name) === name,
+  );
   const local = all.filter((channel) => channel.guildId === guildId);
   return (local.length > 0 ? local : all).map((channel) => channel.id);
 }
@@ -48,7 +56,15 @@ function channelLabel(state: RealtimeState, channelId: string): string {
   return channel ? `#${channel.name}` : "Unknown channel";
 }
 
-export default function SearchPanel({ query, guildId, onClose }: { query: string; guildId: string | null; onClose: () => void }) {
+export default function SearchPanel({
+  query,
+  guildId,
+  onClose,
+}: {
+  query: string;
+  guildId: string | null;
+  onClose: () => void;
+}) {
   const [results, setResults] = useState<IndexResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, navigate] = useLocation();
@@ -60,11 +76,21 @@ export default function SearchPanel({ query, guildId, onClose }: { query: string
     setError(null);
     void (async () => {
       const state = realtimeStore.getState();
-      const senderIds = parsed.from.length > 0 ? parsed.from.flatMap((name) => usersNamed(state, name)) : undefined;
-      const channelIds = parsed.in.length > 0 ? parsed.in.flatMap((name) => channelsNamed(state, guildId, name)) : undefined;
+      const senderIds =
+        parsed.from.length > 0 ? parsed.from.flatMap((name) => usersNamed(state, name)) : undefined;
+      const channelIds =
+        parsed.in.length > 0
+          ? parsed.in.flatMap((name) => channelsNamed(state, guildId, name))
+          : undefined;
       if (isEmptyQuery(parsed)) return [];
       await flushSearchQueue();
-      return searchLocal({ terms: parsed.terms, has: parsed.has, senderIds, channelIds, limit: 50 });
+      return searchLocal({
+        terms: parsed.terms,
+        has: parsed.has,
+        senderIds,
+        channelIds,
+        limit: 50,
+      });
     })()
       .then((found) => active && setResults(found))
       .catch(() => active && setError("The search did not work. Try again."));
@@ -89,11 +115,19 @@ export default function SearchPanel({ query, guildId, onClose }: { query: string
     >
       <div className="flex items-center justify-between gap-2 border-b border-line py-1.5 pl-3 pr-1.5 text-xs">
         <span className="text-muted">Search shows only messages this device has seen.</span>
-        <button type="button" onClick={onClose} aria-label="Close search" className="icon-btn h-7 w-7">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close search"
+          className="icon-btn h-7 w-7"
+        >
           <CloseIcon size={14} />
         </button>
       </div>
-      <div className="overflow-y-auto p-1" data-search-state={results === null && !error ? "loading" : "done"}>
+      <div
+        className="overflow-y-auto p-1"
+        data-search-state={results === null && !error ? "loading" : "done"}
+      >
         {error && <p className="p-3 text-sm">{error}</p>}
         {results?.length === 0 && <p className="p-3 text-sm text-secondary">No message matches.</p>}
         {results?.map((result) => {

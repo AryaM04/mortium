@@ -5,6 +5,7 @@ import { getLatestDesktop } from "@mortium/client-core";
 import type { DesktopAsset, DesktopLatestResponse, DesktopPlatform } from "@mortium/shared";
 import { describeError } from "../lib/errors.js";
 import { session } from "../lib/session.js";
+import { CardPage } from "../components/AuthLayout.js";
 
 interface NavigatorWithData extends Navigator {
   userAgentData?: { platform?: string };
@@ -20,7 +21,11 @@ function detectPlatform(): DesktopPlatform | null {
   return null;
 }
 
-const PLATFORM_NAMES: Record<DesktopPlatform, string> = { windows: "Windows", macos: "macOS", linux: "Linux" };
+const PLATFORM_NAMES: Record<DesktopPlatform, string> = {
+  windows: "Windows",
+  macos: "macOS",
+  linux: "Linux",
+};
 const KIND_NAMES: Record<DesktopAsset["kind"], string> = {
   installer: "Installer",
   msi: "MSI package",
@@ -63,71 +68,69 @@ export default function DownloadPage() {
 
   const detected = detectPlatform();
   const primary = release?.assets.find(
-    (asset) => detected !== null && asset.platform === detected && asset.kind === MAIN_KIND[detected],
+    (asset) =>
+      detected !== null && asset.platform === detected && asset.kind === MAIN_KIND[detected],
   );
   const others = release ? release.assets.filter((asset) => asset !== primary) : [];
-  const muted = { color: "var(--color-text-muted)" };
-
   return (
-    <main className="flex min-h-full w-full justify-center p-4" style={{ backgroundColor: "var(--color-bg-main)" }}>
-      <div
-        className="my-auto w-full max-w-lg rounded-lg border p-6"
-        style={{ borderColor: "var(--color-border)", backgroundColor: "var(--color-bg-sidebar)" }}
-      >
-        <h1 className="mb-4 text-lg font-semibold">Download Mortium</h1>
-        {error && (
-          <p role="alert" className="mb-4 text-sm text-danger-text">
-            {error}
-          </p>
-        )}
-        {!release && !error && <p style={muted}>Loading...</p>}
-        {release && (
-          <>
-            <p className="mb-4 text-sm" style={muted}>
-              Version {release.version}, published on {new Date(release.publishedAt).toLocaleDateString()}.{" "}
-              <a href={release.notesUrl} className="link">
-                Release notes
-              </a>
-            </p>
-            {primary && detected && (
-              <a
-                href={primary.url}
-                className="btn btn-primary mb-4 block px-3 py-3 text-center font-medium"
-              >
-                Download for {PLATFORM_NAMES[detected]} ({formatSize(primary.size)})
-              </a>
-            )}
-            {others.length > 0 && (
-              <>
-                <h2 className="mb-2 text-sm font-semibold">{primary ? "Other files" : "All files"}</h2>
-                <ul className="mb-4 flex flex-col gap-1 text-sm">
-                  {others.map((asset) => (
-                    <li key={asset.name}>
-                      <a href={asset.url} className="link">
-                        {PLATFORM_NAMES[asset.platform]}: {KIND_NAMES[asset.kind]} ({asset.name})
-                      </a>{" "}
-                      <span style={muted}>{formatSize(asset.size)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-            {release.assets.length === 0 && <p className="mb-4 text-sm">This version has no desktop files.</p>}
-          </>
-        )}
-        <h2 className="mb-2 text-sm font-semibold">Before you start</h2>
-        <ul className="mb-4 flex list-disc flex-col gap-1 pl-5 text-sm">
-          {(Object.keys(NOTES) as DesktopPlatform[]).map((platform) => (
-            <li key={platform}>
-              <strong>{PLATFORM_NAMES[platform]}:</strong> {NOTES[platform]}
-            </li>
-          ))}
-          <li>The desktop app connects to a server. Enter this address: {window.location.origin}</li>
-        </ul>
-        <p className="text-sm" style={muted}>
-          <Link href="/login">Back to sign in</Link>
+    <CardPage wide>
+      <h1 className="mb-4 text-xl font-semibold tracking-tight">Download Mortium</h1>
+      {error && (
+        <p role="alert" className="mb-4 text-sm text-danger-text">
+          {error}
         </p>
-      </div>
-    </main>
+      )}
+      {!release && !error && <p className="text-muted">Loading...</p>}
+      {release && (
+        <>
+          <p className="mb-4 text-sm text-muted">
+            Version {release.version}, published on{" "}
+            {new Date(release.publishedAt).toLocaleDateString()}.{" "}
+            <a href={release.notesUrl} className="link">
+              Release notes
+            </a>
+          </p>
+          {primary && detected && (
+            <a href={primary.url} className="btn btn-primary mb-5 flex w-full py-3">
+              Download for {PLATFORM_NAMES[detected]} ({formatSize(primary.size)})
+            </a>
+          )}
+          {others.length > 0 && (
+            <>
+              <h2 className="mb-2 text-sm font-semibold">
+                {primary ? "Other files" : "All files"}
+              </h2>
+              <ul className="mb-4 flex flex-col gap-1 text-sm">
+                {others.map((asset) => (
+                  <li key={asset.name}>
+                    <a href={asset.url} className="link">
+                      {PLATFORM_NAMES[asset.platform]}: {KIND_NAMES[asset.kind]} ({asset.name})
+                    </a>{" "}
+                    <span className="text-muted">{formatSize(asset.size)}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {release.assets.length === 0 && (
+            <p className="mb-4 text-sm">This version has no desktop files.</p>
+          )}
+        </>
+      )}
+      <h2 className="mb-2 text-sm font-semibold">Before you start</h2>
+      <ul className="mb-4 flex list-disc flex-col gap-1 pl-5 text-sm">
+        {(Object.keys(NOTES) as DesktopPlatform[]).map((platform) => (
+          <li key={platform}>
+            <strong>{PLATFORM_NAMES[platform]}:</strong> {NOTES[platform]}
+          </li>
+        ))}
+        <li>The desktop app connects to a server. Enter this address: {window.location.origin}</li>
+      </ul>
+      <p className="text-sm text-muted">
+        <Link href="/login" className="link">
+          Back to sign in
+        </Link>
+      </p>
+    </CardPage>
   );
 }

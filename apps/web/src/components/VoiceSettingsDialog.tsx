@@ -273,15 +273,13 @@ export function VoiceSettingsDialog({ open, onClose }: { open: boolean; onClose:
           <button
             type="button"
             onClick={() => setMicTestOn((v) => !v)}
-            className="rounded px-2 py-1 text-xs"
-            style={{ backgroundColor: "var(--color-bg-main)" }}
+            className="btn btn-secondary px-2.5 py-1 text-xs"
           >
             {micTestOn ? "Stop mic test" : "Test microphone"}
           </button>
           {micTestOn && (
             <div
-              className="h-2 flex-1 overflow-hidden rounded"
-              style={{ backgroundColor: "var(--color-bg-main)" }}
+              className="h-2 flex-1 overflow-hidden rounded-full bg-input"
               role="meter"
               aria-label="Microphone level"
               aria-valuemin={0}
@@ -289,8 +287,8 @@ export function VoiceSettingsDialog({ open, onClose }: { open: boolean; onClose:
               aria-valuenow={Math.round(micLevel * 100)}
             >
               <div
-                className="h-full rounded"
-                style={{ width: `${Math.round(micLevel * 100)}%`, backgroundColor: "#3ba55d" }}
+                className="h-full rounded-full bg-accent"
+                style={{ width: `${Math.round(micLevel * 100)}%` }}
               />
             </div>
           )}
@@ -348,8 +346,7 @@ export function VoiceSettingsDialog({ open, onClose }: { open: boolean; onClose:
           ))}
         </select>
         <div
-          className="flex aspect-video items-center justify-center overflow-hidden rounded"
-          style={{ backgroundColor: "var(--color-bg-main)" }}
+          className="flex aspect-video items-center justify-center overflow-hidden rounded-lg border border-line bg-input"
         >
           {cameraStream ? (
             <video
@@ -393,8 +390,7 @@ export function VoiceSettingsDialog({ open, onClose }: { open: boolean; onClose:
             <button
               type="button"
               onClick={() => setCapturingKey(true)}
-              className="rounded px-2 py-1 text-xs"
-              style={{ backgroundColor: "var(--color-bg-main)" }}
+              className="btn btn-secondary px-2.5 py-1 text-xs"
             >
               {capturingKey ? "Press a key…" : settings.pttKeyCode ? `Key: ${describeKeyCode(settings.pttKeyCode)}` : "Set key"}
             </button>

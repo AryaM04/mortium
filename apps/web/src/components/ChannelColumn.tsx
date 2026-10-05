@@ -2,7 +2,12 @@
 // drag-and-drop reorder) and their channels, and the user panel.
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { Permission, hasPermission, type ChannelJson, type ChannelOrderRequest } from "@mortium/shared";
+import {
+  Permission,
+  hasPermission,
+  type ChannelJson,
+  type ChannelOrderRequest,
+} from "@mortium/shared";
 import {
   countMentions,
   formatBadgeCount,
@@ -86,7 +91,9 @@ function GuildMenu({
         className="icon-btn h-7 w-7"
       >
         {items.length > 0 && (
-          <ChevronDownIcon className={`transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
+          <ChevronDownIcon
+            className={`transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+          />
         )}
       </button>
       {open && (
@@ -145,7 +152,9 @@ function ChannelRow({
   const [, navigate] = useLocation();
   const bright = active || unread;
   const isVoice = channel.type === "voice";
-  const connectedChannelId = useStore(voiceStore, (s) => (s.status === "connected" ? s.channelId : null));
+  const connectedChannelId = useStore(voiceStore, (s) =>
+    s.status === "connected" ? s.channelId : null,
+  );
 
   function onSelect(): void {
     navigate(href);
@@ -203,13 +212,23 @@ function ChannelRow({
         </button>
       </div>
       {isVoice && (
-        <VoiceChannelParticipants guildId={guildId} channelId={channel.id} live={connectedChannelId === channel.id} />
+        <VoiceChannelParticipants
+          guildId={guildId}
+          channelId={channel.id}
+          live={connectedChannelId === channel.id}
+        />
       )}
     </div>
   );
 }
 
-export function ChannelColumn({ guildId, activeChannelId }: { guildId: string; activeChannelId: string | null }) {
+export function ChannelColumn({
+  guildId,
+  activeChannelId,
+}: {
+  guildId: string;
+  activeChannelId: string | null;
+}) {
   const state = useRealtime((s) => s);
   const guild = state.guilds[guildId];
   const channels = state.channels;
@@ -222,12 +241,15 @@ export function ChannelColumn({ guildId, activeChannelId }: { guildId: string; a
   const [inviteChannelId, setInviteChannelId] = useState<string | null>(null);
   const [guildSettingsOpen, setGuildSettingsOpen] = useState(false);
   const [channelSettingsId, setChannelSettingsId] = useState<string | null>(null);
-  const [createDialog, setCreateDialog] = useState<{ kind: "channel" | "category"; parentId: string | null } | null>(
-    null,
-  );
+  const [createDialog, setCreateDialog] = useState<{
+    kind: "channel" | "category";
+    parentId: string | null;
+  } | null>(null);
   const draggedIdRef = useRef<string | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
-  const [notificationMenuAt, setNotificationMenuAt] = useState<{ x: number; y: number } | null>(null);
+  const [notificationMenuAt, setNotificationMenuAt] = useState<{ x: number; y: number } | null>(
+    null,
+  );
 
   useEffect(() => {
     setCollapsed(readCollapsedCategories(guildId));
@@ -272,7 +294,10 @@ export function ChannelColumn({ guildId, activeChannelId }: { guildId: string; a
       if (channel) {
         realtimeStore
           .getState()
-          .applyDispatch({ t: "CHANNEL_UPDATE", d: { ...channel, position: entry.position, parentId: entry.parentId } });
+          .applyDispatch({
+            t: "CHANNEL_UPDATE",
+            d: { ...channel, position: entry.position, parentId: entry.parentId },
+          });
       }
     }
     try {
@@ -283,13 +308,20 @@ export function ChannelColumn({ guildId, activeChannelId }: { guildId: string; a
         if (channel) {
           realtimeStore
             .getState()
-            .applyDispatch({ t: "CHANNEL_UPDATE", d: { ...channel, position: entry.position, parentId: entry.parentId } });
+            .applyDispatch({
+              t: "CHANNEL_UPDATE",
+              d: { ...channel, position: entry.position, parentId: entry.parentId },
+            });
         }
       }
     }
   }
 
-  function handleDrop(draggedId: string, dropTargetId: string | null, dropParentId: string | null): void {
+  function handleDrop(
+    draggedId: string,
+    dropTargetId: string | null,
+    dropParentId: string | null,
+  ): void {
     const dragged = channels[draggedId];
     if (!dragged || dragged.type === "category" || draggedId === dropTargetId) {
       return;
@@ -309,7 +341,10 @@ export function ChannelColumn({ guildId, activeChannelId }: { guildId: string; a
     byParent.set(sourceParent, sourceList);
 
     const destParent = dropParentId;
-    const destList = destParent === sourceParent ? sourceList : (byParent.get(destParent) ?? []).filter((id) => id !== draggedId);
+    const destList =
+      destParent === sourceParent
+        ? sourceList
+        : (byParent.get(destParent) ?? []).filter((id) => id !== draggedId);
     let insertIndex = destList.length;
     if (dropTargetId) {
       const idx = destList.indexOf(dropTargetId);
@@ -339,7 +374,8 @@ export function ChannelColumn({ guildId, activeChannelId }: { guildId: string; a
     if (!channel) return null;
     const messageChannel = messageChannels[id];
     const unread =
-      channel.type === "text" && isChannelUnread(messageChannel?.lastEventId ?? null, messageChannel?.lastReadEventId ?? null);
+      channel.type === "text" &&
+      isChannelUnread(messageChannel?.lastEventId ?? null, messageChannel?.lastReadEventId ?? null);
     const mentionCount = messageChannel ? countMentions(messageChannel, selfUserId) : 0;
     return (
       <ChannelRow
@@ -371,7 +407,10 @@ export function ChannelColumn({ guildId, activeChannelId }: { guildId: string; a
 
   return (
     <aside aria-label="Channels" className="panel flex w-60 shrink-0 flex-col">
-      <div ref={headerRef} className="relative flex h-12 shrink-0 items-center gap-2 border-b border-line pl-4 pr-2">
+      <div
+        ref={headerRef}
+        className="relative flex h-12 shrink-0 items-center gap-2 border-b border-line pl-4 pr-2"
+      >
         <div className="min-w-0 flex-1 truncate font-semibold">{guild.name}</div>
         <GuildMenu
           items={[
@@ -382,10 +421,26 @@ export function ChannelColumn({ guildId, activeChannelId }: { guildId: string; a
                 setNotificationMenuAt({ x: rect ? rect.left + 8 : 80, y: rect ? rect.bottom : 60 });
               },
             },
-            { label: "Invite people", onSelect: () => setInviteChannelId(firstTextChannelId()), hidden: !canCreateInvite },
-            { label: "Server settings", onSelect: () => setGuildSettingsOpen(true), hidden: !isOwner && !canManageChannels },
-            { label: "Create channel", onSelect: () => setCreateDialog({ kind: "channel", parentId: null }), hidden: !canManageChannels },
-            { label: "Create category", onSelect: () => setCreateDialog({ kind: "category", parentId: null }), hidden: !canManageChannels },
+            {
+              label: "Invite people",
+              onSelect: () => setInviteChannelId(firstTextChannelId()),
+              hidden: !canCreateInvite,
+            },
+            {
+              label: "Server settings",
+              onSelect: () => setGuildSettingsOpen(true),
+              hidden: !isOwner && !canManageChannels,
+            },
+            {
+              label: "Create channel",
+              onSelect: () => setCreateDialog({ kind: "channel", parentId: null }),
+              hidden: !canManageChannels,
+            },
+            {
+              label: "Create category",
+              onSelect: () => setCreateDialog({ kind: "category", parentId: null }),
+              hidden: !canManageChannels,
+            },
             {
               label: "Leave server",
               danger: true,
@@ -442,7 +497,9 @@ export function ChannelColumn({ guildId, activeChannelId }: { guildId: string; a
                   </button>
                 )}
               </div>
-              {!isCollapsed && <div className="mt-0.5 flex flex-col gap-0.5">{children.map(renderChannel)}</div>}
+              {!isCollapsed && (
+                <div className="mt-0.5 flex flex-col gap-0.5">{children.map(renderChannel)}</div>
+              )}
             </div>
           );
         })}
@@ -461,9 +518,18 @@ export function ChannelColumn({ guildId, activeChannelId }: { guildId: string; a
       )}
 
       {inviteChannelId && (
-        <InviteDialog open={true} channelId={inviteChannelId} onClose={() => setInviteChannelId(null)} />
+        <InviteDialog
+          open={true}
+          channelId={inviteChannelId}
+          onClose={() => setInviteChannelId(null)}
+        />
       )}
-      <GuildSettingsDialog open={guildSettingsOpen} guild={guild} isOwner={isOwner} onClose={() => setGuildSettingsOpen(false)} />
+      <GuildSettingsDialog
+        open={guildSettingsOpen}
+        guild={guild}
+        isOwner={isOwner}
+        onClose={() => setGuildSettingsOpen(false)}
+      />
       {channelSettingsId && channels[channelSettingsId] && (
         <ChannelSettingsDialog
           open={true}

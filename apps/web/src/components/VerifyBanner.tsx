@@ -39,7 +39,12 @@ export function VerifyBanner() {
           : "Your email address is not verified yet."}
       </span>
       {!sent && (
-        <button type="button" onClick={handleResend} disabled={pending} className="underline underline-offset-2">
+        <button
+          type="button"
+          onClick={handleResend}
+          disabled={pending}
+          className="underline underline-offset-2"
+        >
           {pending ? "Sending..." : "Send the email again"}
         </button>
       )}

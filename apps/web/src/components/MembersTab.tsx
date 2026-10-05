@@ -105,9 +105,7 @@ function RoleMenu({
           );
         })}
         {manageableRoles.length === 0 && (
-          <li className="text-xs text-muted">
-            No roles you can manage.
-          </li>
+          <li className="text-xs text-muted">No roles you can manage.</li>
         )}
       </ul>
     </div>
@@ -259,11 +257,7 @@ export function MembersTab({ guildId }: { guildId: string }) {
           {error}
         </p>
       )}
-      {loading && (
-        <p className="mb-2 text-xs text-muted">
-          Loading members...
-        </p>
-      )}
+      {loading && <p className="mb-2 text-xs text-muted">Loading members...</p>}
       <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
         {filtered.map((member) => {
           const isTargetOwner = member.userId === guild.ownerId;
@@ -276,11 +270,7 @@ export function MembersTab({ guildId }: { guildId: string }) {
             >
               <span className="flex-1 truncate text-sm">
                 {displayName(member)}
-                {isTargetOwner && (
-                  <span className="ml-1 text-xs text-muted">
-                    (owner)
-                  </span>
-                )}
+                {isTargetOwner && <span className="ml-1 text-xs text-muted">(owner)</span>}
               </span>
               <span className="flex flex-wrap gap-1">
                 {memberRoles.map((role) => (
@@ -384,11 +374,7 @@ export function MembersTab({ guildId }: { guildId: string }) {
               </select>
             </label>
             <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setBanTarget(null)}
-                className="btn btn-ghost"
-              >
+              <button type="button" onClick={() => setBanTarget(null)} className="btn btn-ghost">
                 Cancel
               </button>
               <button

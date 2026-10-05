@@ -7,8 +7,19 @@
 // gets a preview card, made on this device (see lib/link-preview.ts). The
 // message takes the preview only when it is ready at send time.
 import { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
-import { MAX_ATTACHMENTS, type Attachment, type GuildMemberJson, type LinkEmbed, type User } from "@mortium/shared";
-import { findFirstLink, formatFileSize, linkPreviewsOf, searchGuildMembers } from "@mortium/client-core";
+import {
+  MAX_ATTACHMENTS,
+  type Attachment,
+  type GuildMemberJson,
+  type LinkEmbed,
+  type User,
+} from "@mortium/shared";
+import {
+  findFirstLink,
+  formatFileSize,
+  linkPreviewsOf,
+  searchGuildMembers,
+} from "@mortium/client-core";
 import { messagesStore } from "../lib/messages.js";
 import { session } from "../lib/session.js";
 import { useSettings } from "../lib/settings.js";
@@ -125,9 +136,18 @@ export interface ComposerProps {
 function searchDmRecipients(recipients: User[], query: string): GuildMemberJson[] {
   const lower = query.toLowerCase();
   return recipients
-    .filter((user) => user.username.startsWith(lower) || user.displayName.toLowerCase().startsWith(lower))
+    .filter(
+      (user) => user.username.startsWith(lower) || user.displayName.toLowerCase().startsWith(lower),
+    )
     .slice(0, MENTION_SEARCH_LIMIT)
-    .map((user) => ({ guildId: "", userId: user.id, nickname: null, joinedAt: user.createdAt, roles: [], user }));
+    .map((user) => ({
+      guildId: "",
+      userId: user.id,
+      nickname: null,
+      joinedAt: user.createdAt,
+      roles: [],
+      user,
+    }));
 }
 
 function memberLabel(member: GuildMemberJson): string {
@@ -238,7 +258,9 @@ export function Composer(props: ComposerProps) {
   }, [channelId]);
 
   function updateUpload(key: number, patch: Partial<Upload>): void {
-    setUploads((current) => current.map((upload) => (upload.key === key ? { ...upload, ...patch } : upload)));
+    setUploads((current) =>
+      current.map((upload) => (upload.key === key ? { ...upload, ...patch } : upload)),
+    );
   }
 
   function addFiles(files: File[]): void {
@@ -252,7 +274,10 @@ export function Composer(props: ComposerProps) {
       size: file.size,
       progress: 0,
       controller: new AbortController(),
-      error: file.size > MAX_FILE_BYTES ? `The file is larger than ${formatFileSize(MAX_FILE_BYTES)}.` : undefined,
+      error:
+        file.size > MAX_FILE_BYTES
+          ? `The file is larger than ${formatFileSize(MAX_FILE_BYTES)}.`
+          : undefined,
     }));
     setUploads((current) => [...current, ...added]);
     added.forEach((upload, index) => {
@@ -268,7 +293,9 @@ export function Composer(props: ComposerProps) {
         .then((result) => updateUpload(upload.key, { result, progress: 1 }))
         .catch((error: unknown) => {
           if (!upload.controller.signal.aborted) {
-            updateUpload(upload.key, { error: error instanceof Error ? error.message : "The file could not be uploaded." });
+            updateUpload(upload.key, {
+              error: error instanceof Error ? error.message : "The file could not be uploaded.",
+            });
           }
         });
     });
@@ -387,7 +414,9 @@ export function Composer(props: ComposerProps) {
       props.onCancelEdit();
     } else {
       const embeds = preview?.embed && findFirstLink(body) === preview.url ? [preview.embed] : [];
-      void messagesStore.getState().sendMessage(channelId, body, mentions, props.replyTarget?.id, ready, embeds);
+      void messagesStore
+        .getState()
+        .sendMessage(channelId, body, mentions, props.replyTarget?.id, ready, embeds);
       props.onCancelReply();
       setUploads([]);
       clearPreview();
@@ -448,7 +477,11 @@ export function Composer(props: ComposerProps) {
       {(props.replyTarget || props.editTarget) && (
         <div className="mx-2 flex items-center justify-between gap-2 rounded-t-lg border border-b-0 border-line bg-sidebar py-1 pl-3 pr-1 text-xs text-secondary">
           <span className="flex min-w-0 items-center gap-1.5 truncate">
-            {props.editTarget ? <PencilIcon size={12} className="shrink-0 text-accent-text" /> : <ReplyIcon size={12} className="shrink-0 text-accent-text" />}
+            {props.editTarget ? (
+              <PencilIcon size={12} className="shrink-0 text-accent-text" />
+            ) : (
+              <ReplyIcon size={12} className="shrink-0 text-accent-text" />
+            )}
             {props.editTarget ? "Editing a message." : `Reply to ${props.replyTarget!.authorName}.`}
           </span>
           <button
@@ -498,7 +531,11 @@ export function Composer(props: ComposerProps) {
         <div className="mb-1" data-link-preview-state={preview.embed ? "ready" : "loading"}>
           {preview.embed ? (
             <Suspense fallback={null}>
-              <LinkEmbedCard embed={preview.embed} localImageUrl={preview.imageUrl} onRemove={removePreview} />
+              <LinkEmbedCard
+                embed={preview.embed}
+                localImageUrl={preview.imageUrl}
+                onRemove={removePreview}
+              />
             </Suspense>
           ) : (
             <div className="flex items-center gap-2 text-xs text-muted">
@@ -520,9 +557,17 @@ export function Composer(props: ComposerProps) {
             >
               <span className="max-w-40 truncate">{upload.name}</span>
               <span className={upload.error ? "text-danger-text" : "text-muted"}>
-                {upload.error ?? (upload.result ? formatFileSize(upload.size) : `${Math.round(upload.progress * 100)}%`)}
+                {upload.error ??
+                  (upload.result
+                    ? formatFileSize(upload.size)
+                    : `${Math.round(upload.progress * 100)}%`)}
               </span>
-              <button type="button" onClick={() => removeUpload(upload.key)} aria-label={`Remove ${upload.name}`} className="icon-btn h-6 w-6">
+              <button
+                type="button"
+                onClick={() => removeUpload(upload.key)}
+                aria-label={`Remove ${upload.name}`}
+                className="icon-btn h-6 w-6"
+              >
                 <CloseIcon size={12} />
               </button>
             </li>
@@ -573,7 +618,11 @@ export function Composer(props: ComposerProps) {
           rows={1}
           value={text}
           disabled={!props.canSend}
-          placeholder={props.canSend ? "Write a message." : props.disabledReason ?? "You cannot send a message here."}
+          placeholder={
+            props.canSend
+              ? "Write a message."
+              : (props.disabledReason ?? "You cannot send a message here.")
+          }
           role="combobox"
           aria-autocomplete="list"
           aria-haspopup="listbox"
@@ -599,7 +648,9 @@ export function Composer(props: ComposerProps) {
           className="max-h-60 min-h-8 flex-1 resize-none bg-transparent px-1.5 py-1.5 text-sm leading-5 text-primary outline-none placeholder:text-muted disabled:cursor-not-allowed"
         />
         {remaining <= COUNTER_THRESHOLD && (
-          <span className={`self-center text-xs ${remaining < 0 ? "text-danger-text" : "text-muted"}`}>
+          <span
+            className={`self-center text-xs ${remaining < 0 ? "text-danger-text" : "text-muted"}`}
+          >
             {remaining}
           </span>
         )}

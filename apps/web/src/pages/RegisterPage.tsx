@@ -92,16 +92,15 @@ export function RegisterPage() {
             {formError}
           </p>
         )}
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-primary w-full"
-        >
+        <button type="submit" disabled={pending} className="btn btn-primary w-full">
           {pending ? "Creating your account..." : "Create account"}
         </button>
       </form>
       <div className="mt-4 text-sm text-muted">
-        Already have an account? <Link href="/login">Sign in</Link>
+        Already have an account?{" "}
+        <Link href="/login" className="link">
+          Sign in
+        </Link>
         <DownloadLink />
       </div>
     </AuthLayout>

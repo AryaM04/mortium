@@ -43,7 +43,11 @@ export function ChangePassword() {
   if (!open) {
     return (
       <div className="mb-4 text-sm">
-        {done && <p role="status" className="mb-1">Your password is changed.</p>}
+        {done && (
+          <p role="status" className="mb-1">
+            Your password is changed.
+          </p>
+        )}
         <button type="button" className="link" onClick={() => setOpen(true)}>
           Change password
         </button>
@@ -76,11 +80,7 @@ export function ChangePassword() {
         <button type="button" className="btn btn-ghost" onClick={() => setOpen(false)}>
           Cancel
         </button>
-        <button
-          type="submit"
-          disabled={pending || current === ""}
-          className="btn btn-primary"
-        >
+        <button type="submit" disabled={pending || current === ""} className="btn btn-primary">
           {pending ? "Saving..." : "Change password"}
         </button>
       </div>

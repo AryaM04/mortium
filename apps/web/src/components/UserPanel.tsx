@@ -63,7 +63,11 @@ function StatusMenu() {
         onClick={() => setOpen((o) => !o)}
         className="flex h-4 w-4 items-center justify-center rounded-full bg-elevated"
       >
-        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: current!.color }} />
+        <span
+          aria-hidden="true"
+          className="h-2.5 w-2.5 rounded-full"
+          style={{ backgroundColor: current!.color }}
+        />
       </button>
       {open && (
         <div
@@ -85,9 +89,15 @@ function StatusMenu() {
               }}
               className="menu-item"
             >
-              <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: option.color }} />
+              <span
+                aria-hidden="true"
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: option.color }}
+              />
               <span className="flex-1">{option.label}</span>
-              {option.value === chosenStatus && <CheckIcon size={14} className="text-accent-text" />}
+              {option.value === chosenStatus && (
+                <CheckIcon size={14} className="text-accent-text" />
+              )}
             </button>
           ))}
         </div>
@@ -115,9 +125,7 @@ export function UserPanel() {
         </div>
         <div className="flex-1 overflow-hidden">
           <div className="truncate text-sm font-medium leading-tight">{user.displayName}</div>
-          <div className="truncate text-xs text-muted">
-            @{user.username}
-          </div>
+          <div className="truncate text-xs text-muted">@{user.username}</div>
         </div>
         <button
           type="button"
@@ -138,7 +146,12 @@ export function UserPanel() {
           <SettingsIcon />
         </button>
         <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-        {voiceSettingsOpen && <VoiceSettingsDialogLoader open={voiceSettingsOpen} onClose={() => setVoiceSettingsOpen(false)} />}
+        {voiceSettingsOpen && (
+          <VoiceSettingsDialogLoader
+            open={voiceSettingsOpen}
+            onClose={() => setVoiceSettingsOpen(false)}
+          />
+        )}
       </div>
     </>
   );

@@ -20,7 +20,12 @@ import { clearLastLocation, readLastLocation, rememberLastLocation } from "../li
 import { showNotice } from "../lib/notice.js";
 import { securityStore } from "../lib/crypto.js";
 import { session } from "../lib/session.js";
-import { backupExists, gateScreen, type BackupCheck, type GateScreen } from "../lib/security-gate.js";
+import {
+  backupExists,
+  gateScreen,
+  type BackupCheck,
+  type GateScreen,
+} from "../lib/security-gate.js";
 import { newRecoveryKeyStore, restoreBusyStore } from "../lib/password-unlock.js";
 
 // Load the diagnostics panel only when a person opens the page with
@@ -139,7 +144,10 @@ export function AppShell() {
   const version = useStore(securityStore, (s) => s.backup?.version ?? null);
   // The crypto layer reads the backup in the background. Until then its
   // state says "no backup", so ask the server when the answer matters.
-  const needCheck = useStore(securityStore, (s) => s.ready && s.backup?.version == null && (!s.deviceVerified || s.holdsMasterKey));
+  const needCheck = useStore(
+    securityStore,
+    (s) => s.ready && s.backup?.version == null && (!s.deviceVerified || s.holdsMasterKey),
+  );
   const keyToShow = useStore(newRecoveryKeyStore, (s) => s.recoveryKey !== null);
   // A backup that this tab made exists, also before the crypto layer reads it.
   const backupMade = useStore(newRecoveryKeyStore, (s) => s.backupMade);

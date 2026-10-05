@@ -59,13 +59,9 @@ export function BansTab({ guildId }: { guildId: string }) {
         </p>
       )}
       {loading ? (
-        <p className="text-sm text-muted">
-          Loading bans...
-        </p>
+        <p className="text-sm text-muted">Loading bans...</p>
       ) : list.length === 0 ? (
-        <p className="text-sm text-muted">
-          Nobody is banned from this server.
-        </p>
+        <p className="text-sm text-muted">Nobody is banned from this server.</p>
       ) : (
         <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
           {list.map((ban) => (
@@ -75,11 +71,7 @@ export function BansTab({ guildId }: { guildId: string }) {
             >
               <div className="flex-1">
                 <div className="text-sm">User {ban.userId}</div>
-                {ban.reason && (
-                  <div className="text-xs text-muted">
-                    {ban.reason}
-                  </div>
-                )}
+                {ban.reason && <div className="text-xs text-muted">{ban.reason}</div>}
               </div>
               <button
                 type="button"

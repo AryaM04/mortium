@@ -152,11 +152,7 @@ export function InviteDialog({
               value={inviteUrl}
               className="field flex-1 px-3 py-2 text-sm"
             />
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="btn btn-primary"
-            >
+            <button type="button" onClick={handleCopy} className="btn btn-primary">
               {copied ? "Copied" : "Copy"}
             </button>
           </div>

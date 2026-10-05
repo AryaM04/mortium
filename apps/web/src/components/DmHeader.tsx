@@ -28,7 +28,9 @@ function GroupNameEditor({ channel, onDone }: { channel: DmChannelJson; onDone: 
     setPending(true);
     setError(null);
     try {
-      rememberDm(await renameGroupDm(session.apiClient, channel.id, { name: parsed ? parsed.data : null }));
+      rememberDm(
+        await renameGroupDm(session.apiClient, channel.id, { name: parsed ? parsed.data : null }),
+      );
       onDone();
     } catch (err) {
       setError(describeError(err));
@@ -68,7 +70,10 @@ function GroupNameEditor({ channel, onDone }: { channel: DmChannelJson; onDone: 
 export function DmHeader({ channel }: { channel: DmChannelJson }) {
   const selfUserId = useRealtime((s) => s.selfUserId);
   const callSize = useRealtime((s) => Object.keys(s.voiceStatesByChannel[channel.id] ?? {}).length);
-  const connectedHere = useStore(voiceStore, (s) => s.status !== "idle" && s.channelId === channel.id);
+  const connectedHere = useStore(
+    voiceStore,
+    (s) => s.status !== "idle" && s.channelId === channel.id,
+  );
   const [editing, setEditing] = useState(false);
   const others = dmOtherRecipients(channel, selfUserId);
   const name = dmDisplayName(channel, selfUserId);

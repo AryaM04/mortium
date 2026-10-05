@@ -40,11 +40,7 @@ export function ServerAddressPage() {
         <p className="mb-4 text-xs text-muted">
           Type the address of the web app of your server. The app restarts when it connects.
         </p>
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-primary w-full"
-        >
+        <button type="submit" disabled={pending} className="btn btn-primary w-full">
           {pending ? "Connecting..." : "Connect"}
         </button>
       </form>

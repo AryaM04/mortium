@@ -20,7 +20,6 @@ export function nameOfUser(state: RealtimeState, userId: string): string {
   return user?.displayName ?? `User ${userId}`;
 }
 
-
 export function SecurityBanner() {
   const security = useStore(securityStore);
   if (!security.ready) {
@@ -38,8 +37,9 @@ export function SecurityBanner() {
           className="mx-1.5 mt-1.5 flex items-center justify-between gap-3 rounded-lg border border-danger-text/30 bg-[#2a1117] px-3 py-2 text-sm text-[#fecdd3]"
         >
           <span>
-            Warning: the identity key of {nameOfUser(state, userId)} changed. This occurs after a reset of their account, or
-            when someone tries to read your messages. Messages to this user stay locked until you accept the change.
+            Warning: the identity key of {nameOfUser(state, userId)} changed. This occurs after a
+            reset of their account, or when someone tries to read your messages. Messages to this
+            user stay locked until you accept the change.
           </span>
           <button
             type="button"

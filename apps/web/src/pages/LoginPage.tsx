@@ -70,18 +70,19 @@ export function LoginPage() {
             {formError}
           </p>
         )}
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-primary w-full"
-        >
+        <button type="submit" disabled={pending} className="btn btn-primary w-full">
           {pending ? "Signing in..." : "Sign in"}
         </button>
       </form>
       <div className="mt-4 flex flex-col gap-1 text-sm text-muted">
-        <Link href="/forgot-password">Forgot your password?</Link>
+        <Link href="/forgot-password" className="link">
+          Forgot your password?
+        </Link>
         <span>
-          No account yet? <Link href="/register">Register</Link>
+          No account yet?{" "}
+          <Link href="/register" className="link">
+            Register
+          </Link>
         </span>
         <DownloadLink />
       </div>

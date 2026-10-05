@@ -10,7 +10,10 @@ export function ConnectionBanner() {
     return null;
   }
   return (
-    <div role="status" className="border-b border-warning/30 bg-[#2a2110] px-3 py-2 text-center text-sm text-[#fcd34d]">
+    <div
+      role="status"
+      className="border-b border-warning/30 bg-[#2a2110] px-3 py-2 text-center text-sm text-[#fcd34d]"
+    >
       The connection is lost. The app tries to connect again.
     </div>
   );

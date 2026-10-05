@@ -7,7 +7,7 @@ export function DownloadLink({ onNavigate }: { onNavigate?: () => void }) {
     return null;
   }
   return (
-    <Link href="/download" onClick={onNavigate} className="block">
+    <Link href="/download" onClick={onNavigate} className="link inline-block">
       Download the desktop app
     </Link>
   );

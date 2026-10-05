@@ -41,9 +41,16 @@ function Lightbox({ attachment, onClose }: { attachment: Attachment; onClose: ()
       className="max-h-[90vh] max-w-[90vw] p-2"
     >
       {url ? (
-        <img src={url} alt={attachment.name} data-testid="lightbox-image" className="max-h-[80vh] max-w-[85vw] object-contain" />
+        <img
+          src={url}
+          alt={attachment.name}
+          data-testid="lightbox-image"
+          className="max-h-[80vh] max-w-[85vw] object-contain"
+        />
       ) : (
-        <p className="p-4 text-sm">{failed ? "The image cannot be shown." : "Loading the image."}</p>
+        <p className="p-4 text-sm">
+          {failed ? "The image cannot be shown." : "Loading the image."}
+        </p>
       )}
       <div className="mt-2 flex justify-end">
         <button type="button" onClick={onClose} className="btn btn-secondary px-3 py-1">
@@ -67,7 +74,15 @@ function ImageAttachment({ attachment }: { attachment: Attachment }) {
         className="block overflow-hidden rounded-lg border border-line bg-elevated"
         style={{ width: thumbnail.width, height: thumbnail.height }}
       >
-        {url && <img src={url} alt={attachment.name} width={thumbnail.width} height={thumbnail.height} data-testid="attachment-thumbnail" />}
+        {url && (
+          <img
+            src={url}
+            alt={attachment.name}
+            width={thumbnail.width}
+            height={thumbnail.height}
+            data-testid="attachment-thumbnail"
+          />
+        )}
         {failed && <span className="p-2 text-xs">The image cannot be shown.</span>}
       </button>
       {open && <Lightbox attachment={attachment} onClose={() => setOpen(false)} />}
@@ -97,7 +112,9 @@ function FileAttachment({ attachment }: { attachment: Attachment }) {
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium">{attachment.name}</div>
         <div className={`text-xs ${state === "failed" ? "text-danger-text" : "text-muted"}`}>
-          {state === "failed" ? "The file could not be downloaded." : formatFileSize(attachment.size)}
+          {state === "failed"
+            ? "The file could not be downloaded."
+            : formatFileSize(attachment.size)}
         </div>
       </div>
       <button

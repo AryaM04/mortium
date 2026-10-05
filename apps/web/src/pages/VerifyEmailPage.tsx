@@ -45,14 +45,18 @@ export function VerifyEmailPage() {
   return (
     <AuthLayout title="Email verification">
       {status === "checking" && <p className="text-sm">Checking your link...</p>}
-      {status === "done" && <p className="text-sm">Your email address is verified. You can close this page.</p>}
+      {status === "done" && (
+        <p className="text-sm">Your email address is verified. You can close this page.</p>
+      )}
       {status === "failed" && (
         <p role="alert" className="text-sm text-danger-text">
           {error}
         </p>
       )}
       <div className="mt-4 text-sm">
-        <Link href="/app">Go to the app</Link>
+        <Link href="/app" className="link">
+          Go to the app
+        </Link>
       </div>
     </AuthLayout>
   );

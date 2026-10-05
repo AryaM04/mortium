@@ -6,6 +6,7 @@ import { useRealtime } from "../lib/useRealtime.js";
 import { voiceStore } from "../lib/voice.js";
 import { ParticipantVolumeMenu, useParticipantMenu } from "./ParticipantVolumeMenu.js";
 import { serverUrl } from "../lib/server-url.js";
+import { HeadphonesOffIcon, MicOffIcon, MoreIcon } from "./icons.js";
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).slice(0, 2);
@@ -36,53 +37,51 @@ export function VoiceChannelParticipants({
   }
 
   return (
-    <ul className="ml-5 mt-0.5 flex flex-col gap-0.5 pb-1">
+    <ul className="ml-6 mt-0.5 flex flex-col gap-0.5 pb-1">
       {entries.map((state) => {
         const isSelf = state.userId === selfUserId;
         const member = isSelf ? selfMember : members?.[state.userId];
         const name = member?.nickname ?? member?.user?.displayName ?? state.userId;
-        const speaking = live && (isSelf ? localSpeaking : (voicePeers.find((p) => p.userId === state.userId)?.speaking ?? false));
+        const speaking =
+          live &&
+          (isSelf
+            ? localSpeaking
+            : (voicePeers.find((p) => p.userId === state.userId)?.speaking ?? false));
 
         return (
           <li
             key={state.userId}
-            className="flex items-center gap-1.5 px-1 py-0.5"
+            className="group flex h-7 items-center gap-2 rounded-md px-1.5 hover:bg-hover"
             data-voice-participant={name}
             data-voice-participant-muted={state.selfMute}
             data-voice-participant-deafened={state.selfDeaf}
             onContextMenu={isSelf ? undefined : (event) => onContextMenu(event, state.userId)}
           >
             <div
-              className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold"
-              style={{
-                backgroundColor: "var(--color-accent)",
-                color: "white",
-                boxShadow: speaking ? "0 0 0 2px #3ba55d" : undefined,
-              }}
+              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-avatar text-[9px] font-semibold text-avatar-text"
+              style={{ boxShadow: speaking ? "0 0 0 2px var(--color-success)" : undefined }}
               aria-hidden="true"
             >
               {member?.user?.avatarKey ? (
                 <img
                   src={serverUrl(`/api/v1/avatars/${state.userId}/${member.user.avatarKey}`)}
                   alt=""
-                  className="h-6 w-6 rounded-full object-cover"
+                  className="h-5 w-5 rounded-full object-cover"
                 />
               ) : (
                 initialsOf(name)
               )}
             </div>
-            <span className="truncate text-xs text-muted">
-              {name}
-            </span>
+            <span className="truncate text-xs text-muted">{name}</span>
             {state.selfMute && (
-              <span aria-hidden="true" title="Muted" className="text-xs">
-                &#128263;
+              <span aria-hidden="true" title="Muted" className="text-danger-text">
+                <MicOffIcon size={12} />
               </span>
             )}
             {state.selfMute && <span className="sr-only">{name} has muted the microphone.</span>}
             {state.selfDeaf && (
-              <span aria-hidden="true" title="Deafened" className="text-xs">
-                &#128266;
+              <span aria-hidden="true" title="Deafened" className="text-danger-text">
+                <HeadphonesOffIcon size={12} />
               </span>
             )}
             {state.selfDeaf && <span className="sr-only">{name} has muted all sound.</span>}
@@ -95,9 +94,9 @@ export function VoiceChannelParticipants({
                   const rect = event.currentTarget.getBoundingClientRect();
                   openAt(state.userId, rect.left, rect.bottom);
                 }}
-                className="ml-auto rounded px-1 text-xs text-muted"
+                className="icon-btn ml-auto h-5 w-5"
               >
-                &#8942;
+                <MoreIcon size={14} />
               </button>
             )}
           </li>

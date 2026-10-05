@@ -13,7 +13,7 @@ const FriendsView = lazy(() => import("../components/FriendsView.js"));
 const GroupDmMembers = lazy(() => import("../components/GroupDmMembers.js"));
 
 function Loading() {
-  return <div className="flex-1" style={{ backgroundColor: "var(--color-bg-main)" }} />;
+  return <div className="panel flex-1 bg-main" />;
 }
 
 export function HomeView({ channelId }: { channelId: string | null }) {

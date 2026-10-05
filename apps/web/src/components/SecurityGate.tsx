@@ -12,7 +12,12 @@ import { Suspense, lazy, useEffect, useState } from "react";
 import { useStore } from "zustand";
 import { currentCrypto, securityStore } from "../lib/crypto.js";
 import { describeError } from "../lib/errors.js";
-import { createBackupWithPassword, newRecoveryKeyStore, unlockWithWrapKey, whileRestoring } from "../lib/password-unlock.js";
+import {
+  createBackupWithPassword,
+  newRecoveryKeyStore,
+  unlockWithWrapKey,
+  whileRestoring,
+} from "../lib/password-unlock.js";
 import { session } from "../lib/session.js";
 import type { GateScreen } from "../lib/security-gate.js";
 import { AuthLayout } from "./AuthLayout.js";
@@ -27,9 +32,7 @@ const field = "field w-full";
 function Part({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mb-5">
-      <h2 className="eyebrow mb-2">
-        {title}
-      </h2>
+      <h2 className="eyebrow mb-2">{title}</h2>
       {children}
     </section>
   );
@@ -45,7 +48,11 @@ function Problem({ text }: { text: string | null }) {
 
 function SignOut() {
   return (
-    <button type="button" className="text-sm link" onClick={() => void session.store.getState().logout()}>
+    <button
+      type="button"
+      className="text-sm link"
+      onClick={() => void session.store.getState().logout()}
+    >
       Sign out
     </button>
   );
@@ -88,7 +95,13 @@ function PasswordUnlock() {
         className={field}
       />
       <div className="flex justify-end">
-        <button type="button" className={button} style={primary} disabled={pending || password === ""} onClick={() => void unlock()}>
+        <button
+          type="button"
+          className={button}
+          style={primary}
+          disabled={pending || password === ""}
+          onClick={() => void unlock()}
+        >
           {pending ? "Unlocking..." : "Unlock with your password"}
         </button>
       </div>
@@ -141,7 +154,8 @@ function VerifyScreen({ hasBackup }: { hasBackup: boolean }) {
   return (
     <AuthLayout title="Verify this device">
       <p className="mb-4 text-sm">
-        Your messages are encrypted. Verify this device before you continue. Until then, it cannot read your messages.
+        Your messages are encrypted. Verify this device before you continue. Until then, it cannot
+        read your messages.
       </p>
       {passwordWorks && (
         <Part title="Unlock with your password">
@@ -149,7 +163,9 @@ function VerifyScreen({ hasBackup }: { hasBackup: boolean }) {
         </Part>
       )}
       <Part title="Verify with another device">
-        <p className="mb-2 text-sm">Use a device where you are signed in. Compare the emojis on both devices.</p>
+        <p className="mb-2 text-sm">
+          Use a device where you are signed in. Compare the emojis on both devices.
+        </p>
         <button type="button" className={button} style={primary} onClick={() => void verify()}>
           Verify with another device
         </button>
@@ -170,8 +186,8 @@ function VerifyScreen({ hasBackup }: { hasBackup: boolean }) {
       ) : (
         <Part title="Reset encryption">
           <p className="mb-2 text-sm">
-            Your account has no recovery key. If you have no other signed-in device, reset the encryption. Then make a
-            recovery key.
+            Your account has no recovery key. If you have no other signed-in device, reset the
+            encryption. Then make a recovery key.
           </p>
           <ResetIdentity />
         </Part>
@@ -203,8 +219,9 @@ function SaveKeyScreen() {
   return (
     <AuthLayout title="Save your recovery key">
       <p className="mb-4 text-sm">
-        Your messages are encrypted. The recovery key lets a new device read them. If you lose this device and the
-        recovery key, you cannot read your old messages. Make the key before you continue.
+        Your messages are encrypted. The recovery key lets a new device read them. If you lose this
+        device and the recovery key, you cannot read your old messages. Make the key before you
+        continue.
       </p>
       <Problem text={error} />
       <BackupSetup required />
@@ -221,14 +238,21 @@ function ShowKeyScreen() {
   return (
     <AuthLayout title="Save your recovery key">
       <p className="mb-4 text-sm">
-        Your password unlocks your encrypted messages on a new device. You need this recovery key only if you forget
-        your password or reset it by email. Keep it in a safe place.
+        Your password unlocks your encrypted messages on a new device. You need this recovery key
+        only if you forget your password or reset it by email. Keep it in a safe place.
       </p>
-      <code data-testid="recovery-key" className="mb-2 block rounded-lg border border-line-strong bg-input p-3 text-center font-mono text-sm text-accent-text">
+      <code
+        data-testid="recovery-key"
+        className="mb-2 block rounded-lg border border-line-strong bg-input p-3 text-center font-mono text-sm text-accent-text"
+      >
         {recoveryKey}
       </code>
       <div className="mb-4 flex gap-3 text-sm">
-        <button type="button" className="link" onClick={() => void navigator.clipboard?.writeText(recoveryKey)}>
+        <button
+          type="button"
+          className="link"
+          onClick={() => void navigator.clipboard?.writeText(recoveryKey)}
+        >
           Copy
         </button>
         <button type="button" className="link" onClick={() => downloadKey(recoveryKey)}>
@@ -250,7 +274,13 @@ function ShowKeyScreen() {
   );
 }
 
-export default function SecurityGate({ screen, hasBackup }: { screen: GateScreen; hasBackup: boolean }) {
+export default function SecurityGate({
+  screen,
+  hasBackup,
+}: {
+  screen: GateScreen;
+  hasBackup: boolean;
+}) {
   const openFlow = useStore(securityStore, (s) => s.verifications.length > 0);
   return (
     <>

@@ -12,10 +12,20 @@ import { PencilIcon, PlusIcon, ReplyArrowIcon, ReplyIcon, SmileIcon, TrashIcon }
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "🎉"];
 
 // Most messages have no files, so the file views load only when one is needed.
-const AttachmentList = lazy(() => import("./AttachmentList.js").then((module) => ({ default: module.AttachmentList })));
+const AttachmentList = lazy(() =>
+  import("./AttachmentList.js").then((module) => ({ default: module.AttachmentList })),
+);
 const LinkEmbedCard = lazy(() => import("./LinkEmbedCard.js"));
 
-function DeleteConfirmDialog({ open, onCancel, onConfirm }: { open: boolean; onCancel: () => void; onConfirm: () => void }) {
+function DeleteConfirmDialog({
+  open,
+  onCancel,
+  onConfirm,
+}: {
+  open: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current;
@@ -116,21 +126,24 @@ export function MessageItem(props: MessageItemProps) {
         <div
           className="markdown text-sm leading-relaxed"
           style={{
-            color: message.deleted || message.cannotRead ? "var(--color-text-muted)" : "var(--color-text-primary)",
+            color:
+              message.deleted || message.cannotRead
+                ? "var(--color-text-muted)"
+                : "var(--color-text-primary)",
             fontStyle: message.deleted || message.cannotRead ? "italic" : "normal",
           }}
         >
-          {message.deleted || message.cannotRead ? (
-            message.body
-          ) : (
-            message.body.length > 0 && (
-              <Markdown text={message.body} getDisplayName={props.getDisplayName} selfUserId={props.selfUserId} />
-            )
-          )}
+          {message.deleted || message.cannotRead
+            ? message.body
+            : message.body.length > 0 && (
+                <Markdown
+                  text={message.body}
+                  getDisplayName={props.getDisplayName}
+                  selfUserId={props.selfUserId}
+                />
+              )}
           {message.edited && !message.deleted && (
-            <span className="ml-1 text-xs text-muted">
-              (edited)
-            </span>
+            <span className="ml-1 text-xs text-muted">(edited)</span>
           )}
         </div>
 
@@ -208,11 +221,23 @@ export function MessageItem(props: MessageItemProps) {
               </div>
             )}
           </div>
-          <button type="button" aria-label="Reply" title="Reply" onClick={props.onReply} className="icon-btn h-7 w-7">
+          <button
+            type="button"
+            aria-label="Reply"
+            title="Reply"
+            onClick={props.onReply}
+            className="icon-btn h-7 w-7"
+          >
             <ReplyIcon />
           </button>
           {props.isOwn && (
-            <button type="button" aria-label="Edit" title="Edit" onClick={props.onEdit} className="icon-btn h-7 w-7">
+            <button
+              type="button"
+              aria-label="Edit"
+              title="Edit"
+              onClick={props.onEdit}
+              className="icon-btn h-7 w-7"
+            >
               <PencilIcon />
             </button>
           )}

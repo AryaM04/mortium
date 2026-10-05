@@ -13,7 +13,8 @@ import {
 const PERMISSION_TEXT: Record<NotificationPermissionState, string> = {
   granted: "Desktop notifications are on.",
   default: "Desktop notifications are off.",
-  denied: "The browser blocks desktop notifications. Change this in the site settings of the browser.",
+  denied:
+    "The browser blocks desktop notifications. Change this in the site settings of the browser.",
   unsupported: "This browser cannot show desktop notifications.",
 };
 
@@ -41,7 +42,9 @@ export default function NotificationSettings() {
         <input
           type="checkbox"
           checked={playRingSound}
-          onChange={(e) => void settingsStore.getState().update({ playRingSound: e.target.checked })}
+          onChange={(e) =>
+            void settingsStore.getState().update({ playRingSound: e.target.checked })
+          }
         />
         Play ring sound
       </label>

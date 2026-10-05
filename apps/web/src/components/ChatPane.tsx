@@ -31,7 +31,8 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
   const channel = guildChannel ?? dmChannel;
   // A DM has no guild. The chat parts find names in the DM recipients.
   const guildId = guildChannel ? guildChannel.guildId : null;
-  const isTextLike = channel !== undefined && channel.type !== "voice" && channel.type !== "category";
+  const isTextLike =
+    channel !== undefined && channel.type !== "voice" && channel.type !== "category";
   const realtimeState = useRealtime((s) => s);
   const messagesState = useMessages((s) => s);
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
@@ -49,7 +50,9 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
   const canManageMessages = hasPermission(permissions, Permission.MANAGE_MESSAGES);
 
   const channelState = channelId ? messagesState.channels[channelId] : undefined;
-  const connectedVoiceChannelId = useStore(voiceStore, (s) => (s.status === "connected" ? s.channelId : null));
+  const connectedVoiceChannelId = useStore(voiceStore, (s) =>
+    s.status === "connected" ? s.channelId : null,
+  );
 
   useEffect(() => {
     setReplyTarget(null);
@@ -65,7 +68,11 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
       const seeded = messagesStore.getState().channels[channelId];
       void messagesStore
         .getState()
-        .openChannel(channelId, seeded?.lastEventId ?? channel.lastEventId, seeded?.lastReadEventId ?? null);
+        .openChannel(
+          channelId,
+          seeded?.lastEventId ?? channel.lastEventId,
+          seeded?.lastReadEventId ?? null,
+        );
     }
     // Open the window again only when the channel changes, not on each new event.
   }, [channelId, isTextLike]);
@@ -119,7 +126,11 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
 
   function startReply(message: AggregatedMessage): void {
     setEditTarget(null);
-    setReplyTarget({ id: message.id, authorName: displayNameOf(realtimeState, guildId, message.senderId), preview: message.body });
+    setReplyTarget({
+      id: message.id,
+      authorName: displayNameOf(realtimeState, guildId, message.senderId),
+      preview: message.body,
+    });
   }
 
   function startEdit(message: AggregatedMessage): void {
@@ -140,13 +151,19 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
       ) : (
         <div className="relative flex h-12 shrink-0 items-center gap-2 border-b border-line pl-4 pr-2">
           <h1 className="flex shrink-0 items-center gap-1.5 font-semibold">
-            {channel.type === "voice" ? <SpeakerIcon className="text-muted" /> : <HashIcon className="text-muted" />}
+            {channel.type === "voice" ? (
+              <SpeakerIcon className="text-muted" />
+            ) : (
+              <HashIcon className="text-muted" />
+            )}
             {/* Keep the channel type in the heading name, as before the icons. */}
             <span className="sr-only">{channel.type === "voice" ? "\u{1F50A}" : "#"} </span>
             {channel.name}
           </h1>
           {guildChannel?.topic && (
-            <span className="truncate border-l border-line-strong pl-2 text-sm text-muted">{guildChannel.topic}</span>
+            <span className="truncate border-l border-line-strong pl-2 text-sm text-muted">
+              {guildChannel.topic}
+            </span>
           )}
           <SearchBox guildId={guildId} />
         </div>
@@ -197,7 +214,8 @@ export function ChatPane({ channelId }: { channelId: string | null }) {
               if (lastOwnMessageId) {
                 const payloads = channelState?.payloads ?? {};
                 const body =
-                  payloads[lastOwnMessageId.id] && payloads[lastOwnMessageId.id]?.type !== "reaction"
+                  payloads[lastOwnMessageId.id] &&
+                  payloads[lastOwnMessageId.id]?.type !== "reaction"
                     ? (payloads[lastOwnMessageId.id] as { body: string }).body
                     : "";
                 setEditTarget({ id: lastOwnMessageId.id, body });

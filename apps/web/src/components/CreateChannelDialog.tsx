@@ -81,7 +81,9 @@ export function CreateChannelDialog({
       className="w-full max-w-sm p-6"
       aria-label={kind === "category" ? "Create a category" : "Create a channel"}
     >
-      <h2 className="mb-4 text-lg font-semibold">{kind === "category" ? "Create a category" : "Create a channel"}</h2>
+      <h2 className="mb-4 text-lg font-semibold">
+        {kind === "category" ? "Create a category" : "Create a channel"}
+      </h2>
       <form onSubmit={handleCreate}>
         <label htmlFor="new-channel-name" className="mb-1 block text-sm font-medium">
           Name
@@ -99,10 +101,22 @@ export function CreateChannelDialog({
             <fieldset className="mb-4">
               <legend className="mb-1 text-sm font-medium">Channel type</legend>
               <label className="mr-4 text-sm">
-                <input type="radio" name="channel-type" checked={type === "text"} onChange={() => setType("text")} /> Text
+                <input
+                  type="radio"
+                  name="channel-type"
+                  checked={type === "text"}
+                  onChange={() => setType("text")}
+                />{" "}
+                Text
               </label>
               <label className="text-sm">
-                <input type="radio" name="channel-type" checked={type === "voice"} onChange={() => setType("voice")} /> Voice
+                <input
+                  type="radio"
+                  name="channel-type"
+                  checked={type === "voice"}
+                  onChange={() => setType("voice")}
+                />{" "}
+                Voice
               </label>
             </fieldset>
 
@@ -135,11 +149,7 @@ export function CreateChannelDialog({
           <button type="button" onClick={onClose} className="btn btn-ghost">
             Cancel
           </button>
-          <button
-            type="submit"
-            disabled={pending}
-            className="btn btn-primary"
-          >
+          <button type="submit" disabled={pending} className="btn btn-primary">
             {pending ? "Creating..." : "Create"}
           </button>
         </div>

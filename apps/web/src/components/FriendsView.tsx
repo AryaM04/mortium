@@ -85,7 +85,10 @@ function FriendRow({
   children: React.ReactNode;
 }) {
   return (
-    <li className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-hover" data-friend-row={user.username}>
+    <li
+      className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-hover"
+      data-friend-row={user.username}
+    >
       <Avatar user={user} size={32} />
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium">{user.displayName}</div>
@@ -99,7 +102,13 @@ function FriendRow({
 }
 
 /** The actions of an accepted friend. Remove and Block ask for a confirmation first. */
-function FriendActions({ user, onError }: { user: User; onError: (message: string | null) => void }) {
+function FriendActions({
+  user,
+  onError,
+}: {
+  user: User;
+  onError: (message: string | null) => void;
+}) {
   const [confirming, setConfirming] = useState<"remove" | "block" | null>(null);
 
   async function run(action: () => Promise<void>): Promise<void> {
@@ -115,7 +124,9 @@ function FriendActions({ user, onError }: { user: User; onError: (message: strin
     return (
       <>
         <span className="text-xs">
-          {confirming === "remove" ? `Remove ${user.displayName} as a friend?` : `Block ${user.displayName}?`}
+          {confirming === "remove"
+            ? `Remove ${user.displayName} as a friend?`
+            : `Block ${user.displayName}?`}
         </span>
         <ActionButton label="Cancel" onClick={() => setConfirming(null)} />
         <ActionButton
@@ -139,7 +150,10 @@ function FriendActions({ user, onError }: { user: User; onError: (message: strin
 
   return (
     <>
-      <ActionButton label="Message" onClick={() => void run(async () => void (await openDmWith(user.id)))} />
+      <ActionButton
+        label="Message"
+        onClick={() => void run(async () => void (await openDmWith(user.id)))}
+      />
       <ActionButton
         label="Start call"
         onClick={() =>
@@ -164,7 +178,10 @@ function AddFriendForm() {
     event.preventDefault();
     const parsed = usernameSchema.safeParse(username);
     if (!parsed.success) {
-      setResult({ ok: false, text: parsed.error.issues[0]?.message ?? "This username is not valid." });
+      setResult({
+        ok: false,
+        text: parsed.error.issues[0]?.message ?? "This username is not valid.",
+      });
       return;
     }
     setPending(true);
@@ -211,7 +228,10 @@ function AddFriendForm() {
         </button>
       </div>
       {result && (
-        <p role={result.ok ? "status" : "alert"} className={`text-sm ${result.ok ? "text-success-text" : "text-danger-text"}`}>
+        <p
+          role={result.ok ? "status" : "alert"}
+          className={`text-sm ${result.ok ? "text-success-text" : "text-danger-text"}`}
+        >
           {result.text}
         </p>
       )}
@@ -225,10 +245,14 @@ export default function FriendsView() {
   const [tab, setTab] = useState<Tab>("online");
   const [error, setError] = useState<string | null>(null);
 
-  const all = Object.values(relationships).sort((a, b) => a.user.displayName.localeCompare(b.user.displayName));
+  const all = Object.values(relationships).sort((a, b) =>
+    a.user.displayName.localeCompare(b.user.displayName),
+  );
   const friends = all.filter((r) => r.status === "accepted");
   const online = friends.filter((r) => (presences[r.userId] ?? "offline") !== "offline");
-  const pending = all.filter((r) => r.status === "pending_incoming" || r.status === "pending_outgoing");
+  const pending = all.filter(
+    (r) => r.status === "pending_incoming" || r.status === "pending_outgoing",
+  );
   const blocked = all.filter((r) => r.status === "blocked");
   const incomingCount = pending.filter((r) => r.status === "pending_incoming").length;
 
@@ -243,11 +267,7 @@ export default function FriendsView() {
 
   function renderList(list: RelationshipJson[], empty: string) {
     if (list.length === 0) {
-      return (
-        <p className="p-4 text-sm text-muted">
-          {empty}
-        </p>
-      );
+      return <p className="p-4 text-sm text-muted">{empty}</p>;
     }
     return (
       <ul className="flex flex-col gap-0.5 p-2">
@@ -255,7 +275,11 @@ export default function FriendsView() {
           const { user } = relationship;
           if (relationship.status === "accepted") {
             return (
-              <FriendRow key={user.id} user={user} subtitle={PRESENCE_LABEL[presences[user.id] ?? "offline"] ?? "Offline"}>
+              <FriendRow
+                key={user.id}
+                user={user}
+                subtitle={PRESENCE_LABEL[presences[user.id] ?? "offline"] ?? "Offline"}
+              >
                 <FriendActions user={user} onError={setError} />
               </FriendRow>
             );
@@ -265,7 +289,11 @@ export default function FriendsView() {
               <FriendRow key={user.id} user={user} subtitle="Incoming friend request">
                 <ActionButton
                   label="Accept"
-                  onClick={() => void run(async () => applyRelationship(await acceptFriendRequest(session.apiClient, user.id)))}
+                  onClick={() =>
+                    void run(async () =>
+                      applyRelationship(await acceptFriendRequest(session.apiClient, user.id)),
+                    )
+                  }
                 />
                 <ActionButton
                   danger
@@ -348,9 +376,7 @@ export default function FriendsView() {
           >
             {option.label}
             {option.value === "pending" && incomingCount > 0 && (
-              <span className="badge ml-1.5">
-                {incomingCount}
-              </span>
+              <span className="badge ml-1.5">{incomingCount}</span>
             )}
           </button>
         ))}
@@ -362,7 +388,8 @@ export default function FriendsView() {
       )}
       <div role="tabpanel" className="flex-1 overflow-y-auto">
         {tab === "online" && renderList(online, "No friends are online now.")}
-        {tab === "all" && renderList(friends, "You have no friends yet. Use \"Add friend\" to send a request.")}
+        {tab === "all" &&
+          renderList(friends, 'You have no friends yet. Use "Add friend" to send a request.')}
         {tab === "pending" && renderList(pending, "You have no pending friend requests.")}
         {tab === "blocked" && renderList(blocked, "You did not block a user.")}
         {tab === "add" && <AddFriendForm />}

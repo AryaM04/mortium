@@ -202,11 +202,7 @@ export function ChannelSettingsDialog({
                     <button type="button" onClick={onClose} className="btn btn-ghost">
                       Cancel
                     </button>
-                    <button
-                      type="submit"
-                      disabled={pending}
-                      className="btn btn-primary"
-                    >
+                    <button type="submit" disabled={pending} className="btn btn-primary">
                       {pending ? "Saving..." : "Save"}
                     </button>
                   </div>

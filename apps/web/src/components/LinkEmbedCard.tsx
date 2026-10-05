@@ -36,11 +36,7 @@ export function LinkEmbedCard({
       data-testid="link-embed"
     >
       <div className="min-w-0 flex-1">
-        {embed.siteName && (
-          <div className="truncate text-xs text-muted">
-            {embed.siteName}
-          </div>
-        )}
+        {embed.siteName && <div className="truncate text-xs text-muted">{embed.siteName}</div>}
         <a
           href={embed.url}
           target="_blank"
@@ -50,9 +46,7 @@ export function LinkEmbedCard({
           {embed.title ?? embed.url}
         </a>
         {embed.description && (
-          <p className="mt-0.5 line-clamp-3 text-xs text-secondary">
-            {embed.description}
-          </p>
+          <p className="mt-0.5 line-clamp-3 text-xs text-secondary">{embed.description}</p>
         )}
         {localImageUrl ? (
           <img src={localImageUrl} alt="" className="mt-2 max-h-40 w-auto rounded-md" />

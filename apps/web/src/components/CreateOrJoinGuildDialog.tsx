@@ -103,14 +103,13 @@ export function CreateOrJoinGuildDialog({ open, onClose }: { open: boolean; onCl
       className="w-full max-w-sm p-6"
       aria-label="Add a server"
     >
-      <div className="mb-4 flex gap-4" role="tablist">
+      <div className="mb-5 flex gap-1 rounded-lg bg-input p-1" role="tablist">
         <button
           type="button"
           role="tab"
           aria-selected={tab === "create"}
           onClick={() => setTab("create")}
-          className="text-sm font-medium"
-          style={{ color: tab === "create" ? "var(--color-text-primary)" : "var(--color-text-muted)" }}
+          className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium ${tab === "create" ? "bg-active text-primary" : "text-muted hover:text-secondary"}`}
         >
           Create a server
         </button>
@@ -119,8 +118,7 @@ export function CreateOrJoinGuildDialog({ open, onClose }: { open: boolean; onCl
           role="tab"
           aria-selected={tab === "join"}
           onClick={() => setTab("join")}
-          className="text-sm font-medium"
-          style={{ color: tab === "join" ? "var(--color-text-primary)" : "var(--color-text-muted)" }}
+          className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium ${tab === "join" ? "bg-active text-primary" : "text-muted hover:text-secondary"}`}
         >
           Join a server
         </button>
@@ -147,11 +145,7 @@ export function CreateOrJoinGuildDialog({ open, onClose }: { open: boolean; onCl
             <button type="button" onClick={onClose} className="btn btn-ghost">
               Cancel
             </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="btn btn-primary"
-            >
+            <button type="submit" disabled={pending} className="btn btn-primary">
               {pending ? "Creating..." : "Create"}
             </button>
           </div>
@@ -178,11 +172,7 @@ export function CreateOrJoinGuildDialog({ open, onClose }: { open: boolean; onCl
             <button type="button" onClick={onClose} className="btn btn-ghost">
               Cancel
             </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="btn btn-primary"
-            >
+            <button type="submit" disabled={pending} className="btn btn-primary">
               {pending ? "Joining..." : "Join"}
             </button>
           </div>

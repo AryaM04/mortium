@@ -61,12 +61,14 @@ export default function GroupDmMembers({ channel }: { channel: DmChannelJson }) 
       aria-label="Group members"
       className="panel flex w-60 shrink-0 flex-col gap-1 overflow-y-auto p-2"
     >
-      <div className="eyebrow mb-1 mt-2 px-2">
-        Members ({channel.recipients.length})
-      </div>
+      <div className="eyebrow mb-1 mt-2 px-2">Members ({channel.recipients.length})</div>
       <ul className="flex flex-col gap-0.5">
         {channel.recipients.map((user) => (
-          <li key={user.id} className="group flex h-10 items-center gap-2.5 rounded-lg px-2 hover:bg-hover" data-group-member={user.displayName}>
+          <li
+            key={user.id}
+            className="group flex h-10 items-center gap-2.5 rounded-lg px-2 hover:bg-hover"
+            data-group-member={user.displayName}
+          >
             <div className="relative">
               <Avatar user={user} size={28} />
               <span
@@ -77,7 +79,10 @@ export default function GroupDmMembers({ channel }: { channel: DmChannelJson }) 
             </div>
             <span className="min-w-0 flex-1 truncate text-sm">{user.displayName}</span>
             {user.id === channel.ownerId && (
-              <span className="rounded bg-warning-soft px-1.5 py-0.5 text-[11px] font-medium text-warning-text" title="Group owner">
+              <span
+                className="rounded bg-warning-soft px-1.5 py-0.5 text-[11px] font-medium text-warning-text"
+                title="Group owner"
+              >
                 Owner
               </span>
             )}
@@ -85,7 +90,9 @@ export default function GroupDmMembers({ channel }: { channel: DmChannelJson }) 
               <button
                 type="button"
                 aria-label={`Remove ${user.displayName} from the group`}
-                onClick={() => void run(() => removeDmRecipient(session.apiClient, channel.id, user.id))}
+                onClick={() =>
+                  void run(() => removeDmRecipient(session.apiClient, channel.id, user.id))
+                }
                 className="btn btn-danger-ghost hidden px-1.5 py-0.5 text-xs group-hover:inline-flex group-focus-within:inline-flex"
               >
                 Remove
@@ -116,7 +123,11 @@ export default function GroupDmMembers({ channel }: { channel: DmChannelJson }) 
           <div className="card flex flex-col gap-2 rounded-lg p-2.5 text-sm">
             <span>Leave this group? You cannot come back unless the owner adds you again.</span>
             <div className="flex justify-end gap-1">
-              <button type="button" onClick={() => setConfirmingLeave(false)} className="btn btn-ghost px-2 py-1 text-xs">
+              <button
+                type="button"
+                onClick={() => setConfirmingLeave(false)}
+                className="btn btn-ghost px-2 py-1 text-xs"
+              >
                 Cancel
               </button>
               <button

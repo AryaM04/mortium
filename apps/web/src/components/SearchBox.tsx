@@ -11,7 +11,10 @@ export function SearchBox({ guildId }: { guildId: string | null }) {
   return (
     <div className="ml-auto shrink-0 px-2">
       <div className="relative">
-        <SearchIcon size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
+        <SearchIcon
+          size={14}
+          className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted"
+        />
         <input
           type="search"
           aria-label="Search messages"

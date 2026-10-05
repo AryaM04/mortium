@@ -38,7 +38,11 @@ export default function DesktopSettings() {
         Change server
       </button>
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={closeToTray} onChange={(event) => toggleCloseToTray(event.target.checked)} />
+        <input
+          type="checkbox"
+          checked={closeToTray}
+          onChange={(event) => toggleCloseToTray(event.target.checked)}
+        />
         Keep the app in the tray when I close the window
       </label>
       {error && (
