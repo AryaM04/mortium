@@ -300,6 +300,30 @@ describeWithDb("gateway", () => {
     void memberReady;
   });
 
+  it("sends no dispatch before READY, and sends a dispatch made during the READY build right after READY", async () => {
+    const user = await registerUser();
+    const createSession = gateway.createSession.bind(gateway);
+    // A change that commits after the server registers the session, while it builds READY.
+    const spy = vi.spyOn(gateway, "createSession").mockImplementation((socket, userId, deviceId) => {
+      const info = createSession(socket, userId, deviceId);
+      gateway.toUser(userId, "PRESENCE_UPDATE", { userId: "1", status: "online" });
+      return info;
+    });
+    try {
+      const ws = await connectRaw();
+      openSockets.push(ws);
+      await nextMessage(ws, (env) => env.op === GatewayOpcode.HELLO);
+      ws.send(JSON.stringify({ op: GatewayOpcode.IDENTIFY, d: { accessToken: user.accessToken, deviceId: user.deviceId } }));
+
+      const first = await nextMessage(ws, (env) => env.op === GatewayOpcode.DISPATCH);
+      expect(first.t).toBe("READY");
+      const second = await nextMessage(ws, (env) => env.op === GatewayOpcode.DISPATCH);
+      expect(second).toMatchObject({ t: "PRESENCE_UPDATE", s: 1 });
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("replays exactly the missed dispatches on RESUME", async () => {
     const owner = await registerUser();
     const guild = await createGuild(owner.accessToken);

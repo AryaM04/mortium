@@ -149,3 +149,8 @@ export class SizedLruCache<V> {
 export function claimAttachment(api: ApiClient, id: string): Promise<void> {
   return api.request("POST", `/attachments/${id}/claim`);
 }
+
+/** Delete a file that this user uploaded, so that it does not count toward the quota. */
+export function deleteAttachment(api: ApiClient, id: string): Promise<void> {
+  return api.request("DELETE", `/attachments/${id}`);
+}

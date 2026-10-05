@@ -5,7 +5,7 @@
 import { and, eq } from "drizzle-orm";
 import { DispatchEvent, Permission, type PutOverwriteRequest } from "@mortium/shared";
 import type { DbClient } from "../../db/client.js";
-import { channels, permissionOverwrites } from "../../db/schema.js";
+import { channels, guildMembers, permissionOverwrites, roles } from "../../db/schema.js";
 import { AppError } from "../../errors.js";
 import type { GatewayService } from "../gateway/service.js";
 import type { VoiceService } from "../voice/service.js";
@@ -29,6 +29,25 @@ async function loadChannelOrThrow(db: DbClient, channelId: bigint) {
   return channel as typeof channel & { guildId: bigint };
 }
 
+/** Throw 400 when the target is not a role or a member of this guild. */
+async function requireOverwriteTarget(db: DbClient, guildId: bigint, targetId: bigint, type: "role" | "member"): Promise<void> {
+  const rows =
+    type === "role"
+      ? await db
+          .select({ id: roles.id })
+          .from(roles)
+          .where(and(eq(roles.id, targetId), eq(roles.guildId, guildId)))
+          .limit(1)
+      : await db
+          .select({ id: guildMembers.userId })
+          .from(guildMembers)
+          .where(and(eq(guildMembers.userId, targetId), eq(guildMembers.guildId, guildId)))
+          .limit(1);
+  if (!rows[0]) {
+    throw new AppError(400, "INVALID_TARGET", "The target must be a role or a member of this guild.");
+  }
+}
+
 export async function putOverwrite(
   deps: OverwritesDeps,
   channelId: bigint,
@@ -48,6 +67,8 @@ export async function putOverwrite(
   const allow = BigInt(input.allow);
   const deny = BigInt(input.deny);
   requireGrantableMask(context, actorPermissions, allow | deny);
+
+  await requireOverwriteTarget(db, channel.guildId, targetId, input.type);
 
   const before = await snapshotViewableChannels(db, channel.guildId, await loadGuildMemberIds(db, channel.guildId));
 

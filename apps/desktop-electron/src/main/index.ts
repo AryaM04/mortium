@@ -23,6 +23,7 @@ import {
 import type { DesktopEvents, DesktopOs } from "@mortium/shared";
 import { APP_HOST, APP_ORIGIN, APP_SCHEME, DEEP_LINK_SCHEME, eventChannel } from "../shared/channels.js";
 import { createAppProtocolHandler } from "./app-protocol.js";
+import { registerAppImageLinks } from "./appimage-links.js";
 import { deepLinksIn, PendingLinks } from "./deep-links.js";
 import { createCallHandlers, registerCalls, type DesktopServices } from "./ipc.js";
 import { JsonFile } from "./json-file.js";
@@ -322,8 +323,15 @@ function start(): void {
     });
 
     if (app.isPackaged) {
-      // The deb package also registers the scheme in its desktop file.
-      app.setAsDefaultProtocolClient(DEEP_LINK_SCHEME);
+      const appImage = process.env.APPIMAGE;
+      if (appImage) {
+        registerAppImageLinks(appImage, DEEP_LINK_SCHEME, process.env).catch((error: unknown) => {
+          console.warn("The app could not register the mortium:// links.", error);
+        });
+      } else {
+        // The deb package also registers the scheme in its desktop file.
+        app.setAsDefaultProtocolClient(DEEP_LINK_SCHEME);
+      }
     }
     createWindow();
   });

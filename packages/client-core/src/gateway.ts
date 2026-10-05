@@ -236,12 +236,23 @@ export function createGatewayClient(options: CreateGatewayClientOptions): Gatewa
   }
 
   async function identify(): Promise<void> {
+    const current = socket;
     const accessToken = await options.api.getAccessToken();
+    // A new socket can replace this one while the token loads.
+    if (socket !== current) {
+      return;
+    }
+    // A new session starts. Its sequence numbers start again at 1.
+    lastSequence = 0;
     rawSend({ op: GatewayOpcode.IDENTIFY, d: { accessToken, deviceId: options.deviceId } });
   }
 
   async function resume(): Promise<void> {
+    const current = socket;
     const accessToken = await options.api.getAccessToken();
+    if (socket !== current) {
+      return;
+    }
     rawSend({
       op: GatewayOpcode.RESUME,
       d: { accessToken, sessionId, lastSequence },
@@ -271,8 +282,9 @@ export function createGatewayClient(options: CreateGatewayClientOptions): Gatewa
       if (!parsed.success) {
         return;
       }
+      // Do not set lastSequence here. IDENTIFY already set it to 0. A lower
+      // value than a seen one would make a later RESUME replay old dispatches.
       sessionId = parsed.data.sessionId;
-      lastSequence = 0;
       hadReadySession = true;
       reconnectAttempt = 0;
       consecutiveAuthFailures = 0;
@@ -394,6 +406,8 @@ export function createGatewayClient(options: CreateGatewayClientOptions): Gatewa
       return;
     }
     clearReconnectTimer();
+    // Remove the old socket first. Its late close must not close the new socket.
+    teardownSocket();
 
     const nextSocket = createSocket(options.url);
     socket = nextSocket;
@@ -408,7 +422,9 @@ export function createGatewayClient(options: CreateGatewayClientOptions): Gatewa
   }
 
   function handleOnline(): void {
-    if (state === "reconnecting") {
+    // Connect at once only while the client waits for the reconnect timer.
+    // A socket that is open or opens now needs no second socket.
+    if (state === "reconnecting" && !socket) {
       clearReconnectTimer();
       connect();
     }

@@ -12,6 +12,8 @@
 # (optional: an age public key; the files are then encrypted to this key).
 
 set -eu
+# The image runs BusyBox ash, which has pipefail.
+# shellcheck disable=SC3040
 set -o pipefail
 
 BACKUP_DIR=/backup
@@ -80,7 +82,8 @@ case "${1:-loop}" in
   loop)
     while true; do
       now=$(date -u +%s)
-      hour=${BACKUP_HOUR:-3}
+      # Remove leading zeros. The shell reads "08" as a wrong octal number.
+      hour=$(echo "${BACKUP_HOUR:-3}" | sed 's/^0*\([0-9]\)/\1/')
       wait=$(( (86400 + hour * 3600 - now % 86400) % 86400 ))
       echo "The next backup starts in $wait seconds."
       sleep "$wait"

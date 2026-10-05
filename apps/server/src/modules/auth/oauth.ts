@@ -152,7 +152,8 @@ async function findUserByEmail(db: DbClient, email: string): Promise<UserRow | u
 
 /**
  * Turn a verified OAuth profile into a user row: reuse the linked account,
- * link a new provider to a matching verified email, or make a new user.
+ * link a new provider to an account with the same verified email, or make
+ * a new user.
  * This function never talks to a real OAuth provider, so tests can call it
  * directly with a made-up profile.
  */
@@ -179,6 +180,16 @@ export async function completeOAuthLogin(
   if (profile.emailVerified) {
     const existingByEmail = await findUserByEmail(db, profile.email);
     if (existingByEmail) {
+      // Another person can register this email with a password and not
+      // verify it. A link would then give that person access to the
+      // account of the real owner. Link only to a verified account.
+      if (!existingByEmail.emailVerified) {
+        throw new AppError(
+          409,
+          "OAUTH_ACCOUNT_NOT_VERIFIED",
+          "An account with this email address exists, but its email is not verified. Sign in with the password and verify the email first.",
+        );
+      }
       await db
         .insert(oauthAccounts)
         .values({ provider, providerUserId: profile.providerUserId, userId: existingByEmail.id });

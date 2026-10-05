@@ -58,6 +58,9 @@ ciphertext. It never gets a key, a file name or a file type.
   the channel of the file. The response has `Cache-Control: private` and
   `X-Content-Type-Options: nosniff`.
 - Claim: only the uploader can claim a file. A second claim does nothing.
+- Delete: `DELETE /attachments/:id` removes the file and its row. Only the
+  uploader can delete a file. Other users get 404. The space returns to the
+  quota of the uploader.
 
 ## Cleanup
 
@@ -69,9 +72,11 @@ encrypted. Thus:
 - The rows of a deleted channel go with the channel. The cleanup deletes
   a file with no row when it is older than 24 hours, and a temp file older
   than one hour.
-- When a user deletes a message, its files stay. The server cannot map
-  the redacted event to its files. The files count toward the quota of the
-  uploader. A later pass can add a delete route that the client calls.
+- The server cannot map a redacted event to its files. Thus, when a user
+  deletes an own message, the client calls `DELETE /attachments/:id` for
+  each file, thumbnail and embed image of that message.
+- When a moderator deletes the message of another user, the files stay.
+  They count toward the quota of the uploader.
 
 ## Code
 

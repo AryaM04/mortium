@@ -4,7 +4,7 @@ import { hasPermission, Permission } from "@mortium/shared";
 import { DispatchEvent } from "@mortium/shared";
 import type { AppConfig } from "../../config.js";
 import type { DbClient } from "../../db/client.js";
-import { channels, guildMembers, guilds, memberRoles, roles, users } from "../../db/schema.js";
+import { channels, guildMembers, guilds, memberRoles, permissionOverwrites, roles, users } from "../../db/schema.js";
 import { AppError } from "../../errors.js";
 import { nextId } from "../../id.js";
 import type { GatewayService } from "../gateway/service.js";
@@ -240,6 +240,27 @@ export async function removeGuildIcon(deps: GuildsDeps, guildId: bigint, userId:
   return buildGuildView(db, guildId, userId);
 }
 
+/**
+ * Remove a member row, with the roles and the member overwrites of that
+ * member in this guild. A later rejoin then starts with no old permissions.
+ */
+export async function deleteMembership(db: DbClient, guildId: bigint, userId: bigint): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.delete(guildMembers).where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, userId)));
+    await tx.delete(memberRoles).where(and(eq(memberRoles.guildId, guildId), eq(memberRoles.userId, userId)));
+    const guildChannels = tx.select({ id: channels.id }).from(channels).where(eq(channels.guildId, guildId));
+    await tx
+      .delete(permissionOverwrites)
+      .where(
+        and(
+          eq(permissionOverwrites.targetType, "member"),
+          eq(permissionOverwrites.targetId, userId),
+          inArray(permissionOverwrites.channelId, guildChannels),
+        ),
+      );
+  });
+}
+
 export async function leaveGuild(deps: GuildsDeps, guildId: bigint, userId: bigint): Promise<void> {
   const { db, gateway, voice } = deps;
   const context = await loadMemberContext(db, guildId, userId);
@@ -249,7 +270,7 @@ export async function leaveGuild(deps: GuildsDeps, guildId: bigint, userId: bigi
   if (context.isOwner) {
     throw new AppError(409, "OWNER_CANNOT_LEAVE", "The guild owner cannot leave. Delete the guild instead.");
   }
-  await db.delete(guildMembers).where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, userId)));
+  await deleteMembership(db, guildId, userId);
 
   gateway?.toGuild(guildId, DispatchEvent.GUILD_MEMBER_REMOVE, { guildId: guildId.toString(), userId: userId.toString() });
   gateway?.toUser(userId, DispatchEvent.GUILD_DELETE, { id: guildId.toString() });

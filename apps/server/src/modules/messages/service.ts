@@ -121,6 +121,24 @@ export interface CreateEventResult {
   created: boolean;
 }
 
+/**
+ * Find the event that this device posted before with this nonce. Returns
+ * undefined when no such event exists. Throws 409 when the event is in
+ * another channel, because a nonce is unique for each device.
+ */
+async function findEventByNonce(db: DbClient, channelId: bigint, deviceId: string, nonce: string): Promise<EventRow | undefined> {
+  const rows = await db
+    .select()
+    .from(events)
+    .where(and(eq(events.senderDeviceId, deviceId), eq(events.nonce, nonce)))
+    .limit(1);
+  const row = rows[0];
+  if (row && row.channelId !== channelId) {
+    throw new AppError(409, "NONCE_USED", "This device already used this nonce in another channel.");
+  }
+  return row;
+}
+
 export async function createEvent(
   db: DbClient,
   channelId: bigint,
@@ -129,18 +147,15 @@ export async function createEvent(
   input: CreateEventInput,
   gateway?: GatewayService,
 ): Promise<CreateEventResult> {
-  const existing = await db
-    .select()
-    .from(events)
-    .where(and(eq(events.senderDeviceId, deviceId), eq(events.nonce, input.nonce)))
-    .limit(1);
-  if (existing[0]) {
-    return { event: existing[0], created: false };
-  }
-
   const access = await loadChannelAccess(db, channelId, userId);
   const permissions = await access.permissions();
   requireChannelPermission(permissions, Permission.VIEW_CHANNEL);
+
+  const existing = await findEventByNonce(db, channelId, deviceId, input.nonce);
+  if (existing) {
+    return { event: existing, created: false };
+  }
+
   await requireCanMessage(db, access.channel, userId);
 
   let target: EventRow | undefined;
@@ -191,13 +206,9 @@ export async function createEvent(
     // the same (device, nonce) pair; the unique index lets only one insert
     // through, and the loser looks up the winner's row instead of failing.
     if (isUniqueViolation(error)) {
-      const winner = await db
-        .select()
-        .from(events)
-        .where(and(eq(events.senderDeviceId, deviceId), eq(events.nonce, input.nonce)))
-        .limit(1);
-      if (winner[0]) {
-        return { event: winner[0], created: false };
+      const winner = await findEventByNonce(db, channelId, deviceId, input.nonce);
+      if (winner) {
+        return { event: winner, created: false };
       }
     }
     throw error;
@@ -224,24 +235,33 @@ export interface EventRateLimiter {
   check(userId: bigint): RateLimitResult;
 }
 
-/** A simple in-memory sliding window: at most `maxEvents` per `windowMs`, per user. */
+/**
+ * A simple in-memory sliding window: at most `maxEvents` per `windowMs`, per user.
+ * At most once per window, a check removes the users with no recent event,
+ * so the map does not grow with each user who ever posted.
+ */
 export function createEventRateLimiter(maxEvents = 10, windowMs = 5000): EventRateLimiter {
   const hits = new Map<string, number[]>();
+  let lastSweep = Date.now();
   return {
     check(userId: bigint): RateLimitResult {
       const key = userId.toString();
       const now = Date.now();
+      if (now - lastSweep >= windowMs) {
+        lastSweep = now;
+        for (const [otherKey, list] of hits) {
+          if (now - list[list.length - 1]! >= windowMs) {
+            hits.delete(otherKey);
+          }
+        }
+      }
       const timestamps = (hits.get(key) ?? []).filter((t) => now - t < windowMs);
       if (timestamps.length >= maxEvents) {
         hits.set(key, timestamps);
         return { allowed: false, retryAfterMs: windowMs - (now - timestamps[0]!) };
       }
       timestamps.push(now);
-      if (timestamps.length === 0) {
-        hits.delete(key);
-      } else {
-        hits.set(key, timestamps);
-      }
+      hits.set(key, timestamps);
       return { allowed: true, retryAfterMs: 0 };
     },
   };

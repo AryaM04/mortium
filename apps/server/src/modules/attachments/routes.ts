@@ -1,4 +1,4 @@
-// Encrypted attachment routes: upload, download and claim. The body of an
+// Encrypted attachment routes: upload, download, claim and delete. The body of an
 // upload is raw ciphertext (application/octet-stream). It streams to disk.
 import type { Readable } from "node:stream";
 import type { FastifyInstance } from "fastify";
@@ -7,7 +7,7 @@ import { AppError } from "../../errors.js";
 import { parseId } from "../../id.js";
 import { checkRate } from "../keys/routes.js";
 import { createEventRateLimiter } from "../messages/service.js";
-import { claimAttachment, openAttachment, uploadAttachment } from "./service.js";
+import { claimAttachment, deleteAttachment, openAttachment, uploadAttachment } from "./service.js";
 
 const UPLOADS_PER_MINUTE = 60;
 
@@ -53,6 +53,12 @@ export async function registerAttachmentRoutes(app: FastifyInstance, deps: AppDe
 
   app.post("/attachments/:id/claim", { preHandler: app.authenticate }, async (request, reply) => {
     await claimAttachment(deps.db, parseId((request.params as { id: string }).id), request.auth!.userId);
+    return reply.status(204).send();
+  });
+
+  app.delete("/attachments/:id", { preHandler: app.authenticate }, async (request, reply) => {
+    const id = parseId((request.params as { id: string }).id);
+    await deleteAttachment(deps.db, deps.config.dataDir, id, request.auth!.userId);
     return reply.status(204).send();
   });
 }

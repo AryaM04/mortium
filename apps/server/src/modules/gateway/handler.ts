@@ -262,6 +262,8 @@ export function registerGatewayRoute(
         return;
       }
       send(GatewayOpcode.DISPATCH, ready, { t: "READY" });
+      // Dispatches made while READY was built waited in the session buffer. Send them now.
+      gateway.markSessionReady(session.id);
       delivery?.start(session.id, claims.deviceId);
     }
 

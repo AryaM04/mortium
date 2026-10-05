@@ -142,9 +142,22 @@ The script needs `git`, `curl` and `flock`. Ubuntu and Debian have them.
    ```
 
 The script writes one line for each deploy to `.deploy/deploy.log`, and
-the build output of the last deploy to `.deploy/last-deploy.log`. When CI
-or the build fails, the stack stays on the old commit. The next commit
-starts a new deploy. To try the same commit again, remove `.deploy/skip`.
+the build output of the last deploy to `.deploy/last-deploy.log`. It keeps
+the last commit that built correctly in `.deploy/deployed`, and deploys
+when the main branch has a different commit. The first run has no
+`.deploy/deployed` file, so it builds the current commit one time.
+
+When the deploy of a commit fails, the stack stays on the old containers:
+
+- When CI fails, the script does not try that commit again.
+- When the build fails, the next run tries the build again one time. After
+  a second failure, the script does not try that commit again.
+- When the merge cannot fast-forward, the script does not try that commit
+  again.
+
+In each of these cases, the script writes the commit to `.deploy/skip`. The
+next commit on main starts a new deploy. To try the same commit again,
+remove `.deploy/skip`.
 
 CAUTION: The script only fast-forwards. Do not change tracked files in the
 stack folder, or the deploy stops. Keep host values in `.env`.
@@ -324,6 +337,21 @@ one time. Then start the stack:
 docker compose run --rm --no-deps --user 0 --cap-add CHOWN --cap-add FOWNER --entrypoint chown caddy -R 10001:10001 /data /config
 docker compose up -d --build
 ```
+
+### Update a database from before the key tables changed
+
+The database migration `0008_m6_keys_and_to_device` adds required columns
+to the key tables. On a database that has rows in these tables from before
+this migration, the migration fails, and the API does not start. A new
+database, or a database that already has this migration, needs no step.
+
+1. Show the number of migrations that the database has:
+   `docker compose exec postgres sh -c 'psql -U $POSTGRES_USER -d $POSTGRES_DB -tAc "select count(*) from drizzle.__drizzle_migrations"'`.
+2. If the number is 9 or more, stop here. This step is not necessary.
+3. Delete the old key rows. Clients cannot use these rows, and the devices
+   upload new keys when they start:
+   `docker compose exec postgres sh -c 'psql -U $POSTGRES_USER -d $POSTGRES_DB -c "delete from cross_signing_keys; delete from fallback_keys; delete from one_time_keys; delete from to_device_queue;"'`.
+4. Start the stack: `docker compose up -d --build`.
 
 ## 12. Troubleshooting
 

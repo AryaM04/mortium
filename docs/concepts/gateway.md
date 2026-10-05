@@ -43,6 +43,14 @@ starting at 1. Every event the server sends to that session (a
 number it saw, so it can ask the server to resume from that point after a
 short drop in the connection.
 
+The server registers the session before it builds `READY`. A change in
+that time makes a dispatch, but the dispatch waits in the session buffer.
+The server sends these dispatches right after `READY`, in order. Thus no
+dispatch arrives before `READY`. A dispatch can repeat a change that
+`READY` already has. The client stores the new state of the object, so a
+repeated dispatch does no harm. The client sets its last sequence number
+to 0 when it sends `IDENTIFY`, not when `READY` arrives.
+
 ## Heartbeat
 
 The client must send `HEARTBEAT` on the interval `HELLO` gave it. The

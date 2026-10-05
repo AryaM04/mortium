@@ -75,7 +75,9 @@ The `nonce` exists so a client can safely retry a post that may or may not
 have reached the server (a dropped connection, a timeout): the same
 (device, nonce) pair always returns the same event, with 200 instead of
 201 the second time. A unique index on the database enforces this, so no
-in-memory table is needed.
+in-memory table is needed. The server checks the channel access before it
+looks at the nonce. A nonce that the device used in a different channel
+gets 409 `NONCE_USED`.
 
 A user cannot post more than 10 events in 5 seconds; past that the server
 answers 429 with `retryAfterMs`.

@@ -1,11 +1,11 @@
 // Integration tests for kick, ban, unban, voice moderation and owner
 // transfer. Real Postgres, driven through app.inject (see test/db.ts).
 import type { FastifyInstance } from "fastify";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { encodeBase64Url, encodePlainPayload, Permission } from "@mortium/shared";
 import { buildApp } from "../../app.js";
-import { events } from "../../db/schema.js";
+import { events, memberRoles, permissionOverwrites } from "../../db/schema.js";
 import { createFakeMailer } from "../../mailer.js";
 import { createTestDb, describeWithDb, type TestDb } from "../../../test/db.js";
 import { buildTestConfig, mkTempDataDir, passwordFields } from "../../../test/helpers.js";
@@ -115,6 +115,51 @@ describeWithDb("kick, ban, unban, voice moderation and ownership transfer", () =
       headers: authHeader(target.accessToken),
     });
     expect(gone.statusCode).toBe(404);
+  });
+
+  it("gives a kicked member who joins again no old roles and no old member overwrites", async () => {
+    const owner = await registerUser();
+    const target = await registerUser();
+    const bystander = await registerUser();
+    const guild = await createGuild(owner.accessToken);
+    const textChannel = textChannelOf(guild);
+    await joinGuild(owner.accessToken, guild.id, textChannel, target.accessToken);
+    await joinGuild(owner.accessToken, guild.id, textChannel, bystander.accessToken);
+    await grantRole(owner.accessToken, guild.id, target.userId, Permission.KICK_MEMBERS);
+    const overwrite = await app.inject({
+      method: "PUT",
+      url: `/api/v1/channels/${textChannel}/overwrites/${target.userId}`,
+      headers: authHeader(owner.accessToken),
+      payload: { type: "member", allow: Permission.MANAGE_MESSAGES.toString(), deny: "0" },
+    });
+    expect(overwrite.statusCode).toBe(204);
+
+    const kicked = await app.inject({
+      method: "DELETE",
+      url: `/api/v1/guilds/${guild.id}/members/${target.userId}`,
+      headers: authHeader(owner.accessToken),
+    });
+    expect(kicked.statusCode).toBe(204);
+    await joinGuild(owner.accessToken, guild.id, textChannel, target.accessToken);
+
+    const roleRows = await testDb.db
+      .select()
+      .from(memberRoles)
+      .where(and(eq(memberRoles.guildId, BigInt(guild.id)), eq(memberRoles.userId, BigInt(target.userId))));
+    expect(roleRows).toHaveLength(0);
+    const overwriteRows = await testDb.db
+      .select()
+      .from(permissionOverwrites)
+      .where(eq(permissionOverwrites.targetId, BigInt(target.userId)));
+    expect(overwriteRows).toHaveLength(0);
+
+    // The old KICK_MEMBERS role does not apply after the rejoin.
+    const kickAttempt = await app.inject({
+      method: "DELETE",
+      url: `/api/v1/guilds/${guild.id}/members/${bystander.userId}`,
+      headers: authHeader(target.accessToken),
+    });
+    expect(kickAttempt.statusCode).toBe(403);
   });
 
   it("nobody can kick or ban the guild owner", async () => {

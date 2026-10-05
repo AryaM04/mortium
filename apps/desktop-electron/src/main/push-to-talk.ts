@@ -152,6 +152,8 @@ export interface KeyHook {
  */
 export class GlobalPushToTalk {
   private stopCurrent: (() => void) | null = null;
+  /** Counts the `set` calls. A call that a later call replaced while it waited does nothing. */
+  private generation = 0;
 
   constructor(
     private readonly loadHook: () => Promise<KeyHook>,
@@ -160,6 +162,7 @@ export class GlobalPushToTalk {
 
   /** Use this shortcut, or no shortcut (null). Rejects when the key is not valid or the hook does not start. */
   async set(shortcut: string | null): Promise<void> {
+    const generation = ++this.generation;
     this.stopCurrent?.();
     this.stopCurrent = null;
     if (shortcut === null) {
@@ -171,6 +174,9 @@ export class GlobalPushToTalk {
       hook = await this.loadHook();
     } catch {
       throw new Error(PUSH_TO_TALK_UNAVAILABLE);
+    }
+    if (generation !== this.generation) {
+      return;
     }
     let pressed = false;
     const down = (event: KeyEvent) => {

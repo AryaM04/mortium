@@ -25,7 +25,7 @@ import {
 } from "@mortium/shared";
 import type { DbClient } from "../../db/client.js";
 import { channelRecipients, channels, friendships, guildMembers } from "../../db/schema.js";
-import { channelPermissions, loadMemberContext } from "../guilds/member-context.js";
+import { loadGuildPermissionData, loadOverwrites, memberChannelPermissions } from "../guilds/member-context.js";
 
 /** How many dispatches a session keeps, so a RESUME can replay them. */
 export const RESUME_BUFFER_SIZE = 500;
@@ -63,6 +63,11 @@ interface Session {
   buffer: BufferedDispatch[];
   /** Set when the socket disconnects. The session is dropped once this fires. */
   expiryTimer: ReturnType<typeof setTimeout> | null;
+  /**
+   * False until READY went out. Until then, dispatches wait in the buffer,
+   * so that no dispatch arrives before READY.
+   */
+  ready: boolean;
 }
 
 const OPEN = 1; // WebSocket.OPEN, duplicated here to avoid an import for one constant.
@@ -90,10 +95,25 @@ export class GatewayService {
   /** Create a new session for a freshly identified connection. */
   createSession(ws: GatewaySocket, userId: bigint, deviceId: string): SessionInfo {
     const id = randomBytes(16).toString("base64url");
-    const session: Session = { id, userId, deviceId, ws, seq: 0, buffer: [], expiryTimer: null };
+    const session: Session = { id, userId, deviceId, ws, seq: 0, buffer: [], expiryTimer: null, ready: false };
     this.sessions.set(id, session);
     this.addUserSession(userId, id);
     return { id, userId, deviceId };
+  }
+
+  /**
+   * Send the dispatches that waited for READY, in order. Call this right
+   * after READY went out on the socket of the session.
+   */
+  markSessionReady(sessionId: string): void {
+    const session = this.sessions.get(sessionId);
+    if (!session || session.ready) {
+      return;
+    }
+    session.ready = true;
+    for (const entry of session.buffer) {
+      this.sendRaw(session, entry.seq, entry.t, entry.d);
+    }
   }
 
   /** True when a live (non-ghost) session with this id belongs to this user. */
@@ -138,6 +158,8 @@ export class GatewayService {
       session.ws.close(1000, "The session resumed on another connection.");
     }
     session.ws = ws;
+    // The caller sends the replay, so later dispatches can go out at once.
+    session.ready = true;
     this.addUserSession(userId, sessionId);
 
     const replay = session.buffer.filter((entry) => entry.seq > lastSequence);
@@ -463,29 +485,24 @@ export class GatewayService {
   }
 
   /**
-   * Every member of `guildId` who can currently view `channelId`, one
-   * permission check pass over the guild's members (one query set per
-   * call, not per member). Call this BEFORE a channel delete commits, so
-   * the overwrite rows (cascaded away by the delete) are still there.
+   * Every member of `guildId` who can currently view `channelId`. The
+   * server loads the guild data once and computes the permissions in
+   * memory, with no queries for each member. Call this BEFORE a channel
+   * delete commits, so the overwrite rows (cascaded away by the delete) are
+   * still there.
    */
   async computeChannelViewers(db: DbClient, guildId: bigint, channelId: bigint): Promise<bigint[]> {
-    const memberUserIds = this.guildUsers.get(guildId.toString());
-    if (!memberUserIds) {
+    if (!this.guildUsers.has(guildId.toString())) {
       return [];
     }
-    const viewers: bigint[] = [];
-    for (const userIdText of memberUserIds) {
-      const userId = BigInt(userIdText);
-      const context = await loadMemberContext(db, guildId, userId);
-      if (!context) {
-        continue;
-      }
-      const permissions = await channelPermissions(db, channelId, context);
-      if (hasPermission(permissions, Permission.VIEW_CHANNEL)) {
-        viewers.push(userId);
-      }
+    const [data, overwrites] = await Promise.all([loadGuildPermissionData(db, guildId), loadOverwrites(db, [channelId])]);
+    if (!data) {
+      return [];
     }
-    return viewers;
+    const channelOverwrites = overwrites.get(channelId) ?? [];
+    return data.memberIds.filter((userId) =>
+      hasPermission(memberChannelPermissions(data, userId, channelOverwrites), Permission.VIEW_CHANNEL),
+    );
   }
 
   /**
@@ -556,7 +573,9 @@ export class GatewayService {
     if (session.buffer.length > RESUME_BUFFER_SIZE) {
       session.buffer.shift();
     }
-    this.sendRaw(session, session.seq, t, d);
+    if (session.ready) {
+      this.sendRaw(session, session.seq, t, d);
+    }
   }
 
   private sendRaw(session: Session, seq: number, t: DispatchEventName, d: unknown): void {

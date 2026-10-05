@@ -7,6 +7,12 @@
 # The script reads DEPLOY_REPO (such as "owner/mortium") from .env. It
 # writes one line to .deploy/deploy.log for each deploy and each failure,
 # and the build output of the last deploy to .deploy/last-deploy.log.
+#
+# Files in .deploy:
+#   deployed  The last commit that built and started correctly.
+#   failed    A commit whose build failed one time. The next run tries again.
+#   skip      A commit that the script does not try again. Remove the file
+#             to try that commit again.
 set -eu
 
 # Cron gives a short PATH. Docker from the snap package is in /snap/bin.
@@ -35,7 +41,10 @@ if [ -z "$REMOTE" ]; then
   log "Cannot read the main branch of $URL."
   exit 1
 fi
-if [ "$REMOTE" = "$(git rev-parse HEAD)" ] || [ "$REMOTE" = "$(cat .deploy/skip 2> /dev/null)" ]; then
+# Compare with the last commit that built correctly, not with HEAD. After a
+# failed build, HEAD is already the new commit.
+DEPLOYED=$(cat .deploy/deployed 2> /dev/null || true)
+if [ "$REMOTE" = "$DEPLOYED" ] || [ "$REMOTE" = "$(cat .deploy/skip 2> /dev/null)" ]; then
   exit 0
 fi
 
@@ -47,21 +56,36 @@ if [ "$STATUS" != "completed" ]; then
   exit 0
 fi
 
-# A failed commit is not tried again. The next commit on main starts a new
-# deploy. To try the same commit again, remove the file .deploy/skip.
+# A commit that failed CI is not tried again. The next commit on main starts
+# a new deploy. To try the same commit again, remove the file .deploy/skip.
 if [ "$CONCLUSION" != "success" ]; then
-  log "CI did not pass on $REMOTE ($CONCLUSION). The stack stays on $(git rev-parse --short HEAD)."
+  log "CI did not pass on $REMOTE ($CONCLUSION). The stack stays on ${DEPLOYED:-the current commit}."
   echo "$REMOTE" > .deploy/skip
   exit 0
 fi
 
 log "Deploy $REMOTE."
-if git fetch -q "$URL" main && git merge -q --ff-only FETCH_HEAD &&
-  docker compose up -d --build > .deploy/last-deploy.log 2>&1; then
-  docker image prune -f > /dev/null
-  log "Deployed $REMOTE."
-else
-  log "The deploy of $REMOTE failed. See .deploy/last-deploy.log."
+if ! git fetch -q "$URL" main || ! git merge -q --ff-only FETCH_HEAD; then
+  log "Cannot fast-forward to $REMOTE. Remove the local changes, then remove .deploy/skip."
   echo "$REMOTE" > .deploy/skip
   exit 1
 fi
+if docker compose up -d --build > .deploy/last-deploy.log 2>&1; then
+  docker image prune -f > /dev/null
+  echo "$REMOTE" > .deploy/deployed
+  rm -f .deploy/failed .deploy/skip
+  log "Deployed $REMOTE."
+  exit 0
+fi
+
+# A build can fail for a short time, for example on a network error. Try a
+# failed build again one time. After a second failure, stop.
+if [ "$REMOTE" = "$(cat .deploy/failed 2> /dev/null)" ]; then
+  log "The deploy of $REMOTE failed again. See .deploy/last-deploy.log. To try again, remove .deploy/skip."
+  echo "$REMOTE" > .deploy/skip
+  rm -f .deploy/failed
+else
+  log "The deploy of $REMOTE failed. See .deploy/last-deploy.log. The next run tries again."
+  echo "$REMOTE" > .deploy/failed
+fi
+exit 1

@@ -86,6 +86,10 @@ jobs:
     if: needs.plan.outputs.release == 'true'
     strategy:
       fail-fast: false
+      # Run one job at a time. Each job reads latest.json, adds its platform
+      # and uploads the file again. Two jobs at the same time can write over
+      # the entry of the other job, or make two draft releases.
+      max-parallel: 1
       matrix:
         include:
           - os: windows-latest

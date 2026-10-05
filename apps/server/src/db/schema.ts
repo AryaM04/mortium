@@ -379,7 +379,7 @@ export const events = pgTable(
     codec: text("codec").notNull().default("plain-v1"),
     megolmSessionId: text("megolm_session_id"),
     ciphertext: bytea("ciphertext").notNull(),
-    /** A client-generated dedupe key. The same (device, nonce) pair within 10 minutes returns the first event. */
+    /** A client-generated dedupe key. The same (device, nonce) pair in the same channel returns the first event. */
     nonce: text("nonce").notNull(),
     redactedAt: timestamp("redacted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

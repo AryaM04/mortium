@@ -2,7 +2,8 @@
 // completeOAuthLogin directly with a made-up profile; they never call a
 // real OAuth provider.
 import { afterAll, beforeAll, expect, it } from "vitest";
-import { users } from "../../db/schema.js";
+import { eq } from "drizzle-orm";
+import { oauthAccounts, users } from "../../db/schema.js";
 import { createTestDb, describeWithDb, type TestDb } from "../../../test/db.js";
 import { completeOAuthLogin, generateUniqueUsername, sanitizeUsernameBase } from "./oauth.js";
 import { nextId } from "../../id.js";
@@ -124,6 +125,30 @@ describeWithDb("completeOAuthLogin", () => {
         usernameHint: "someone-else",
       }),
     ).rejects.toMatchObject({ code: "OAUTH_EMAIL_TAKEN" });
+  });
+
+  it("does not link a verified provider email to an account whose email is not verified", async () => {
+    // An attacker registers the email of the victim with a password and does not verify it.
+    await testDb.db.insert(users).values({
+      id: nextId(),
+      username: "squatter",
+      displayName: "Squatter",
+      email: "victim@example.com",
+      emailVerified: false,
+      passwordHash: "some-hash",
+    });
+
+    await expect(
+      completeOAuthLogin(testDb.db, "google", {
+        providerUserId: "google-victim",
+        email: "victim@example.com",
+        emailVerified: true,
+        usernameHint: "victim",
+      }),
+    ).rejects.toMatchObject({ statusCode: 409, code: "OAUTH_ACCOUNT_NOT_VERIFIED" });
+
+    const links = await testDb.db.select().from(oauthAccounts).where(eq(oauthAccounts.providerUserId, "google-victim"));
+    expect(links).toHaveLength(0);
   });
 
   it("makes a new account when the email is not verified and free", async () => {

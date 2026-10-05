@@ -8,6 +8,13 @@ import { AuthLayout } from "../components/AuthLayout.js";
 import { describeError } from "../lib/errors.js";
 import { session } from "../lib/session.js";
 
+/** Text for the sign-in errors that the user can correct. Other codes show as they are. */
+const ERROR_TEXT: Record<string, string> = {
+  OAUTH_ACCOUNT_NOT_VERIFIED:
+    "An account with this email address exists, but its email is not verified. Sign in with the password and verify the email first.",
+  OAUTH_EMAIL_TAKEN: "An account with this email address already exists. Verify this email with the provider to link it.",
+};
+
 export function AuthCallbackPage() {
   const [, navigate] = useLocation();
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +35,8 @@ export function AuthCallbackPage() {
     history.replaceState(null, "", window.location.pathname);
 
     if (errorMatch) {
-      setError(`Sign-in did not finish: ${decodeURIComponent(errorMatch[1]!)}`);
+      const code = decodeURIComponent(errorMatch[1]!);
+      setError(ERROR_TEXT[code] ?? `Sign-in did not finish: ${code}`);
       return;
     }
     if (!codeMatch) {

@@ -14,7 +14,7 @@ import {
   type EventJson,
 } from "@mortium/shared";
 import { ApiError, type ApiClient } from "./api.js";
-import { claimAttachment } from "./attachments.js";
+import { claimAttachment, deleteAttachment } from "./attachments.js";
 import type { PayloadCodec } from "./codec.js";
 import * as messagesApi from "./messages-api.js";
 
@@ -885,15 +885,18 @@ export function createMessagesStore(options: MessagesStoreOptions): StoreApi<Mes
     return trimWindow({ ...result, eventIds: [...next.eventIds, ...later], eventsById }, "after");
   }
 
+  /** The ids of all files of a message: the attachments, their thumbnails and the embed images. */
+  function fileIds(attachments: Attachment[] | undefined, embeds: Embed[] | undefined): string[] {
+    const embedImages = (embeds ?? []).flatMap((embed) => (embed.image ? [embed.image] : []));
+    return [...(attachments ?? []), ...embedImages].flatMap((attachment) =>
+      attachment.thumbnail ? [attachment.id, attachment.thumbnail.id] : [attachment.id],
+    );
+  }
+
   /** Claim the files of a sent message, so the server keeps them. A failed claim only logs: the next send claims again. */
   function claimAll(attachments: Attachment[] | undefined, embeds: Embed[] | undefined): void {
-    const embedImages = (embeds ?? []).flatMap((embed) => (embed.image ? [embed.image] : []));
-    for (const attachment of [...(attachments ?? []), ...embedImages]) {
-      for (const id of [attachment.id, attachment.thumbnail?.id]) {
-        if (id) {
-          claimAttachment(api, id).catch(() => {});
-        }
-      }
+    for (const id of fileIds(attachments, embeds)) {
+      claimAttachment(api, id).catch(() => {});
     }
   }
 
@@ -1061,7 +1064,17 @@ export function createMessagesStore(options: MessagesStoreOptions): StoreApi<Mes
     },
 
     async redact(channelId, eventId) {
+      const state = get();
+      const channel = state.channels[channelId];
+      const payload = channel?.payloads[eventId];
       await messagesApi.redactEvent(api, channelId, eventId);
+      // The server cannot read which files a message holds. Delete the files
+      // of an own message here, so that they do not count toward the quota.
+      if (payload?.type === "message" && channel?.eventsById[eventId]?.senderId === state.selfUserId) {
+        for (const id of fileIds(payload.attachments, payload.embeds)) {
+          deleteAttachment(api, id).catch(() => {});
+        }
+      }
       updateChannel(get, set, channelId, (c) => applyEventRedact(c, [eventId]));
       options.onRedacted?.(channelId, [eventId]);
     },

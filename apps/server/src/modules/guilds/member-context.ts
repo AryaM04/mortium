@@ -75,6 +75,64 @@ export async function loadMemberContext(
   };
 }
 
+/**
+ * The permission data of all members of a guild. It lets the server compute
+ * the permissions of many members in memory, with no queries for each member.
+ */
+export interface GuildPermissionData {
+  ownerId: bigint;
+  everyoneRole: RoleInput;
+  memberIds: bigint[];
+  /** The roles that each member holds, without @everyone. */
+  rolesByMember: Map<bigint, RoleInput[]>;
+}
+
+/** Load the permission data of a guild with four queries. Returns null when the guild does not exist. */
+export async function loadGuildPermissionData(db: DbClient, guildId: bigint): Promise<GuildPermissionData | null> {
+  const [guildRows, roleRows, memberRows, heldRows] = await Promise.all([
+    db.select({ ownerId: guilds.ownerId }).from(guilds).where(eq(guilds.id, guildId)).limit(1),
+    db.select({ id: roles.id, permissions: roles.permissions }).from(roles).where(eq(roles.guildId, guildId)),
+    db.select({ userId: guildMembers.userId }).from(guildMembers).where(eq(guildMembers.guildId, guildId)),
+    db.select({ userId: memberRoles.userId, roleId: memberRoles.roleId }).from(memberRoles).where(eq(memberRoles.guildId, guildId)),
+  ]);
+  const guild = guildRows[0];
+  if (!guild) {
+    return null;
+  }
+  const everyoneRole = roleRows.find((role) => role.id === guildId);
+  if (!everyoneRole) {
+    throw new Error(`Guild ${guildId} has no @everyone role.`);
+  }
+  const permissionsById = new Map(roleRows.map((role) => [role.id, role.permissions]));
+  const rolesByMember = new Map<bigint, RoleInput[]>();
+  for (const row of heldRows) {
+    const permissions = permissionsById.get(row.roleId);
+    if (row.roleId === guildId || permissions === undefined) {
+      continue;
+    }
+    const list = rolesByMember.get(row.userId) ?? [];
+    list.push({ id: row.roleId, permissions });
+    rolesByMember.set(row.userId, list);
+  }
+  return {
+    ownerId: guild.ownerId,
+    everyoneRole,
+    memberIds: memberRows.map((row) => row.userId),
+    rolesByMember,
+  };
+}
+
+/** The permissions of one member in one channel, computed from `loadGuildPermissionData`. */
+export function memberChannelPermissions(data: GuildPermissionData, memberId: bigint, overwrites: OverwriteInput[]): bigint {
+  return computePermissions({
+    isOwner: data.ownerId === memberId,
+    everyoneRole: data.everyoneRole,
+    memberRoles: data.rolesByMember.get(memberId) ?? [],
+    overwrites,
+    memberId,
+  });
+}
+
 /** The caller's guild-level permissions: no channel overwrites apply. */
 export function guildPermissions(context: MemberContext): bigint {
   return computePermissions({

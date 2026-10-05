@@ -12,7 +12,7 @@ import { revalidateGuildVoice } from "../voice/gateway-ops.js";
 import { toVoiceStateUpdate, type VoiceService } from "../voice/service.js";
 import { requireHierarchyOverMember } from "./hierarchy.js";
 import { channelPermissions, guildPermissions, loadMemberContext } from "./member-context.js";
-import { requirePermission } from "./service.js";
+import { deleteMembership, requirePermission } from "./service.js";
 import { toBanJson } from "./serialize.js";
 
 export interface ModerationDeps {
@@ -20,10 +20,6 @@ export interface ModerationDeps {
   gateway?: GatewayService;
   voice?: VoiceService;
   log?: FastifyBaseLogger;
-}
-
-async function removeMember(db: DbClient, guildId: bigint, targetUserId: bigint): Promise<void> {
-  await db.delete(guildMembers).where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, targetUserId)));
 }
 
 function afterMemberRemoved(deps: ModerationDeps, guildId: bigint, targetUserId: bigint): void {
@@ -53,7 +49,7 @@ export async function kickMember(deps: ModerationDeps, guildId: bigint, userId: 
   requirePermission(context, Permission.KICK_MEMBERS);
   await requireHierarchyOverMember(db, context, targetUserId);
 
-  await removeMember(db, guildId, targetUserId);
+  await deleteMembership(db, guildId, targetUserId);
   afterMemberRemoved(deps, guildId, targetUserId);
 }
 
@@ -130,7 +126,7 @@ export async function banMember(
     .values({ guildId, userId: targetUserId, reason: input.reason ?? null, by: userId })
     .onConflictDoUpdate({ target: [bans.guildId, bans.userId], set: { reason: input.reason ?? null, by: userId } });
 
-  await removeMember(db, guildId, targetUserId);
+  await deleteMembership(db, guildId, targetUserId);
   afterMemberRemoved(deps, guildId, targetUserId);
 
   if (gateway) {

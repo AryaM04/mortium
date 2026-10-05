@@ -142,6 +142,18 @@ export async function claimAttachment(db: DbClient, id: bigint, userId: bigint):
   }
 }
 
+/** Delete a file and its row. Only the uploader can delete it. This frees the quota. */
+export async function deleteAttachment(db: DbClient, dataDir: string, id: bigint, userId: bigint): Promise<void> {
+  const rows = await db
+    .delete(attachments)
+    .where(and(eq(attachments.id, id), eq(attachments.uploaderId, userId)))
+    .returning({ id: attachments.id });
+  if (rows.length === 0) {
+    throw new AppError(404, "NOT_FOUND", "This file does not exist.");
+  }
+  await unlink(filePath(dataDir, id)).catch(() => {});
+}
+
 /**
  * Delete the attachments that nobody claimed in 24 hours, the files of
  * deleted channels (their rows go with the channel), and old temp files.

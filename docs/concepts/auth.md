@@ -137,6 +137,12 @@ The server links accounts by email only when the provider says the email
 address is verified. This stops one person from claiming somebody else's
 email address through an OAuth account that never confirmed it.
 
+The existing account must also have a verified email. Another person can
+register an email address with a password and not verify it. If the
+server linked the provider to that account, that person would keep access.
+Thus the server refuses the link with 409 `OAUTH_ACCOUNT_NOT_VERIFIED`.
+The owner must sign in with the password and verify the email first.
+
 ### OAuth sign-in from the desktop app
 
 The desktop app cannot get the redirect in its own window, because the

@@ -6,7 +6,7 @@ import { isUniqueViolation, type DbClient } from "../../db/client.js";
 import { bans, channels, guildMembers, guilds, invites, users } from "../../db/schema.js";
 import { AppError } from "../../errors.js";
 import type { GatewayService } from "../gateway/service.js";
-import { loadMemberContext } from "./member-context.js";
+import { channelPermissions, loadMemberContext, requireChannelPermission } from "./member-context.js";
 import { requirePermission } from "./service.js";
 import { channelsInGuild } from "./channels.js";
 import { buildGuildView } from "./service.js";
@@ -44,7 +44,10 @@ export async function createInvite(
   if (!context) {
     throw new AppError(404, "NOT_FOUND", "This channel does not exist.");
   }
-  requirePermission(context, Permission.CREATE_INVITE);
+  // An invite shows its channel, so the creator must see that channel.
+  const permissions = await channelPermissions(db, channelId, context);
+  requireChannelPermission(permissions, Permission.VIEW_CHANNEL);
+  requireChannelPermission(permissions, Permission.CREATE_INVITE);
 
   const expiresAt = input.maxAgeSeconds === 0 ? null : new Date(Date.now() + input.maxAgeSeconds * 1000);
   const maxUses = input.maxUses === 0 ? null : input.maxUses;
@@ -163,30 +166,34 @@ export async function acceptInvite(db: DbClient, code: string, userId: bigint, g
     return buildGuildView(db, invite.guildId, userId);
   }
 
-  // Increment atomically, guarded by the same not-expired/not-used-up
-  // condition. Of many parallel accepts, only as many as maxUses allows
-  // can match this WHERE clause; the database serializes the rest out.
+  // Add the member and use one invite use in one transaction. A second
+  // request for the same user adds no row, so it uses no invite use. The
+  // update has the same "not expired, not used up" condition, so of many
+  // parallel accepts, only as many as maxUses allows can match it.
   const now = new Date();
   const usesCondition =
     invite.maxUses === null ? sql`true` : lt(invites.uses, invite.maxUses);
   const expiryCondition = invite.expiresAt === null ? sql`true` : gt(invites.expiresAt, now);
 
-  const updated = await db
-    .update(invites)
-    .set({ uses: sql`${invites.uses} + 1` })
-    .where(and(eq(invites.code, code), usesCondition, expiryCondition))
-    .returning({ code: invites.code });
-
-  if (!updated[0]) {
-    throw new AppError(404, "INVITE_NOT_FOUND", "This invite is not valid, expired or fully used.");
-  }
-
-  const memberRows = await db
-    .insert(guildMembers)
-    .values({ guildId: invite.guildId, userId, nickname: null })
-    .onConflictDoNothing()
-    .returning();
-  const memberRow = memberRows[0];
+  const memberRow = await db.transaction(async (tx) => {
+    const memberRows = await tx
+      .insert(guildMembers)
+      .values({ guildId: invite.guildId, userId, nickname: null })
+      .onConflictDoNothing()
+      .returning();
+    if (!memberRows[0]) {
+      return undefined;
+    }
+    const updated = await tx
+      .update(invites)
+      .set({ uses: sql`${invites.uses} + 1` })
+      .where(and(eq(invites.code, code), usesCondition, expiryCondition))
+      .returning({ code: invites.code });
+    if (!updated[0]) {
+      throw new AppError(404, "INVITE_NOT_FOUND", "This invite is not valid, expired or fully used.");
+    }
+    return memberRows[0];
+  });
 
   const view = await buildGuildView(db, invite.guildId, userId);
 
