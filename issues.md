@@ -463,7 +463,7 @@ What occurs now when the user reloads the page in a voice channel:
 
 ### UI-02: Older history removes the newest messages and leaves a gap
 
-- Severity: High. Confidence: Confirmed. Status: Open.
+- Severity: High. Confidence: Confirmed. Status: Fixed in v0.2.5.
 - Symptom: The user scrolls up past about 300 messages. The newest messages disappear from the end and do not load again. New messages show after the gap.
 - Cause: `loadOlder` cuts the newest events and sets `hasMoreAfter = true`, but it does not change `atLatest` (`messages-store.ts:264-267`, `926-934`). Live events are still added at the end (`messages-store.ts:381`). `MessageList.tsx:246-249` loads newer events only when `atLatest` is false.
 - Fix: Set `atLatest = false` when `hasMoreAfter` becomes true.
@@ -477,59 +477,66 @@ What occurs now when the user reloads the page in a voice channel:
 
 ### UI-04: A failed load shows an empty pane, and failed edits, reactions and deletes show nothing
 
-- Severity: Medium. Confidence: Confirmed. Status: Open.
+- Severity: Medium. Confidence: Confirmed. Status: Fixed in v0.2.5.
 - Symptom: A network error or a 403 on the first page gives an empty pane with no retry. A failed jump also gives an empty pane. A failed edit or reaction is lost, and the composer text is already cleared.
 - Cause: `void openChannel(...)` has no `catch` (`ChatPane.tsx:65-67`). `MessageList.tsx:206-207` shows nothing while no channel state exists. `jumpTo` ignores errors (`MessageList.tsx:173`), and `ChatPane.tsx:57-58` skipped `openChannel`. Edit, react and delete errors go to `void` calls (`Composer.tsx:383`, `MessageList.tsx:288-297`).
 - Fix: Add an `error` field for each channel, and show it with a "Retry" button. Call `openChannel` when `jumpTo` fails. Catch failed changes and show a notice.
 
 ### UI-05: The status that the user sees and the status that others see can be different
 
-- Severity: Medium. Confidence: Confirmed. Status: Open.
+- Severity: Medium. Confidence: Confirmed. Status: Fixed in v0.2.5.
 - Symptom: A user sets "Invisible" or "Do not disturb". After a server restart, others see the user as online, but the user's interface still says "Invisible". After a reload, the opposite can occur.
 - Cause: `presenceUiStore` is only in memory and starts as "online" (`lib/presence.ts:14`). IDENTIFY sends no status (`gateway.ts:240`). The server never clears its presence map (`gateway/service.ts:76`, `321`), and READY does not contain the user's own status (`gateway/service.ts:340`).
 - Fix: Save the selected status, and send `PRESENCE_SET` after each READY. Alternatively, put the own status in READY.
 
 ### UI-06: The read marker stops when the channel holds 300 events
 
-- Severity: Medium. Confidence: Confirmed. Status: Open.
+- Severity: Medium. Confidence: Confirmed. Status: Fixed in v0.2.5.
 - Symptom: The user keeps a busy channel open for a long time. The channel stays unread.
 - Cause: The mark-read effect depends on `eventIds.length` (`ChatPane.tsx:86-94`). At 300 events, each new event removes one at the start (`messages-store.ts:391`), so the length does not change.
 - Fix: Depend on the id of the newest event.
 
 ### UI-07: A channel stays unread when the window gets focus again
 
-- Severity: Medium. Confidence: Confirmed. Status: Open.
+- Severity: Medium. Confidence: Confirmed. Status: Fixed in v0.2.5.
 - Symptom: A message arrives while the window has no focus. The user focuses the window with that channel open. The channel stays unread.
 - Cause: `ChatPane.tsx:87` checks `document.hasFocus()` only when the effect runs.
 - Fix: Add a window `focus` listener that runs the mark-read logic.
 
 ### UI-08: The last location can point to a server that the user left
 
-- Severity: Medium. Confidence: Confirmed. Status: Open.
+- Severity: Medium. Confidence: Confirmed. Status: Fixed in v0.2.5.
 - Symptom: The user leaves a server, or is kicked, on another device. Each visit to `/app` then opens an empty server page ("Choose a channel to start.").
 - Cause: `AppHome` goes to `readLastLocation()` (`AppShell.tsx:34-40`). `GuildView` leaves only when `wasLoadedRef` is true (`AppShell.tsx:57-72`), so `clearLastLocation` never runs.
 - Fix: When READY arrived and the server is not in it, call `clearLastLocation()` and go to `/app/@me`.
 
 ### UI-09: ArrowUp edits the first text of a message, not the last edit
 
-- Severity: Low. Confidence: Confirmed. Status: Open.
+- Severity: Low. Confidence: Confirmed. Status: Fixed in v0.2.5.
 - Symptom: ArrowUp opens the text before earlier edits. A save then undoes those edits.
 - Cause: `ChatPane.tsx:194-201` reads `payloads[id].body`, which is the first version.
 - Fix: Use `aggregateEvent`, as `MessageList` does, or use `startEdit`.
 
 ### UI-10: Unread state is lost for channels that leave the cache, and the cache grows
 
-- Severity: Low. Confidence: Confirmed. Status: Open.
+- Severity: Low. Confidence: Confirmed. Status: Fixed in v0.2.5.
 - Symptom: After the user opens more than 20 channels, the older ones lose their "New" marker and read state. Memory grows with channels that the user never opened.
 - Cause: `touchChannel` deletes the full channel state, also `lastEventId` and `lastReadEventId` (`messages-store.ts:727-738`). `EVENT_CREATE` makes a window for channels that are not open (`messages-store.ts:1160-1165`). These windows are never removed.
 - Fix: Keep the read fields when a channel leaves the cache, and remove only the events. Do not add live events to channels that are not open.
 
 ### UI-11: Opening a channel can set the newest event id back to an older value
 
-- Severity: Low. Confidence: Confirmed. Status: Open.
+- Severity: Low. Confidence: Confirmed. Status: Fixed in v0.2.5.
 - Symptom: The unread state can be wrong for a short time when a message arrives while the first page loads.
 - Cause: The value read before the fetch writes over a newer value from a live event (`messages-store.ts:916-919`).
 - Fix: Keep the newer of the two ids, as the code does for `lastReadEventId`.
+
+### UI-12: A jump to an old search result can leave the message row hidden
+
+- Severity: Low. Confidence: Suspected. Status: Fixed in v0.2.5.
+- Symptom: A click on an old search result loads the correct page, but the target message does not show. The e2e test `search.spec.ts` fails about one time in three on a Windows PC under load.
+- Cause: Not known. The row is in the page but has no visible size. The jump logic in `MessageList.tsx` (`wasAtLatestRef`, about line 75) had a similar fault before.
+- Fix: Find the cause with a trace of the virtual list during the jump.
 
 ---
 
@@ -650,10 +657,3 @@ What occurs now when the user reloads the page in a voice channel:
 - Symptom: With `BACKUP_HOUR=08` or `09`, the backup container restarts in a loop and makes no backup.
 - Cause: `infra/scripts/backup.sh:83-84` uses the value in shell arithmetic. The shell reads `08` and `09` as invalid octal numbers.
 - Fix: Remove leading zeros before the arithmetic.
-
-### UI-12: A jump to an old search result can leave the message row hidden
-
-- Severity: Low. Confidence: Suspected. Status: Open.
-- Symptom: A click on an old search result loads the correct page, but the target message does not show. The e2e test `search.spec.ts` fails about one time in three on a Windows PC under load.
-- Cause: Not known. The row is in the page but has no visible size. The jump logic in `MessageList.tsx` (`wasAtLatestRef`, about line 75) had a similar fault before.
-- Fix: Find the cause with a trace of the virtual list during the jump.
