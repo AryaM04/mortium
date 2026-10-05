@@ -121,14 +121,14 @@ on 2026-10-01. The review read the code. It did not run the app.
 
 ### GW-05: The client can open two sockets after the network comes back
 
-- Severity: Medium. Confidence: Confirmed. Status: Open.
+- Severity: Medium. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: After the network comes back, the gateway drops again, and the status banner changes between states.
 - Cause: `handleOnline` (`packages/client-core/src/gateway.ts:410-415`) calls `connect()` while a reconnect socket is still opening. `connect()` (`gateway.ts:392-408`) does not remove the old socket first. The old socket later closes and calls `teardownSocket()`, which closes the new socket.
 - Fix: Call `teardownSocket()` at the start of `connect()`. Do not connect in `handleOnline` when a socket exists. After `await getAccessToken()`, check that the socket did not change.
 
 ### GW-06: Events sent before READY are lost, and the sequence starts again at 0
 
-- Severity: Medium. Confidence: Likely. Status: Open.
+- Severity: Medium. Confidence: Likely. Status: Fixed in v0.2.3.
 - Symptom: A change just after connect, for example to a channel, a member or a DM, does not show. A later RESUME can send old events again.
 - Cause: The server registers the session (`handler.ts:221`) before it builds READY (`handler.ts:225`). Events in that gap go out before READY. READY then builds the client store again from an empty state (`realtime-store.ts:172`) and sets `lastSequence = 0` (`gateway.ts:275`).
 - Fix: On the server, hold events until READY is sent. On the client, do not set `lastSequence` lower than a value it already got.
@@ -198,7 +198,7 @@ on 2026-10-01. The review read the code. It did not run the app.
 
 ### CRY-07: The rate limit on `/keys/query` makes key backup restore fail with no message
 
-- Severity: High. Confidence: Likely. Status: Open. **User-reported (2).**
+- Severity: High. Confidence: Likely. Status: Partly fixed in v0.2.3. The restore asks for all senders in one request and tries again after a 429. The server limit is not changed. **User-reported (2).**
 - Symptom: A restore reports many "failed" sessions, and old chats stay unreadable. On a new device, many keys that arrive together are dropped.
 - Cause: `/keys/query` allows 60 requests a minute for each user, for all devices together (`keys/routes.ts:30`, `49`, `96`, `132`). The client asks for one user at a time. `restoreSessions` calls `getDevice` for each unknown sender device (`device-list.ts:134-148`). A 429 counts the session as `failed`, and nothing tries again (`key-backup.ts:555-591`).
 - Fix: Ask for many devices in one request during a restore. Try again after a 429. Raise the limit or count it for each device.
@@ -223,7 +223,7 @@ on 2026-10-01. The review read the code. It did not run the app.
 
 ### CRY-10: When the local store or the pickle key is lost, encryption fails with no message
 
-- Severity: Medium. Confidence: Likely. Status: Open.
+- Severity: Medium. Confidence: Likely. Status: Partly fixed in v0.2.3. The app shows the reason and a sign-out button. The Tauri app does not send the secure store reason yet.
 - Symptom: After the WebView data is cleared, a reinstall, or a browser that removes IndexedDB, encryption never starts on that device. The interface shows nothing.
 - Cause:
   - If the pickle key cannot be read, `loadPickleKey` makes a new key and writes over the old one (`crypto/index.ts:218-227`). `from_pickle` then fails at each start. The error goes only to `console.warn` (`crypto.ts:236-238`).
@@ -235,14 +235,14 @@ on 2026-10-01. The review read the code. It did not run the app.
 
 ### CRY-11: An error during SAS confirmation stops the verification for 10 minutes
 
-- Severity: Medium. Confidence: Confirmed. Status: Open. **User-reported (3).**
+- Severity: Medium. Confidence: Confirmed. Status: Fixed in v0.2.3. **User-reported (3).**
 - Symptom: The dialog says "Wait for your other device" until the timeout. A retry is not possible. The other side can show "got a message that it did not expect".
 - Cause: `confirm()` has no `try/catch` (`verification.ts:219-231`). `checkMac` sets `macChecked = true` first (`verification.ts:422`). A network error in `finish` or `send` goes to `void ...confirm()` (`VerificationDialog.tsx:106`).
 - Fix: Catch errors in `confirm`, as `handleToDevice` does. Cancel the verification with a clear reason, and log the error.
 
 ### CRY-12: A device list fetch can undo a verification or a master key change
 
-- Severity: Medium. Confidence: Likely. Status: Open. **User-reported (3).**
+- Severity: Medium. Confidence: Likely. Status: Fixed in v0.2.3. **User-reported (3).**
 - Symptom: Right after a verification, a reset or a restore, the device can show its own "identity changed" banner or show as not verified.
 - Cause: `markMasterKeyVerified`, `acceptMasterKeyChange` and `trustOwnMasterKey` read and write the user outside `REFRESH_QUEUE` (`device-list.ts:160-206`). `apply` reads the user at its start and writes it at its end (`device-list.ts:212-264`). A fetch at the same time writes the old values back.
 - Fix: Run these writes in `REFRESH_QUEUE`, or read the user again in `apply` just before the write.
@@ -256,21 +256,21 @@ on 2026-10-01. The review read the code. It did not run the app.
 
 ### CRY-14: An old master private key stays after another device resets the identity
 
-- Severity: Low. Confidence: Confirmed. Status: Open.
+- Severity: Low. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: The device reports that it holds the master key. It puts the old key in a new backup and signs secrets with it. New devices refuse these secrets.
 - Cause: `ensureMasterKey` returns when the server key is different (`device-manager.ts:275-277`), but it keeps the old key (`device-manager.ts:142-144`; `key-backup.ts:257`, `350`, `378`).
 - Fix: Delete the stored master key when the server key is different.
 
 ### CRY-15: A failed key backup upload is not tried again
 
-- Severity: Low. Confidence: Confirmed. Status: Open.
+- Severity: Low. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: Keys stay out of the backup until a new key or a READY arrives. The interface says "The app tries again later".
 - Cause: On an error, `uploadAll` sets `lastError` but does not schedule a retry (`key-backup.ts:338-339`).
 - Fix: Schedule a retry with a backoff.
 
 ### CRY-16: Old local data and ghost devices are never removed
 
-- Severity: Low. Confidence: Confirmed. Status: Open.
+- Severity: Low. Confidence: Confirmed. Status: Partly fixed in v0.2.3. Sign-out deletes the local data. Old ghost devices on the server stay.
 - Symptom: The browser storage, the OS keychain and the server queue grow with each sign-in.
 - Cause:
   - Each sign-in leaves a `crypto:` and a `search:` IndexedDB database and a `crypto-pickle-key:*` secure-store entry. Sign-out does not delete them (`session.ts:146-154`).
@@ -280,7 +280,7 @@ on 2026-10-01. The review read the code. It did not run the app.
 
 ### CRY-17: Contacts always show as "Identity not verified"
 
-- Severity: Low. Confidence: Confirmed. Status: Open. **User-reported (1).**
+- Severity: Low. Confidence: Confirmed. Status: Fixed in v0.2.3. **User-reported (1).**
 - Symptom: Each contact shows "Identity not verified" until a SAS verification between the two users, also when keys work correctly. The menu does not update after a SAS. An email verified in another browser does not update an open app.
 - Cause: `MemberContextMenu.tsx:44-60` shows "verified" only when `verifiedMasterKey === masterKey` (`crypto/index.ts:510-516`). A key trusted on first use never shows as verified. The menu reads the state once. The server sends no event when the email is verified (`session.ts:194`).
 - Fix: Show a neutral text for a key trusted on first use, for example "Not verified with emojis". Subscribe to `security.onChange`. Send an event when the email is verified.
@@ -315,7 +315,7 @@ What occurs now when the user reloads the page in a voice channel:
 
 ### VC-03: A new READY during a call does not update the call
 
-- Severity: High. Confidence: Confirmed. Status: Open. **User-reported (4).**
+- Severity: High. Confidence: Confirmed. Status: Fixed in v0.2.3. **User-reported (4).**
 - Symptom: After a long network drop, the panel still says "connected", and peers show "Connection lost" for all time. The server removes the user 15 s later. The app does not rejoin.
 - Cause: `INVALID_SESSION` leads to IDENTIFY (`gateway.ts:258-262`, `314-322`). READY builds the store again (`realtime-store.ts:172`). `voice.ts:257-281` ignores READY and RESUMED. Peers drop signals from a sender with no voice state (`signal-transport.ts:118-121`).
 - Fix: On READY during a call, send `VOICE_JOIN` again with a new `callId`, or stop the call cleanly.
@@ -329,119 +329,119 @@ What occurs now when the user reloads the page in a voice channel:
 
 ### VC-05: Server mute, server deafen and a missing SPEAK permission do not stop the media
 
-- Severity: High. Confidence: Confirmed. Status: Open.
+- Severity: High. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: A server-muted user, or a user without SPEAK, still sends audio. Others see the user as muted but hear the user. A server-deafened user still hears all. Push to talk sends audio while server-muted.
 - Cause: The server only sets flags (`voice/service.ts:165`, `314-326`; `guilds/moderation.ts:228`). The client only disables a button (`VoiceStatusPanel.tsx:192`). The engine never reads `serverMute`, `serverDeaf` or the returned `selfMute` (`voice.ts:124-138`, `engine.ts:1622-1642`). When the server refuses an unmute (`voice/service.ts:207-212`), the local track is already on.
 - Fix: On a voice state update for the own device, turn the track off for `serverMute` or `selfMute`, and set the output gain to 0 for `serverDeaf`. Undo a local unmute when `NO_PERMISSION` arrives.
 
 ### VC-06: A move by a moderator disconnects the user and leaves a ghost
 
-- Severity: High. Confidence: Confirmed. Status: Open.
+- Severity: High. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: The moved user's voice panel goes idle. The server shows the user in the new channel with no media.
 - Cause: `moveUser` sends a "left" event and then the new state (`moderation.ts:261-267`). The engine stops the call on the "left" event (`engine.ts:1172-1176`). It then ignores the new state, because `currentChannelId` is null (`engine.ts:1177`). The moved state keeps `selfStream`, so the one-stream check is skipped (`voice/service.ts:349`).
 - Fix: Treat an own state with a new channel id as a move, and join that channel locally. Ignore the "left" event by `callId` (see `VC-01`).
 
 ### VC-07: Users who join later do not see a camera or screen share that is already on
 
-- Severity: High. Confidence: Confirmed. Status: Open.
+- Severity: High. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: A user joins after another user turned on a camera or screen share. The new user does not see it.
 - Cause: `ensurePeer` adds send-only video transceivers with `addTransceiver` before the offer of the new user arrives (`engine.ts:1099-1117`). `setRemoteDescription` matches offer lines only with transceivers from `addTrack`, so these stay unmatched. The answer cannot add lines. The later `negotiationneeded` event is ignored (`engine.ts:1142-1151`), and `handleDescriptionNow` does not offer again (`engine.ts:858-881`).
 - Fix: After the answer is set, if a transceiver has `mid === null`, start a new negotiation.
 
 ### VC-08: A camera or screen share that is turned off and on again is not visible to peers
 
-- Severity: High. Confidence: Confirmed (stream id), Likely (`onmute`). Status: Open.
+- Severity: High. Confidence: Confirmed (stream id), Likely (`onmute`). Status: Fixed in v0.2.3.
 - Symptom: The camera or screen share works only the first time. A short network mute can also hide a remote video until the call ends.
 - Cause: The second toggle uses `replaceTrack` with no new negotiation (`engine.ts:1485-1486`, `1596-1597`). The receiver keeps the first stream id. The "media" signal sends the new local `stream.id` (`engine.ts:422-431`, `1500`), so `applyMediaSignal` cannot find it (`engine.ts:926-927`). `track.onmute` removes the stream, and nothing adds it again on unmute (`engine.ts:938-950`).
 - Fix: Send the stream id that the receiver sees (keep the first stream, or call `sender.setStreams`). Show the stream again on `onunmute`.
 
 ### VC-09: A join that the server refuses shows as connected
 
-- Severity: Medium. Confidence: Confirmed. Status: Open.
+- Severity: Medium. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: After `CHANNEL_FULL`, `NO_PERMISSION` or a blocked DM, the panel says "Voice connected" with an open microphone and no peers. During a channel change, the server still shows the user in the old channel.
 - Cause: `handleVoiceError` only sends an error event (`engine.ts:1211-1217`). `join()` waits for the 5 s timeout and continues (`engine.ts:1371-1394`). `voice.ts:327-329` then sets `connected`. The server fails before it removes the old state (`voice/service.ts:147-157`).
 - Fix: Treat a `VOICE_ERROR` during the join wait as a failed join. Stop the call and reject. During a channel change, send `VOICE_LEAVE` when the join fails.
 
 ### VC-10: The selected output device has no effect
 
-- Severity: Medium. Confidence: Confirmed. Status: Open.
+- Severity: Medium. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: The selected speaker or headset is ignored. Audio always plays on the default device.
 - Cause: Audio goes through `masterGain` to `audioContext.destination` (`engine.ts:745-761`, `1356`). `setSinkId` is used only on a muted helper `<audio>` element (`engine.ts:768-776`, `1695-1702`). `AudioContext.setSinkId` is never called.
 - Fix: Call `audioContext.setSinkId(deviceId)` when it exists. Use the saved device when the context is made.
 
 ### VC-11: Screen share audio from a peer takes control of that peer's volume and speaking ring
 
-- Severity: Medium. Confidence: Confirmed. Status: Open.
+- Severity: Medium. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: After a peer shares a screen with audio, the volume slider and "Mute for me" do not change the peer's voice. The speaking ring follows the screen audio.
 - Cause: Each audio `ontrack` calls `attachRemoteStream` (`engine.ts:1127-1134`), which replaces `sourceNode`, `gainNode`, the analyser and `audioEl` (`engine.ts:757-775`). `setUserVolume` and `closePeer` cannot reach the old microphone nodes (`engine.ts:975-983`, `1704-1712`).
 - Fix: Keep separate nodes for the microphone and the screen audio. Apply the volume to both.
 
 ### VC-12: A camera or screen capture can start after the user left the call
 
-- Severity: Medium. Confidence: Confirmed. Status: Open.
+- Severity: Medium. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: The user leaves while the camera prompt or the screen picker is open. The capture starts anyway, and the camera light stays on.
 - Cause: `setCamera` and `setScreenShare` do not check the call state after `await getUserMedia` or `getDisplayMedia` (`engine.ts:1458-1503`, `1563-1618`). A camera "off" during a pending start is ignored (`engine.ts:1427`).
 - Fix: Add a media generation counter, as `micGeneration` does. Stop the stream when the counter changed.
 
 ### VC-13: A leave while the join waits leaks peer connections
 
-- Severity: Medium. Confidence: Confirmed. Status: Open.
+- Severity: Medium. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: The user disconnects while the panel says "connecting". Peer connections stay open, and the idle panel can show peers.
 - Cause: `teardown` does not clear `joinConfirmed`. `join()` continues after the wait and calls `ensurePeer` (`engine.ts:1221-1300`, `1371-1394`).
 - Fix: Read a join generation after each `await` in `join()`, and return when it changed.
 
 ### VC-14: A connection that fails three times does not recover
 
-- Severity: Medium. Confidence: Likely. Status: Open.
+- Severity: Medium. Confidence: Likely. Status: Fixed in v0.2.3.
 - Symptom: A peer connection that failed stays broken.
 - Cause: Only the impolite side makes a new connection (`engine.ts:986-998`, `1026-1033`). The polite side keeps its old connection and refuses the offer from the new one. The error is not shown. `restartsAttempted` is never reset after a recovery (`engine.ts:1001-1006`).
 - Fix: Send a "rebuild" signal so that both sides make a new connection. Reset the counter on "connected".
 
 ### VC-15: A lost offer or answer stops all later negotiation with that peer
 
-- Severity: Medium. Confidence: Likely. Status: Open.
+- Severity: Medium. Confidence: Likely. Status: Fixed in v0.2.3.
 - Symptom: A camera or screen toggle, or an ICE restart, during a gateway reconnect never takes effect for some peers.
 - Cause: Signals are dropped while the socket is down (`crypto/transport.ts:86`). A connection in `have-local-offer` makes each later `negotiateNow` return (`engine.ts:821-826`).
 - Fix: Add a timeout for `have-local-offer` that rolls back and offers again. Alternatively, keep signals in a queue until the gateway is ready.
 
 ### VC-16: Voice signals count toward the gateway rate limit
 
-- Severity: Medium. Confidence: Likely. Status: Open.
+- Severity: Medium. Confidence: Likely. Status: Fixed in v0.2.3.
 - Symptom: In calls with about 6 to 10 users, a join and a camera toggle can close the socket with `RATE_LIMITED`. Signals are then lost.
 - Cause: The limit is 120 messages per 60 s for each connection (`handler.ts:55-56`, `429-435`). Each ICE candidate, offer, answer and "media" signal is a separate `TO_DEVICE_SEND` (`signal-transport.ts:137-147`, `olm-machine.ts:288-290`).
 - Fix: Count `TO_DEVICE_SEND` separately, or send many signals in one message.
 
 ### VC-17: A disconnected default microphone stays dead
 
-- Severity: Medium. Confidence: Likely. Status: Open.
+- Severity: Medium. Confidence: Likely. Status: Fixed in v0.2.3.
 - Symptom: The user uses the default microphone and disconnects the headset. Others hear nothing, and the app shows no message.
 - Cause: `handleDeviceChange` acts only when `settings.inputDeviceId` is set (`voice.ts:454-458`). The engine does not listen for `ended` on the local track (`engine.ts:1347`).
 - Fix: On `devicechange` or `ended`, open the default microphone again.
 
 ### VC-18: The voice channel limit counts the user's own old state
 
-- Severity: Low. Confidence: Confirmed. Status: Open.
+- Severity: Low. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: A rejoin, or a change of device, into a full channel (10 users) gets `CHANNEL_FULL`.
 - Cause: `VoiceService.join` checks `peers.size` before it removes the old state (`voice/service.ts:147-158`, `577-580`). `moveUser` has the same fault (`voice/service.ts:343-345`).
 - Fix: Do not count the user's own state when it is already in that channel.
 
 ### VC-19: An incoming call disappears after a reload
 
-- Severity: Low. Confidence: Confirmed. Status: Open.
+- Severity: Low. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: The called user reloads during the ring. The call card and the sound stop.
 - Cause: READY clears `incomingCalls` (`realtime-store.ts:172`) and contains no rings (`handler.ts:86-100`).
 - Fix: Put the active rings for the user in READY.
 
 ### VC-20: Selecting "Default" during a call has no effect until the next join
 
-- Severity: Low. Confidence: Confirmed. Status: Open.
+- Severity: Low. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: A change back to the default microphone, speaker or camera during a call does nothing.
 - Cause: `if (deviceId) apply…Live(deviceId)` skips null (`VoiceSettingsDialog.tsx:265`, `316`, `345`).
 - Fix: Apply the default device when the value is null.
 
 ### VC-21: Screen share can fail in Firefox and Safari when the server is slow
 
-- Severity: Low. Confidence: Suspected. Status: Open.
+- Severity: Low. Confidence: Suspected. Status: Fixed in v0.2.3.
 - Symptom: Screen share fails when the server takes long to confirm the slot.
 - Cause: `getDisplayMedia` runs only after the server confirms (up to 5 s) (`engine.ts:1556-1565`). Firefox and Safari require a recent user action for this call.
 - Fix: Show the picker first, then ask for the slot, and roll back on `STREAM_IN_USE`.
@@ -537,14 +537,14 @@ What occurs now when the user reloads the page in a voice channel:
 
 ### SRV-01: A member who is kicked, banned or leaves keeps all roles after a rejoin
 
-- Severity: High. Confidence: Confirmed. Status: Open.
+- Severity: High. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: A moderator is kicked, then joins again with an invite. The moderator gets all old roles back, also admin roles.
 - Cause: `member_roles` has no foreign key to `guild_members`. `removeMember` (`moderation.ts:23`) and `leaveGuild` delete only the `guild_members` row. `acceptInvite` adds the member again (`invites.ts:185`), and the old roles apply.
 - Fix: In the same transaction as the member delete, delete the member's roles and member overwrites for that server.
 
 ### SRV-02: An OAuth sign-in can link to an account that another person made with the same email
 
-- Severity: High. Confidence: Confirmed. Status: Open.
+- Severity: High. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: An attacker registers `victim@example.com` with a password and does not verify the email. The victim later signs in with Google or GitHub. The provider links to the attacker's account, and the attacker keeps password access.
 - Cause: `completeOAuthLogin` links to `existingByEmail` without a check of `emailVerified` (`auth/oauth.ts:180-185`). It also keeps the password and the sessions.
 - Fix: Refuse the link when the account is not verified. Alternatively, set the email as verified, remove the password and revoke all sessions before the link.
@@ -558,49 +558,49 @@ What occurs now when the user reloads the page in a voice channel:
 
 ### SRV-04: The attachment quota can never be freed
 
-- Severity: Medium. Confidence: Confirmed. Status: Open.
+- Severity: Medium. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: After a user reaches the quota, uploads fail with "Delete some files first", but no way to delete a file exists.
 - Cause: The quota adds all files of the user (`attachments/service.ts:726-731`). No delete route exists. A message delete does not remove its files.
 - Fix: Add `DELETE /attachments/:id` for the uploader. Remove the file when its message is deleted.
 
 ### SRV-05: Each message and typing event runs about four queries for each server member
 
-- Severity: Medium. Confidence: Confirmed. Status: Open.
+- Severity: Medium. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: High CPU and database load on the home server in large channels.
 - Cause: `computeChannelViewers` (`gateway/service.ts`) calls `loadMemberContext` (four queries) and `channelPermissions` for each member, on each event. `notifyVisibilityChanges` and `snapshotViewableChannels` do the same.
 - Fix: Load the server, roles, member roles and overwrites once, and compute the viewers in memory, as `listChannelMembers` does.
 
 ### SRV-06: A failed or double join uses an invite use
 
-- Severity: Low. Confidence: Confirmed. Status: Open.
+- Severity: Low. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: A double click on an invite uses two uses. Limited invites run out too early.
 - Cause: The `uses + 1` update runs before the member insert (`invites.ts:157`, `170-178`, `185`). The two writes are not in one transaction.
 - Fix: Do the insert and the update in one transaction. Increase `uses` only when the insert added a row.
 
 ### SRV-07: The message nonce check ignores the channel and runs before the access check
 
-- Severity: Low. Confidence: Confirmed. Status: Open.
+- Severity: Low. Confidence: Confirmed. Status: Partly fixed in v0.2.3. The access check runs first and the nonce check uses the channel. A nonce stays used for all time.
 - Symptom: A nonce used again returns an old event from another channel, and the new message is not posted. A user who lost access can still get that old event.
 - Cause: `messages/service.ts:132-138` looks up only `(deviceId, nonce)`, before `loadChannelAccess`. The unique index makes the check permanent, but the docs say 10 minutes.
 - Fix: Add `channelId` to the check, and do the access check first. Add a time limit.
 
 ### SRV-08: Invite creation and channel overwrites use the wrong scope
 
-- Severity: Low. Confidence: Confirmed. Status: Open.
+- Severity: Low. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: A user can make an invite for a channel that the user cannot see. The invite preview shows the channel name. An overwrite can name a role or user from another server.
 - Cause: `createInvite` checks `CREATE_INVITE` for the server, not for the channel (`invites.ts`). `putOverwrite` does not check `targetId` (`overwrites.ts`).
 - Fix: Check `VIEW_CHANNEL` and `CREATE_INVITE` on the channel. Check that `targetId` is a role or member of the server.
 
 ### SRV-09: Migration 0008 fails on a database that has rows
 
-- Severity: Low. Confidence: Suspected. Status: Open.
+- Severity: Low. Confidence: Suspected. Status: Not fixed in code. docs/deploy.md tells how to upgrade a database from before migration 0008.
 - Symptom: An upgrade of an old database stops in `migrate()`, and the server does not start.
 - Cause: `apps/server/drizzle/0008_m6_keys_and_to_device.sql` adds `NOT NULL` columns with no default and no fill.
 - Fix: Delete the old rows first, or add the columns as nullable, fill them, then add `NOT NULL`.
 
 ### SRV-10: The rate limiter maps never remove idle users
 
-- Severity: Low. Confidence: Confirmed. Status: Open.
+- Severity: Low. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: Memory grows slowly, with one entry for each user who ever used a route.
 - Cause: `createEventRateLimiter` deletes a key only when its list is empty, which does not occur (`messages/service.ts:654-674`).
 - Fix: Remove old keys on a timer, or when the map passes a size limit.
@@ -611,42 +611,42 @@ What occurs now when the user reloads the page in a voice channel:
 
 ### OPS-01: Auto-deploy does not try a failed build again
 
-- Severity: Medium. Confidence: Confirmed. Status: Open.
+- Severity: Medium. Confidence: Confirmed. Status: Fixed in v0.2.3.
 - Symptom: A temporary build failure, for example a network error, leaves the old containers. Removal of `.deploy/skip`, as the docs say, does nothing. No deploy occurs until a newer commit.
 - Cause: `scripts/auto-deploy.sh:59` merges before the build. After a build failure, `HEAD` is already the new commit, so line 38 stops at once on each run. `docs/deploy.md` describes a retry that cannot work.
 - Fix: Keep the last commit that built correctly in `.deploy/deployed`, and compare with that value, not with `HEAD`.
 
 ### OPS-02: A data restore fails on a new host
 
-- Severity: Medium. Confidence: Likely. Status: Open.
+- Severity: Medium. Confidence: Likely. Status: Fixed in v0.2.3.
 - Symptom: `restore.sh` restores the database, then `tar -xzf` fails with "permission denied". The stack does not start again, and avatars and attachments stay lost.
 - Cause: `infra/scripts/restore.sh:108-110` makes the `api-data` volume through the backup image. That image has no `/data` folder owned by 100:101, so the volume belongs to root. The backup service runs as 100:101 (`docker-compose.yml:269`, `infra/scripts/backup.sh:66-67`).
 - Fix: In the backup `Dockerfile`, make `/data` and set its owner to 100:101.
 
 ### OPS-03: The Linux AppImage cannot open `mortium://` links, so OAuth sign-in fails there
 
-- Severity: Medium. Confidence: Suspected. Status: Open.
+- Severity: Medium. Confidence: Suspected. Status: Fixed in v0.2.3.
 - Symptom: GitHub or Google sign-in from the AppImage opens the browser, but the final link opens nothing. The deb package works.
 - Cause: `apps/desktop-electron/src/main/index.ts:413-416` registers the link handler only through the desktop file of the deb package. An AppImage without desktop integration has no desktop file.
 - Fix: For an AppImage, write a desktop file with `MimeType=x-scheme-handler/mortium` and register it with `xdg-mime`. Alternatively, document that the AppImage needs desktop integration.
 
 ### OPS-04: `latest.json` can lose the Windows or macOS entry
 
-- Severity: Medium. Confidence: Suspected. Status: Open.
+- Severity: Medium. Confidence: Suspected. Status: Fixed in v0.2.3.
 - Symptom: After a release, the Tauri updater finds no update for one platform.
 - Cause: The two Tauri jobs in `release.yml` run at the same time. Both read, merge and upload the same `latest.json`. One upload can write over the other. Releases v0.1.0 and v0.1.1 have all entries.
 - Fix: Set `max-parallel: 1` on the matrix, or build `latest.json` once in the `publish` job.
 
 ### OPS-05: The global push-to-talk key can stay active after a call on Linux
 
-- Severity: Low. Confidence: Likely. Status: Open.
+- Severity: Low. Confidence: Likely. Status: Fixed in v0.2.3.
 - Symptom: After a call, the push-to-talk key is still captured system-wide.
 - Cause: `set()` in `apps/desktop-electron/src/main/push-to-talk.ts` sets `stopCurrent` only after `await this.loadHook()`. A `set(null)` during that wait does nothing, and the pending `set(shortcut)` then installs the hook. The web side does not wait (`apps/web/src/desktop/desktop-platform.ts:291-294`).
 - Fix: Run the `set` calls one after the other in a promise queue, or drop an old call with a generation counter.
 
 ### OPS-06: A backup hour with a leading zero can stop the backups
 
-- Severity: Low. Confidence: Suspected. Status: Open.
+- Severity: Low. Confidence: Suspected. Status: Fixed in v0.2.3.
 - Symptom: With `BACKUP_HOUR=08` or `09`, the backup container restarts in a loop and makes no backup.
 - Cause: `infra/scripts/backup.sh:83-84` uses the value in shell arithmetic. The shell reads `08` and `09` as invalid octal numbers.
 - Fix: Remove leading zeros before the arithmetic.
